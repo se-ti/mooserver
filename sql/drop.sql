@@ -1,0 +1,12 @@
+drop table version;
+drop table stamp;
+drop table activity;
+drop table position;
+drop table sms;
+drop table raw_sms;
+drop table moose;
+drop table phone;
+drop table session;
+drop table usergroups;
+drop table users;
+drop table logs;

@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/> 
+<link rel="stylesheet" href="css/bootstrap.min.css" />
+<link rel="stylesheet" href="css/bootstrap-theme.min.css" />
+<link rel="stylesheet" href="css/leaflet0-7-3.min.css" />
+<!-- link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" / -->
+
+<script src="js/common.js"></script>
+<script src="js/lineedit.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/admin.js"></script>
+<script src="lib/jquery-1.11.1.min.js"></script>
+<script src="lib/bootstrap.min.js"></script>
+<script src="lib/leaflet0-7-3.min.js"></script>
+<!-- script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script -->
+<script src="lib/heatcanvas.js"></script>
+<script src="lib/heatcanvas-leaflet.js"></script>
+
+<style>
+#main .cont {display: none;}
+body {padding-top:70px;} /*required by navbar-fixed-top*/
+.clickable {cursor: pointer; }
+
+td .note {visibility: hidden;}
+tr:hover > td > .note {visibility: visible;}
+table.hideControls tr:hover > td > .note {visibility: hidden;}
+
+div.bold {font-weight: bold;}
+
+.mainmap {min-height:700px; max-height:1024px;}
+.map2 {min-height:450px; max-height:500px;}
+.map3 {min-height:400px; max-height:400px; width:100%; margin: 1.5em 0;}
+
+.panel+.affix {margin-top: -1.2em;}
+.panel.hidden+.affix {margin-top: inherit;}
+.map-panel {width: 263px;}
+
+
+
+button {margin-right: 0.7em; }
+button:last-of-type {margin-right: 0;}
+
+.leaflet-control label {margin-bottom: inherit; font-weight: inherit;}
+.ll-extend input[type="checkbox"] {position: relative; top: 1px;}
+.ctxMenu .leaflet-popup-tip-container {display:none;}
+
+
+
+</style>
+
+</head>
+<body>
+    <!-- Fixed navbar -->
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse"><!-- .in   -->
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">MooServer</a>
+        </div>
+
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+
+          </ul>
+
+        </div><!--/.nav-collapse -->
+
+
+      </div>
+    </div> <!-- menu end -->
+
+    <div class="container-fluid" >
+	    <div class="row" id="main">
+	    </div>
+    </div>
+
+<div class="container-fluid" >
+	<div class="row">
+		<div class="col-xs-12 col-sm-9" id='log'>
+		</div>
+	</div>
+</div>
+
+	
+
+<script>
+
+
+CApp = function()
+{
+    this._err = null;
+    this._timeout = null;
+    this._global = null;
+    this.clearData();
+
+    this._cb_autoHide = $cd(this, this._autoHide);
+}
+
+CApp.single = function()
+{
+    if (CApp.__instance == null)
+        CApp.__instance = new CApp();
+
+    return CApp.__instance;
+}
+
+CApp.prototype = {
+
+    _errTpl: '<div class="center-block col-xs-6" style="position: absolute; top:35px; z-index: 2000;"><div class="alert" role="alert"></div></div>',
+
+    error: function(html)
+    {
+        this._setMessage(html, true);
+    },
+
+    message: function(html, timeout)
+    {
+        this._setMessage(html, false, timeout);
+    },
+
+    clearMessage: function()
+    {
+        this._setMessage('');
+    },
+
+    clearData: function()
+    {
+        this._global = {
+            profile: null,
+            rights: null,
+            moose: null,
+            phones: null
+        };
+    },
+
+    getRights: function()
+    {
+        return this._global.rights;
+    },
+
+    setRights: function(value)
+    {
+        this._global.rights = value || {};
+    },
+
+    getMoose: function()
+    {
+        return this._global.moose;
+    },
+
+    setMoose: function(value)
+    {
+        this._global.moose = value || [];
+    },
+
+    getPhones: function()
+    {
+        return this._global.phones;
+    },
+
+    setPhones: function(value)
+    {
+        this._global.phones = value || [];
+    },
+
+    _setMessage: function(html, isErr, timeout)
+    {
+        if (!this._err)
+            this._err = $(this._errTpl).prependTo('div.container:visible'); //.insertAfter('div.navbar-inverse');
+
+        if (this._timeout != null)
+        {
+            window.clearTimeout(this._timeout);
+            this._timeout = null;
+        }
+
+        var empty = (html || '') == '';
+        this._err.toggleClass('hidden', empty)
+                .find('div.alert')
+                .html(html)
+                .toggleClass('alert-danger', isErr || false)
+                .toggleClass('alert-info', (!isErr) || false);
+
+        if (!empty && (timeout || 0) > 0)
+            this._timeout = window.setTimeout(this._cb_autoHide, timeout);
+    },
+
+     _autoHide: function()
+     {
+         if (this._err && !this._err.hasClass('hidden'))
+            this._err.addClass('hidden');
+     }
+}
+
+CController = function()
+{
+	this._pages = [];
+
+	this._active = null;
+
+    var menu = $('div.navbar-collapse');
+	this._pass = new CLogin(menu)
+            .on_Setup($cd(this, this._onRightsChange));
+
+	window.addEventListener("hashchange", $cd(this, this._onChange), false);
+}
+
+CController.prototype = {
+	addPage: function(page)
+	{
+		if (!page)
+			return;
+
+		var menu = $('div.navbar-collapse.collapse:first').find('ul.nav.navbar-nav');
+		this._pages.push(page);
+		page.buildIn(menu);
+	},
+
+    appInit: function()
+    {
+        var menu = $('.navbar-inverse');
+        this.setPages([new CMoose(menu),
+            new CBeacon(menu),
+            new CSingleBeacon(menu),
+            new CGate(menu),
+            new CAdmin(menu),
+            new CLogs(menu),
+            new CProfile(menu),
+            new CConfirm(menu)
+        ]);
+
+        this.activate();
+        this.getMoose();
+    },
+
+    setPages: function(pages)
+    {
+        if (pages == null || !pages instanceof Array)
+            return;
+        for (var i = 0; i < pages.length; i++)
+            this.addPage(pages[i]);
+    },
+
+    activate: function()
+    {
+        this._onChange();
+    },
+
+	_onChange: function()
+	{
+		var hash = window.location.hash;
+		for (var i = 0; i < this._pages.length; i++)
+			if (this._pages[i].match(hash))
+			{
+				if (this._pages[i] != this._active && this._active)
+					this._active.deactivate();
+
+				this._pages[i].activate();				
+				this._active = this._pages[i];
+				return;
+			}
+	},
+
+	_onRightsChange: function(rights)
+	{
+        var app = CApp.single();
+        app.clearData();
+        app.setRights(rights);
+
+        //console.log('orc: ' + rights.isRoot);
+
+		for (var i = 0; i < this._pages.length; i++)
+			this._pages[i].setRights(rights);
+	},
+
+	getMoose: function()
+	{
+		$ajax('getMooseRoot', null, $cd(this, this._onGetMoose), $cd(this, this._onFail));
+	},
+
+	_onGetMoose: function(result, text, jqXHR)  // это же загрузка application level data!
+	{
+		if (!this._testResult(result))
+			return;
+
+        var app = CApp.single();
+        app.setRights(result.rights);
+        app.setMoose(result.mooses);
+        app.setPhones(result.phones);
+
+		this._pass.setup(result.rights);
+
+		for (var i = 0; i < this._pages.length; i++)
+			this._pages[i].setData(result);
+	},
+
+	_testResult: function(result)
+	{
+		if (result.error)
+		{
+			log('Ошибка Ajax: ' + result.error);
+			return false;
+		}
+	
+		return true;
+	},
+
+	_onFail: function (jqXHR, text, error)
+	{
+		log('Ошибка ajax: ' + error.message + '<br/>Перезагрузите страницу.');
+	}
+};
+
+CMoose = function(after)
+{
+	CPage.call(this, '', 'Животные', null);
+
+    this.map = null;
+	this.source = []; // точки с сервера
+
+
+	this.periodChooser = null;
+	this.mooseChooser = null;
+	this.send = null;
+
+	this._exportBtn = null;
+    this._fitBounds = true;
+
+    this._canAdmin = false;
+
+	this._init(after);
+}
+
+CMoose.prototype =
+{
+	_init: function(after)
+	{
+		this._elem = $(this._tpl_fl).insertAfter(after).hide();
+		var row = this._elem.find('.row');
+
+        var rm = $(this._tpl_right).appendTo(row); /*правое меню*/
+		var je = $(this._tpl_main).appendTo(row);
+
+        this.periodChooser = new CChooser(rm)
+                .on_periodChange($cd(this, this._periodChange));
+
+        this.mooseChooser = new CMooseChooser(rm, true)
+                .on_mooseChange($cd(this, this._mooseChange));
+
+		var exprt = this.stdExport(null, 'Экспорт треков')
+            .append('<button class="btn btn-default" class="form-control" data-type="activity">Экспорт активности</button>')
+			.appendTo(rm)
+		 	.find('button')
+			.click($cd(this, this._export));
+		this._exportBtn = $(exprt.get(0));
+
+        this.map = new CMooseMap(je, 'mainmap', rm);
+
+		this.send = new CSmsControl(rm)
+			.on_sendSuccess($cd(this, this.reRead))
+			.on_change($cd(this, this._phoneSelect));
+        $('<div class="pull-right text-muted small"><small>программирование: se-ti, AVP, маяки: AVP</small></div>')
+                .appendTo(je);
+	},
+
+	activate: function(s)
+	{
+		CPage.callBaseMethod(this, 'activate', [s]);
+        this._reloadMoose();
+        if (this.map)
+			this.map.invalidateSize();
+        if (this.periodChooser)
+            this.periodChooser.setTimes(null, null, true);
+	},
+
+	setRights: function(rights)
+	{
+		if (this.send)
+			this.send.toggle(rights.canFeed || false);
+        this._canAdmin  = rights.canAdmin;
+
+        this.map.update({canToggle: this._canAdmin});
+        this._reloadMoose();
+	},
+
+	setData: function(data)
+	{
+		if (this.send)
+			this.send.setData(data.phones, data.mooses);
+
+		if (this.mooseChooser)
+		{		
+			this.mooseChooser.setData(data.mooses);
+			if (data.mooses && data.mooses.length > 0)
+			{
+				this.mooseChooser.selectMoose(data.mooses[0].id);
+				this.reRead(null);
+			}
+		}
+	},
+
+    _reloadMoose: function()
+    {
+        $ajax('getMoose', null, $cd(this, this._onGetMoose));
+    },
+
+    _onGetMoose: function(result, text, jqXHR)  // это же загрузка application level data!
+    {
+        if (result.error)
+        {
+            if (console)
+                console.log(result.error);
+            return;
+        }
+
+        this.setData(result);
+        var app = CApp.single();
+        app.setMoose(result.mooses);
+        app.setPhones(result.phones);
+    },
+
+	_getMoosePhones: function()
+	{
+		var phone = null;
+		var ids = [];
+		var mooses = this.mooseChooser.getMoose();
+
+		for (var i = 0; i < mooses.length; i++)
+		{
+			ids.push(mooses[i].value);
+			phone = phone || mooses[i].phone;
+		}
+		return {ids: ids, phone: phone};
+	},
+
+	_phoneSelect: function(phone)
+	{
+		this.mooseChooser.selectByPhone(phone);
+		this.reRead();
+	},
+
+	_mooseChange: function(mooses)
+	{
+		var moosePhones = this._getMoosePhones();	
+
+		if (moosePhones.phone)
+			this.send.selectPhone(moosePhones.phone);
+		
+		this.reRead(moosePhones);
+	},
+
+	_periodChange: function()
+	{
+		this.reRead(null);
+	},
+
+	_getParam: function(moosePhones)
+	{
+		moosePhones = moosePhones || this._getMoosePhones();
+		var times = this.periodChooser.getTimes();
+
+		var param = {ids: moosePhones.ids};
+		if (times.start)
+			param.start = times.start.toJSON();
+		if (times.end)
+			param.end = times.end.toJSON();
+
+		return param;
+	},
+
+	reRead: function(moosePhones)
+	{
+        this._fitBounds = this._fitBounds || moosePhones != null;
+		$ajax('getData', this._getParam(moosePhones), $cd(this, this._onReRead));
+	},
+
+	_export: function(evt)
+	{
+		var frm = this._exportBtn.parent().get(0);
+
+		frm.action = 'export.php?m=' + evt.target.getAttribute('data-type'); 
+
+		var param = this._getParam();
+		if (!param.ids || param.ids.length <= 0)
+			return false;
+
+		frm['ids'].value = param.ids; 
+		if (param.start)
+			frm['start'].value = param.start;
+		if (param.end)
+			frm['end'].value = param.end;
+		
+		return true;
+	},
+          
+	_onReRead: function(result, text, jqXHR)
+	{
+		if (result.error)
+		{
+			if (console)
+				console.log(result.error);
+			return;
+		}
+
+        var st = null;
+        var en = null;
+        var gtd;
+        var len;
+
+		this.source = [];
+
+		for (var i = 0; i < result.length; i++)
+        {
+            gtd = CMooseMapHelper.glueTrackData(result[i]);
+            this.source.push({id: result[i].id, key: 'mooseId', data: gtd});
+            if (!gtd || !gtd || gtd.length <= 0)
+                continue;
+
+            len = gtd.length;
+            if (st == null  || st > gtd[0].tm)
+                st = gtd[0].tm;
+            if (en == null  || en < gtd[len-1].tm)
+                en = gtd[len-1].tm;
+        }
+
+		this.map.render(this.source, this._fitBounds);
+        if (st != null)
+            this.periodChooser.setTimes(st, en);
+	}
+}
+CMoose.inheritFrom(CPage);
+
+
+CBeacon = function(after)
+{
+	CPage.call(this, 'beacon', 'Приборы', null);
+
+	this._rm = null;
+	this._send = null;
+	this._stat = null;
+
+	this._period = null;
+	this._exportBtn = null;
+    this._showAll = null;
+
+    this._map = null;
+
+    this._data = null;
+
+    this._c_reRead = $cd(this, this.reRead);
+    this._c_reRender = $cd(this, this._reRender);
+	this._init(after);	
+}
+
+CBeacon.prototype = {
+
+    _lookBack: 6,
+    _periodTpl: '<select class="form-control"><option value="0">за неделю</option><option value="1">за месяц</option><option selected value="2">за год</option><option value="3">все</option> </select>',
+
+	_init: function(after)
+	{
+		this._elem = $(this._tpl).insertAfter(after).hide();
+		var row = this._elem.find('.row');
+        this._rm = $(this._tpl_right).appendTo(row);
+		var je = $(this._tpl_main).appendTo(row);
+
+        var e = $('<div class="checkbox"><input type="text"/> <label><input type="checkbox"/>Включая&nbsp;неактивные</label></div>')
+                .appendTo(je);
+
+        this._search = e.find('input[type="text"]')
+                .change(this._c_reRender)
+                .keyup(this._c_reRender);
+
+        this._showAll = e.find('input[type="checkbox"]')
+                .change(this._c_reRead);
+
+		this._stat = $('<table class="hidden table table-striped"></table>')
+                .appendTo(je)
+                .click($cd(this, this._clickRow));
+		//$('<p>manage moose-beacons for root and admin</p>').appendTo(je);
+
+        this._period = $(this._periodTpl).appendTo(this._rm);
+		this._exportBtn = this.stdExport('beacons', 'Экспорт приборов')
+                .append('<input type="hidden" name="all"/>')
+			    .appendTo(this._rm)
+		 	    .find('button')
+			    .click($cd(this, this._export));
+
+		this._send = new CSmsControl(this._rm)
+                .on_sendSuccess(this._c_reRead)
+			    .on_change($cd(this, this._phoneSelect));
+
+        var holder = $('<div class="map-panel" data-spy="affix"></div>')
+                .appendTo(this._rm);
+        this._map = new CMooseMap(holder, 'map3', null);
+        this._map.update({canToggle: false});
+        this._mapHelper = new CMooseMapHelper();
+	},
+
+	activate: function(s)
+	{
+		CPage.callBaseMethod(this, 'activate', [s]);
+		this.reRead();
+        var phones = CApp.single().getPhones();
+        if (phones && this._send)
+            this._send.setData(phones);
+
+        if (this._map)
+        {
+            this._map.clearTracks();
+            this._map.invalidateSize();
+        }
+	},
+
+	setData: function(data)
+	{
+		if (this._send)
+			this._send.setData(data.phones);
+	},
+
+	setRights: function(rights)
+	{
+		if (this._send)
+			this._send.toggle(rights.isRoot || rights.canFeed);
+
+        if (this._showAll)
+        {
+            this._showAll.parents('.form-control:first').toggleClass('hidden', !rights.isLogged);
+            this._showAll.get(0).checked = false;
+        }
+
+        if (this._isActive)
+            this.reRead();
+
+        if (this._map)
+            this._map.update({canToggle: rights.canAdmin});
+	},
+
+	_phoneSelect: function(phone)
+	{
+	},
+
+    _baseDate: function()
+    {
+        var d = new Date();
+        d.setUTCMilliseconds(0);
+        d.setUTCSeconds(0);
+        d.setUTCMinutes(0);
+        d.setUTCHours(0);
+        return d;
+    },
+
+	_getParam: function()
+	{
+        var d = this._baseDate();
+        d.setUTCDate(d.getUTCDate() - this._lookBack);
+
+        var all = this._showAll? this._showAll.get(0).checked : false;
+
+		return {start: d.toJSON(), all: all};
+	},
+
+	_export: function()
+	{
+		var frm = this._exportBtn.parent().get(0);
+
+        var d = this._baseDate();
+        switch(Number(this._period.val()))
+        {
+            case 0: d.setUTCDate(d.getUTCDate() - 7); break;
+            case 1: d.setUTCMonth(d.getUTCMonth() -1); break;
+            case 2: d.setUTCFullYear(d.getUTCFullYear() -1); break;
+            case 3: d = null; break;
+        }
+
+        frm['start'].value = d ? d.toJSON() : null;
+        frm['all'].value = this._showAll.get(0).checked;
+
+		return true;
+	},
+	
+	reRead: function()
+	{		
+		$ajax('getBeaconData', this._getParam(), $cd(this, this._onReRead));
+	},
+
+	_onReRead: function(result, text, jqXHR)
+	{
+		if (result.error)
+		{
+			if (console)
+				console.log(result.error);
+			return;
+		}
+		if (!this._stat)
+			return;
+
+        this._data = result;
+        this._render(result);
+	},
+
+    _reRender: function()
+    {
+        this._render(this._data);
+    },
+
+    _render: function(result)
+    {
+        var head = '<th>&nbsp;</th><th>&nbsp;</th>';
+        var body = '';
+
+        var i;
+        var d;
+        var dates = [];
+        for (i = 0; i < this._lookBack; i++)
+        {
+            d = new Date();
+            d.setUTCDate(d.getUTCDate() - i);
+            dates.push(d);
+            head += '<th>' + d.getUTCDate() + '.' + (d.getUTCMonth() + 1) + '</th>';
+        }
+
+        var note ='<td><div class="note">вн. id<br/>V<br/>T&deg; C</div></td>';
+
+        var text = (this._search.val() || '').toLocaleLowerCase().trim();
+        for (i = 0; i < result.length; i ++)
+        {
+            var item = result[i];
+            var phoneText = item.phone || item.id || '<неизвестен>';
+            if (text != '' && (item.moose || '').toLocaleLowerCase().indexOf(text) < 0 && phoneText.toLocaleLowerCase().indexOf(text) < 0)
+                continue;
+
+            var cls = '';
+            var phd = item.data;
+            if (!item.active)
+                cls = ' class="info" title="отключен"';
+
+            var sfx = item.moose ? String.format('<div>{0}</div>', String.toHTML(item.moose)) : '';
+            var line = String.format('<td{0}><h4>{1}</h4>{2}</td>{3}', cls, String.toHTML(phoneText), sfx, note);
+
+            for (var j = 0; j < dates.length; j++)
+                line += this._renderItem(this._findItem(dates[j], phd), j > 0);
+
+            body += '<tr data-id="' + item.id + '" class="clickable">' + line + '</tr>';
+        }
+
+        this._stat.get(0).innerHTML = '<thead>' + head + '</thead><tbody>' + body + '</tbody>';
+        this._stat.removeClass('hidden');
+    },
+
+    _findItem: function(date, items)
+    {
+        if (!items)
+            return null;
+
+        var d = new Date();
+        var year = date.getUTCFullYear();
+        var mon = date.getUTCMonth();
+        var day = date.getUTCDate();
+        for (var i = 0; i < items.length; i++)
+        {
+            d.setTime(Date.parse(items[i][1]));
+            if (d.getUTCFullYear() == year && d.getUTCMonth() == mon && d.getUTCDate() == day)
+                return items[i];
+        }
+
+        return null;
+    },
+
+    _renderItem: function(item, highlightEmpty)
+    {
+        if (!item)
+            return '<td' + (highlightEmpty ? ' class="warning"' : '') + '>&nbsp;</td>';
+
+        var cls;
+        var res = '';
+        for (var k = 2; k < 5; k++) // gps on, gsm tries не нужны
+        {
+            cls = CSingleBeacon.prototype.badValue(item, k) ? ' class="text-danger bold"' : '';
+            res += String.format('<div{0}>{1}</div>', cls, String.format(item[k]));
+        }
+
+        var d = new Date();
+        d.setTime(Date.parse(item[0]));
+        return String.format('<td title="получено: {0}" data-id="{1}">{2}</td>', d.toLocaleString(), item[7], res);
+    },
+
+    _clickRow: function(e)
+    {
+        if (!e || !e.target)
+            return;
+
+        var jTgt = $(e.target);
+        var cell = jTgt.parents('td:first');
+        var id = cell.attr('data-id');
+        if ((id || '') != '')
+        {
+            this._mapHelper.drawRawSms(this._map, id);
+            this._stat.find('td').removeClass('success');
+            cell.addClass('success');
+            return;
+        }
+
+        var row = jTgt.parents('tr[data-id]:first');
+        id = row.attr('data-id');
+        window.location.hash += '/' + id;
+    }
+}
+CBeacon.inheritFrom(CPage);
+
+CSingleBeacon = function(after)
+{
+    CPage.call(this, 'beacon', null, null);
+    this._id = null;
+
+    this._phone = null;
+    this._periodChooser = null;
+    this._rm = null;
+    this._exportBtn = null;
+    this._map = null;
+    this._mapHelper = null;
+
+    this._c_rawClick = $cd(this, this._rawClick);
+    this._init(after);
+}
+
+CSingleBeacon.prototype =
+{
+    cold: -11.5,
+    low: 3.4,
+
+    match: function(hash)
+    {
+        var re = /\#beacon\/(\d+)/
+        var res = re.exec(hash);
+        if (res == null || res.length < 2)
+            return false;
+
+        this._id = res[1];
+
+        return true;
+    },
+
+    _init: function(after)
+    {
+        this._elem = $(this._tpl).insertAfter(after).hide();
+        var row = this._elem.find('.row');
+        this._rm = $(this._tpl_right).appendTo(row);
+        var je = $(this._tpl_main)
+            .append('<ul class="nav nav-pills"><li role="presentation" class="active"><a href="#beacon">Все приборы</a></li></ul>')
+            .append('<h1><small></small></h1>')
+            .appendTo(row);
+        this._phone = je.find('h1 small');
+        this._table = $('<table class="hidden table table-striped"></table>')
+            .click(this._c_rawClick)
+            .appendTo(je);
+
+
+        this._periodChooser = new CChooser(this._rm)
+            .on_periodChange($cd(this, this.reRead));
+
+        this._exportBtn = this.stdExport('beacons', 'Export')
+            .appendTo(this._rm)
+            .find('button')
+            .click($cd(this, this._export));
+
+        var holder = $('<div class="map-panel" data-spy="affix"></div>')
+                .appendTo(this._rm);
+
+        this._map = new CMooseMap(holder, 'map3', null);
+        this._map.update({canToggle: false});
+        this._mapHelper = new CMooseMapHelper();
+    },
+
+    activate: function(s)
+    {
+        CPage.callBaseMethod(this, 'activate', [s]);
+        this.reRead();
+        if (this._map)
+        {
+            this._map.clearTracks();
+            this._map.invalidateSize();
+        }
+    },
+
+    _getParam: function()
+    {
+        var times = this._periodChooser.getTimes();
+        var param = {ids: [this._id], all: true};
+        if (times.start)
+            param.start = times.start.toJSON();
+        if (times.end)
+            param.end = times.end.toJSON();
+
+        return param;
+    },
+
+    reRead: function()
+    {
+        $ajax('getBeaconData', this._getParam(), $cd(this, this._onReRead));
+    },
+
+    _export: function()
+    {
+        var frm = this._exportBtn.parent().get(0);
+        var param = this._getParam();
+
+        frm['ids'].value = param.ids;
+        if (param.start)
+            frm['start'].value = param.start;
+        if (param.end)
+            frm['end'].value = param.end;
+
+        return true;
+    },
+
+    _onReRead: function(result, text, jqXHR)
+    {
+        if (result.error)
+        {
+            if (console)
+                console.log(result.error);
+            return;
+        }
+        if (!this._table)
+            return;
+
+        this._render(result);
+    },
+
+    _render: function(result)
+    {
+        var head = '<thead><th>Получено</th><th>посл. точка</th><th>вн. id</th><th>V</th><th>T &deg;C</th><th>gps on, мин</th><th>gsm tries</th></thead>';
+        var body = '';
+        var line = '';
+        var cls;
+        var d = new Date();
+
+        for (var i = 0; i < result.length; i ++)
+        {
+            var phd = result[i].data;
+            var phdLen = phd.length;
+
+            var text = [result[i].phone];
+            if (result[i].moose)
+                text.push('сейчас ' + result[i].moose);
+            this._phone.text(text.join(", "));
+
+            for(var j = 0; j < phdLen; j++)
+            {
+                line = this._localeDateCell(d, phd[j][0], true)
+                     + this._localeDateCell(d, phd[j][1], false);
+
+                for (var k = 2; k < 7; k++)
+                {
+                    cls = '';
+                    if (this.badValue(phd[j], k))
+                        cls = ' class="danger"';
+
+                    line += '<td' +  cls + '>' + (phd[j][k] || '&nbsp;') + '</td>';
+                }
+
+                body += String.format('<tr data-id="{0}">{1}</tr>', phd[j][7], line);
+            }
+        }
+
+        this._table.get(0).innerHTML = head + '<tbody>' + body + '</tbody>';
+        this._table.removeClass('hidden');
+    },
+
+    badValue: function(item, idx)
+    {
+        if (!item || idx == null)
+            return false;
+        return item[idx] != null && (idx == 4 && item[idx] < CSingleBeacon.prototype.cold || idx == 3 && item[idx] < CSingleBeacon.prototype.low);
+    },
+
+    _localeDateCell: function(date, val, full)
+    {
+        if (!val)
+            return '<td>&lt;нет&gt;</td>';
+
+        date.setTime(Date.parse(val));
+        return String.format('<td>{0}</td>', full ? date.toLocaleString() : date.toLocaleDateString());
+    },
+
+    _rawClick: function(e)
+    {
+        if (!e || !e.target)
+            return;
+
+        var je = $(e.target).parents('tr:first');
+        if (je.length > 0)
+        {
+            this._mapHelper.drawRawSms(this._map, je.attr('data-id') || '');
+            this._table.find('tr').removeClass('success');
+            je.addClass('success');
+        }
+    },
+
+    setRights: function(rights)
+    {
+        if (this._isActive)
+            this.reRead();
+
+        if (this._map)
+            this._map.update({canToggle: rights.canAdmin});
+    }
+}
+CSingleBeacon.inheritFrom(CPage);
+
+
+CGate = function(after)
+{
+    CPage.call(this, 'gates', 'Гейт', null);
+
+    this._isSuper = false;
+    this._rm = null;
+    this._table = null;
+    this._justErr = null;
+    this._map = null;
+    this._mapHelper = null;
+    this._mooseSel = null;
+
+    this._c_reRead = $cd(this, this.reRead);
+    this._c_onReRead = $cd(this, this._onReRead);
+    this._c_delClick = $cd(this, this._delClick);
+    this._c_onDeleteSms = $cd(this, this._onDeleteSms);
+    this._init(after);
+}
+
+CGate.prototype =
+{
+    match: function(hash)
+    {
+        return this._isAvailable && CPage.callBaseMethod(this, 'match', [hash]);
+    },
+
+    _init: function(after)
+    {
+        this._elem = $(this._tpl_fl).insertAfter(after).hide();
+        var row = this._elem.find('.row');
+        this._rm = $(this._tpl_right).appendTo(row);
+        var je = $(this._tpl_main)
+                //.append('<ul class="nav nav-pills"><li role="presentation" class="active"><a href="#beacon">Все приборы</a></li></ul>')
+                //.append('<h1><small></small></h1>')
+                .appendTo(row);
+
+        this._justErr = $('<label><input type="checkbox" checked /> Только ошибочные</label>')
+                .appendTo(je)
+                .find('input')
+                .change(this._c_reRead);
+
+        this._table = $('<table class="hidden table table-striped"></table>')
+                .click(this._c_delClick)
+                .appendTo(je);
+
+        //$('<p>Gates and messages stat! for feeders & root & admin</p><p>manage gates for root & admin</p>')
+//                .appendTo(je);
+
+        var map = $('<div class="affix col-xs-12 col-sm-3"></div>')
+                .appendTo(this._rm);
+        this._rm.css('height', '500px');
+
+        this._map = new CMooseMap(map, 'map2', null);
+        this._map.update({canToggle: true});
+        this._mapHelper = new CMooseMapHelper();
+    },
+
+    activate: function(s)
+    {
+        CPage.callBaseMethod(this, 'activate', [s]);
+        this.reRead();
+        if (this._map)
+            this._map.invalidateSize();
+    },
+
+    reRead: function()
+    {
+        var param = {limit: 500,
+            errors: this._justErr.get(0).checked
+        };
+
+        $ajax('getGateData', param, this._c_onReRead);
+    },
+
+    _onReRead: function(result, text, jqXHR)
+    {
+        if (result.error)
+        {
+            if (console)
+                console.log(result.error);
+            return;
+        }
+
+        if (!this._table)
+            return;
+
+        this._render(result);
+    },
+
+    _render: function(result)
+    {
+        if (!result)
+        {
+            this._table.html('');
+            return;
+        }
+
+        var it;
+        var len = result.length;
+        var body = '';
+        var add = '';
+        var head = '<thead><tr><th>id</th><th>stamp</th><th>гейт</th><th>прибор</th><th>лось</th><th>статус</th>' + (this._isSuper ? '<th></th>' : '') + '</tr></thead>';
+        var tpl = '<tr data-id="{0}"><td rowspan="{7}">{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td>{8}</tr>';
+        for (var i = 0; i < len; i++)
+        {
+            it = result[i];
+
+            var d = new Date();
+            d.setTime(Date.parse(it.stamp));
+            var stat = this._itemStatus(it);
+            body += String.format(tpl, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, stat.needText ? 2: 1, this._renderButtons(it, stat));
+            if (stat.needText)
+                body += String.format('<tr><td colspan="6" style="overflow-x: hidden; text-overflow: ellipsis;"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.toHTML(it.text));
+        }
+
+        this._table.html(head + '<tbody>' + body + '</tbody>')
+                .toggleClass('hidden', false);
+    },
+
+    _renderChmooseBtn: function(item)
+    {
+        if (!this._isSuper || !item.sid)
+            return '';
+
+        return '<button style="margin-left: 1.5em;" class="btn btn-default btn-xs chmoose note"><span class="glyphicon glyphicon-pencil"></span></button>';
+    },
+
+    _renderButtons: function(item, stat)
+    {
+        if (!this._isSuper)
+            return '';
+        if (!stat.needText && (item.moose || '') != '')
+            return '<td></td>';
+
+        return String.format('<td><div class="note"><button class="btn btn-default del" data-id="{0}"><span class="glyphicon glyphicon-trash"></span></button></div></td>', item.id);
+    },
+
+    _renderUser: function(item)
+    {
+        var arr = [];
+        if (item.login)
+            arr.push(String.toHTML(item.login));
+        if (item.name)
+            arr.push(String.toHTML(item.name));
+        var ip = item.ip || item.xfwIp || '';
+        if ((ip || '') != '')
+            arr.push('<small>' + String.toHTML(ip) + '</small>');
+
+        return arr.join('<br/>');
+    },
+
+    _itemStatus: function(item)
+    {
+        var isShort = item.text.length < 50;
+        var rv = {
+            html: '',
+            needText: item.sid == null || isShort
+        };
+
+        if (item.sid != null )
+            rv.html =  item.moose == null ? '<span class="bg-warning">Нет животного</span>' : (isShort ? 'Подозрительно короткое': 'OK');
+        else
+            rv.html = String.format('{0}',  String.toHTML(item.error));
+
+        return rv;
+    },
+
+    _delClick: function(e)
+    {
+        if (!e || !e.target)
+            return;
+        var je = $(e.target);
+        if (!je.hasClass('del') && !je.hasClass('chmoose'))
+        {
+            if (je.parents('tr').length > 0)
+                this._mapHelper.drawRawSms(this._map, this._getSmsId(e));
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (je.hasClass('chmoose'))
+        {
+            this._startChangeMoose(e);
+            return;
+        }
+
+        var id = je.attr('data-id');
+        if ((id || '') == '' || !confirm(String.format("Вы действительно хотите удалить sms id='{0}'?\nДействие невозможно отменить.", id )))
+            return;
+
+        $ajax('deleteSms', {'rawSmsId' :id}, this._c_onDeleteSms);
+    },
+
+    _onDeleteSms: function(result, text, jqXHR)
+    {
+        if (result.error)
+        {
+            if (console)
+                console.log(result.error);
+            return;
+        }
+
+        this.reRead();
+    },
+
+    _toggleControls: function(enable)
+    {
+        this._justErr.get(0).disabled = !enable;
+    },
+
+    _startChangeMoose: function(e)
+    {
+        var je = $(e.target);
+        var cell = je.parents('td:first');
+        var smsId = this._getSmsId(e);
+        var m = CApp.single().getMoose();
+
+        if (!m || smsId == null)
+            return;
+
+        cell.get(0).innerHTML = '';
+        this._mooseSel = $('<select class="form-control"/>')
+                .appendTo(cell)
+                .get(0);
+
+        $selAdd(this._mooseSel, i, -1, '<не задан>');
+        var idx = 0;
+        for (var i = 0; i < m.length; i++)
+        {
+            $selAdd(this._mooseSel, i + 1, m[i].id, m[i].name);
+            if (m[i].id == 7)
+                idx = i+1;
+        }
+
+        //this._mooseSel.selectedIndex = idx;
+        this._mooseSel._smsId = smsId;
+
+        this._toggleControls(false);
+        this._table.addClass('hideControls');
+        $saveCancel(cell, $cd(this, this._changeMoose), $cd(this, this._cancelChangeMoose));
+    },
+
+    _cancelChangeMoose: function()
+    {
+        this._toggleControls(true);
+        this._table.removeClass('hideControls');
+        this.reRead();
+    },
+
+    _changeMoose: function()
+    {
+        this._toggleControls(true);
+        this._table.removeClass('hideControls');
+
+        var ms = this._mooseSel;
+        if (!ms)
+            this.reRead();
+        else
+            $ajax('reassignSms', {moose: ms.value > 0 ? ms.value : null, smsIds:[ms._smsId]}, $cd(this, this.reRead));
+        //this.reRead();
+    },
+
+    _getSmsId: function(event)
+    {
+        if (!event || !event.target)
+            return;
+        var je = $(event.target).parents('tr');
+        var id = je.attr('data-id');
+        return (id || '') == '' ? null : id;
+    },
+
+    setRights: function(rights)
+    {
+        this._isSuper = rights.isSuper;
+        this._isAvailable = rights.canAdmin;
+
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
+
+        if (!this._isAvailable && this._isActive)
+            window.location.hash = '';
+    }
+}
+CGate.inheritFrom(CPage);
+
+CProfile = function(after)
+{
+    CPage.call(this, 'profile', null, null);
+
+    this._c = {
+        login: null,
+        name: null,
+        orgs: null,
+        rights: null
+    };
+    this._changePwd = null;
+    this._nameEd = null;
+    this._cbOnGetProfile = $cd(this, this._onGetProfile);
+    this._init(after);
+}
+
+CProfile.prototype = {
+    _rowTpl: '<div class="form-group"><label class="control-label col-xs-2">{0}</label>{1}</div>',
+    _staticTpl: '<p class="col-xs-10 form-control-static"></p>',
+
+    _init: function(after)
+    {
+        this._elem = $(this._tpl).insertAfter(after).hide();
+        var row = this._elem.find('.row');
+        //this._rm = $(this._tpl_right).appendTo(row);
+        var je = $(this._tpl_main)
+                .removeClass('col-sm-pull-3')
+                .appendTo(row);
+
+        $('<h2>Профиль пользователя</h2>')
+                .appendTo(je);
+
+        je = $('<div class="form-horizontal"></div>')
+                .appendTo(je);
+
+        var c = this._c;
+        c.login = $(String.format(this._rowTpl, 'Логин', this._staticTpl))
+                .appendTo(je)
+                .find('p');
+
+        var str = '<p class="col-xs-10 form-control-static"></p>';
+        c.name = $(String.format(this._rowTpl, 'Имя', str))
+                .appendTo(je)
+                .find('p');
+                //.find('span:first');
+        this._nameEd = new CProfileNameEdit(c.name);
+
+        str = '<div class="col-xs-10"></div>';
+        var pRoot = $(String.format(this._rowTpl, 'Пароль', str))
+                .appendTo(je)
+                .find('div');
+        this._changePwd = new CPassword(pRoot);
+
+        c.rights = $(String.format(this._rowTpl, 'Права', this._staticTpl))
+                .appendTo(je)
+                .find('p');
+
+        c.orgs = $(String.format(this._rowTpl, 'Организации', this._staticTpl))
+                .appendTo(je)
+                .find('p');
+    },
+
+    activate: function(s)
+    {
+        CPage.callBaseMethod(this, 'activate', [s]);
+
+        this.getProfile();
+    },
+
+    getProfile: function()
+    {
+        $ajax('getProfile', null, this._cbOnGetProfile);
+    },
+
+    _onGetProfile: function(result, text, jqXHR)
+    {
+        if (result.error)
+        {
+            if (console)
+                console.log(result.error);
+            return;
+        }
+        var c = this._c;
+        c.login.text(result.login || '');
+        this._nameEd.setValue(result.name || '');
+
+        var arr = [];
+        if (result.isSuper)
+            arr.push('Супер админ');
+        if (result.canAdmin)
+            arr.push('Администрировать систему');
+        if (result.canFeed)
+            arr.push('Добавлять смс');
+        if(arr.length == 0)
+            arr.push('Просмотр');
+        c.rights.html(arr.join('<br/>'));
+
+        arr = [];
+        if (result.isSuper)
+            arr.push('&lt;все&gt;')
+        else
+            for (var i = 0; i < result.orgs.length; i++)
+                arr.push(String.format('<dl><dt>{0} </dt><dd>{1}</dd></dl>', String.toHTML(result.orgs[i].login), String.toHTML(result.orgs[i].name)));
+        if(arr.length == 0)
+            arr.push('&lt;нет&gt;');
+        c.orgs.html(arr.join(''));
+    },
+
+    setRights: function(rights)
+    {
+        this._isAvailable = rights.isLogged;
+        if (this._menu)
+            this._menu.toggleClass('hidden', !rights.canAdmin);
+
+        if (this._isActive && !this._isAvailable)
+            window.location.hash = '';
+    }
+}
+CProfile.inheritFrom(CPage);
+
+CConfirm = function(after)
+{
+    CPage.call(this, 'confirm', null, null);
+
+    this._uid = null;
+    this._type = null;
+    this._token = null;
+
+    this._title = null;
+    this._pwd = null;
+
+    this._d_endEdit = $cd(this, this._endEdit);
+
+    this._init(after);
+}
+
+CConfirm.prototype =
+{
+    match: function(hash)
+    {
+        var re = /confirm\/(\d+)\/(\w+)\/([0-9a-zA-Z]+)/gm ;
+        var m = re.exec(hash);
+        if (m == null || m.length != 4)
+            return false;
+
+        this._uid = m[1];
+        this._type = m[2];
+        this._token = m[3];
+        return true;
+    },
+
+    _init: function(after)
+    {
+        this._elem = $(this._tpl).insertAfter(after).hide();
+        var row = this._elem.find('.row');
+
+        var e = $('<div class="col-xs-8 col-xs-push-2"></div>')
+                .appendTo(row);
+        this._title = $('<h2>Cмена пароля</h2>').appendTo(e);
+
+        this._pwd = new CPassword(e, true)
+                .on_endEdit(this._d_endEdit);
+    },
+
+    activate: function(s)
+    {
+        CPage.callBaseMethod(this, 'activate', [s]);
+
+        this._pwd.toggle(false);
+
+        var p = {
+            uid: this._uid,
+            token: this._token,
+            ttype: this._type
+        };
+        $ajax('verifyToken', p, $cd(this, this._onVerifyToken));
+
+        if (this._type != 'forget')
+            alert(String.format("uid: {0}\ntype: {1}\ntoken:{2}", this._uid, this._type, this._token));
+
+        //this.reRead();
+    },
+
+    _onVerifyToken: function(result, text, jqXHR)
+    {
+        if (result.error)
+        {
+            if (console)
+                console.log(result.error);
+
+            this._title.text(result.error);
+
+            return;
+        }
+
+        this._title.text(String.format("Смена пароля для пользователя {0}", result.res));
+        this._pwd.toggle(true);
+        this._pwd.setExtraParam(this._uid, this._type, this._token);
+        this._pwd.startEdit();
+    },
+
+    _endEdit: function(save)
+    {
+        this._pwd.toggle(false);
+        if (save)
+            this._title.text('');
+        
+        window.setTimeout(function(){ window.location.hash = ''; }, save ? 2500: 0);
+    }
+}
+CConfirm.inheritFrom(CPage);
+
+var cont = new CController($get('main'));
+$(document).ready($cd(cont, cont.appInit));
+
+</script>
+</body>
+</html>
