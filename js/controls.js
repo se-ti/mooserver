@@ -2081,3 +2081,60 @@ CMooseMapHelper.prototype =
         jqXHR.__mapControl.render([{data:CMooseMapHelper.glueTrackData(result), id: jqXHR.__rawId, key: 'rawSmsId'}], true);
     }
 }
+
+
+CColumnFilter = function(root, key)
+{
+    CControl.call(this);
+    this._c = {
+
+    };
+
+    this._key = key;
+
+    this._d_onActivate = $cd(this, this._onActivate);
+    this._buildIn(root);
+}
+
+CColumnFilter.prototype =
+{
+    _buildIn: function(root)
+    {
+        this._c.root = $('<span style="font-size: smaller; margin-left: 0.75em;" class="glyphicon glyphicon-filter"></span>')
+            .appendTo(root)
+            .click(this._d_onActivate);
+        $(root).css('white-space', 'nowrap');
+
+    },
+
+    clear: function()
+    {
+        this._raise_dataChanged();
+    },
+
+    _onActivate: function()
+    {
+        this._c.root.toggleClass('text-danger');
+    },
+
+    getValues: function()
+    {
+
+    },
+
+    on_dataChanged: function(h)
+    {
+        return this.on('dataChanged', h);
+    },
+
+    remove_dataChanged: function(h)
+    {
+        return this.remove('dataChanged', h);
+    },
+
+    _raise_dataChanged: function()
+    {
+        this.raise('dataChanged');
+    }
+}
+CColumnFilter.inheritFrom(CControl);

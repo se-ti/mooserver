@@ -189,6 +189,9 @@ CLogs = function(after)
     this._rm = null;
     this._levels = null;
     this._table = null;
+    this._body = null;
+    this._filter = null;
+
     this._init(after);
 }
 
@@ -233,6 +236,11 @@ CLogs.prototype =
 
         this._table = $('<table class="hidden table table-striped table-condensed"></table>')
             .appendTo(je);
+        this._table.html('<thead><tr><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead><tbody></tbody>');
+        this._body = this._table.find('tbody');
+
+        /*this._filter = new CColumnFilter(this._table.find('th').get(2), 'levels')
+            .on_dataChanged($cd(this, this.reRead));*/
     },
 
     activate: function(s)
@@ -289,8 +297,8 @@ CLogs.prototype =
             body += String.format(tpl, it.id, d.toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), String.toHTML(it.message));
         }
 
-        this._table.html(head + '<tbody>' + body + '</tbody>')
-            .toggleClass('hidden', false);
+        this._body.html(body);
+        this._table.removeClass('hidden');
     },
 
     setRights: function(rights)
