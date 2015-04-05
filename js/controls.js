@@ -1000,6 +1000,96 @@ CChooser.prototype =
 }
 CChooser.inheritFrom(CControl);
 
+CUserProxy = function()
+{
+    this._keys = ['login', 'name'];
+}
+CUserProxy.prototype =
+{
+    getCaption: function(item)
+    {
+        return item[this._keys[0]];
+    },
+
+    _text: function(item)
+    {
+        var res = [];
+        var keys = this._keys;
+        for (var i = 0; i < keys.length; i++)
+            if ((item[keys[i]] || '') != '')
+                res.push(item[keys[i]].toLocaleLowerCase());
+        return res;
+    },
+
+    _appendOrgs: function(arr, orgs)
+    {
+        if (!orgs)
+            return arr;
+
+        for (var j = 0; j < orgs.length; j++)
+            if ((orgs[j].login || '') != '')
+                arr.push(orgs[j].login.toLocaleLowerCase());
+
+        return arr;
+    },
+
+    getContext: function(item)
+    {
+        return this._appendOrgs(this._text(item), item.orgs);
+    }
+}
+
+CBeaconProxy = function()
+{
+    CUserProxy.call(this);
+    this._keys = ['phone'];
+}
+CBeaconProxy.prototype =
+{
+    getContext: function(item)
+    {
+        var res = this._appendOrgs(this._text(item), item.orgs);
+        var moose = CApp.single().getMoose();
+        for (var i = 0; i < moose.length; i++)
+        {
+            if (item.moose != moose[i].id)
+                continue;
+            if ((moose[i].name || '') != '')
+                res.push(moose[i].name.toLocaleLowerCase());
+            break;
+        }
+
+        return res;
+    }
+}
+CBeaconProxy.inheritFrom(CUserProxy);
+
+CMooseProxy = function()
+{
+    CUserProxy.call(this);
+    this._keys = ['name', 'phone'];
+}
+CMooseProxy.inheritFrom(CUserProxy);
+
+CGateProxy = function()
+{
+    CUserProxy.call(this);
+}
+CGateProxy.inheritFrom(CUserProxy);
+
+COrgProxy = function()
+{
+    CUserProxy.call(this);
+}
+COrgProxy.prototype =
+{
+    getContext: function(item)
+    {
+        return this._text(item);
+    }
+}
+COrgProxy.inheritFrom(CUserProxy);
+
 CManageUsersControl = function(elem, options)
 {
     CControl.call(this);
@@ -1034,7 +1124,8 @@ CManageUsersControl.prototype = {
             cols: [new CEditLogin('Название', 'Название', 'Комментарий')],
             onAdd: 'addGroup',
             onEdit: 'addGroup',
-            onToggle: 'toggleGroup'
+            onToggle: 'toggleGroup',
+            proxy: new COrgProxy()
         },
         users: {
             title : 'Пользователи',
@@ -1042,7 +1133,8 @@ CManageUsersControl.prototype = {
             cols: [new CEditLogin('Логин', 'Email', 'Имя', false), new CEditRights(), new CEditOrgs()],
             onAdd: 'addUser',
             onEdit: 'addUser',
-            onToggle: 'toggleUser'
+            onToggle: 'toggleUser',
+            proxy: new CUserProxy()
         },
         gates: {
             title : 'Гейты',
@@ -1050,7 +1142,8 @@ CManageUsersControl.prototype = {
             cols: [new CEditLogin('Гейт', 'Логин', 'Комментарий'), new CEditOrgs()],
             onAdd: 'addGate',
             onEdit: 'addGate',
-            onToggle: 'toggleGate'
+            onToggle: 'toggleGate',
+            proxy: new CGateProxy()
         },
         moose: {
             title : 'Животные',
@@ -1058,7 +1151,8 @@ CManageUsersControl.prototype = {
             cols: [new CNameEdit(), new CMoosePhoneEdit('Прибор', true), new CSingleOrg()],
             onAdd: 'addMoose',
             onEdit: 'addMoose',
-            onToggle: null // 'toggleMoose'
+            onToggle: null, // 'toggleMoose'
+            proxy: new CMooseProxy()
         },
         beacons: {
             title : 'Приборы',
@@ -1066,7 +1160,8 @@ CManageUsersControl.prototype = {
             cols: [new CPhoneEdit(), new CMoosePhoneEdit('Животное', false), new CSingleOrg()],
             onAdd: 'addBeacon',
             onEdit: 'addBeacon',
-            onToggle: 'toggleBeacon'
+            onToggle: 'toggleBeacon',
+            proxy: new CBeaconProxy()
         }
     },
 
@@ -1206,6 +1301,7 @@ CManageUsersControl.prototype = {
     setData: function(data, orgs, alt)
     {
         var i;
+        var proxy = this._sett.proxy;
         if (data && orgs)
         {
             var hash = {};
@@ -1216,7 +1312,7 @@ CManageUsersControl.prototype = {
             for (i = 0; i < data.length; i++)
             {
                 this._orgIdsToNames(hash, data[i]);
-                data[i]._caption = this._makeCaption(data[i]);
+                data[i]._caption = proxy.getCaption(data[i]);
             }
 
             this._data = data;
@@ -1241,16 +1337,6 @@ CManageUsersControl.prototype = {
         for (var j = 0; j < item.groups.length; j++)
             if (hash[item.groups[j]])
                 item.orgs.push(hash[item.groups[j]]);
-    },
-
-    _makeCaption: function(item)
-    {
-        if (this._sett == this._types.beacons)
-            return item.phone;
-        else if (this._sett == this._types.moose)
-            return item.name;
-
-        return item.login;
     },
 
     _render: function()
@@ -1309,34 +1395,12 @@ CManageUsersControl.prototype = {
         if (search == '' || !show)
             return show;
 
-        var ctx = this._searchContext(item);
+        var ctx = this._sett.proxy.getContext(item); //this._searchContext(item);
         for (var i = 0; i < ctx.length; i++)
             if (ctx[i].indexOf(search) >= 0)
                 return true;
 
         return false;
-    },
-
-    _searchContext: function(item)
-    {
-        var i;
-        var res = [];
-        var keys = ['login', 'name', 'phone'];
-        for (i = 0; i < keys.length; i++)
-            if ((item[keys[i]] || '') != '')
-                res.push(item[keys[i]].toLocaleLowerCase());
-
-        if (!item.orgs)
-            return res;
-
-        keys.splice(1, 2);
-        var orgs = item.orgs;
-        for (var j = 0; j < orgs.length; j++)
-            for (i = 0; i < keys.length; i++)
-                if ((orgs[j][keys[i]] || '') != '')
-                    res.push(orgs[j][keys[i]].toLocaleLowerCase());
-
-        return res;
     },
 
     on_dataChanged: function(h)
