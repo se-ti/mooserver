@@ -450,7 +450,10 @@ class CTinyDb
 
         $res = $this->db->lastInsertId();
         if (!$auth->isRoot())                                   // добавить автора в группу
-            $this->SetUserGroups($auth, $auth->id(), array($res));
+        {
+            $query = "insert into usergroups (user_id, group_id) values ({$auth->id()}, $res)";
+            $this->Query($query);
+        }
 
         $this->commit();
         Log::t($this, $auth, 'create', "Create org, name: '$name', comment: '$comment'");
