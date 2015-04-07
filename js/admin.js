@@ -220,10 +220,7 @@ CLogs.prototype =
     {
         this._elem = $(this._tpl).insertAfter(after).hide();
         var row = this._elem.find('.row');
-        //this._rm = $(this._tpl_right).appendTo(row);
         var je = $('<div class="col-xs-12"></div>')
-            //.append('<ul class="nav nav-pills"><li role="presentation" class="active"><a href="#beacon">Все приборы</a></li></ul>')
-            //.append('<h1><small></small></h1>')
             .appendTo(row);
 
 
@@ -239,8 +236,10 @@ CLogs.prototype =
         this._table.html('<thead><tr><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead><tbody></tbody>');
         this._body = this._table.find('tbody');
 
-        /*this._filter = new CColumnFilter(this._table.find('th').get(2), 'levels')
-            .on_dataChanged($cd(this, this.reRead));*/
+        /*var items = [{caption: 'info', value: 0}, {caption: 'trace', value: 1}, {caption: 'debug', value: 2}, {caption: 'error', value: 3}, {caption: 'critical', value: 4}];
+        this._filter = new CColumnFilter(this._table.find('th').get(2), 'levels', {search: true, empty: false, emptyMeansAll: true})
+            .on_dataChanged($cd(this, this.reRead));
+        this._filter.setItems(items);*/
     },
 
     activate: function(s)
@@ -257,6 +256,9 @@ CLogs.prototype =
         for (var i = 0; i < e.options.length; i++)
             if (e.options[i].selected)
                 param.levels.push(e.options[i].value);
+
+        if (this._filter)
+            param.levels = this._filter.getValues();
 
         $ajax('getLogs', param, $cd(this, this._onReRead));
     },

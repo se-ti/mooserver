@@ -2083,16 +2083,33 @@ CMooseMapHelper.prototype =
 }
 
 
-CColumnFilter = function(root, key)
+CColumnFilter = function(root, key, options)
 {
     CControl.call(this);
     this._c = {
-
+        root: null,
+        holder: null,
+        search: null,
+        list: null,
+        okBtn: null,
+        cancelBtn: null
     };
 
+
     this._key = key;
+    this._items = [];
+    this._checked = {};
+    this._empty = false;
+    this._all = false;
+
+    this._options = $.extend({search: true, empty: false, emptyMeansAll: true}, options);
 
     this._d_onActivate = $cd(this, this._onActivate);
+    this._d_onOk = $cd(this, this._onOk);
+    this._d_onCancel = $cd(this, this._onCancel);
+    this._d_onSearch = $cd(this, this._onSearch);
+    this._d_onClickOutside = $cd(this, this._onClickOutside);
+    this._d_onChange = $cd(this, this._onChange);
     this._buildIn(root);
 }
 
@@ -2100,26 +2117,173 @@ CColumnFilter.prototype =
 {
     _buildIn: function(root)
     {
-        this._c.root = $('<span style="font-size: smaller; margin-left: 0.75em;" class="glyphicon glyphicon-filter"></span>')
-            .appendTo(root)
+        var c = this._c;
+        c.root = $('<span style="font-size: smaller; margin-left: 0.75em;" class="glyphicon glyphicon-filter"></span>')
+            .appendTo(root);
+        $(root)
+            .css('cursor', 'pointer')
             .click(this._d_onActivate);
-        $(root).css('white-space', 'nowrap');
 
+        c.holder = $('<div class="hidden filter-holder panel panel-default" style="position: fixed;"><div class="panel-body"><div><input type="text" class="form-control"/></div><ul></ul><div><button class="btn btn-primary btn-sm">OK</button><button class="btn btn-default btn-sm">Отменить</button></div></div></div>')
+            .appendTo(root);
+        c.okBtn = c.holder.find('button:first')
+            .click(this._d_onOk);
+        c.cancelBtn = c.holder.find('button:last')
+            .click(this._d_onCancel);
+        c.list = c.holder.find('ul')
+            .change(this._d_onChange);
+        c.search = c.holder.find('input')
+            .change(this._d_onSearch)
+            .keyup(this._d_onSearch)
+            .toggle(this._options.search);
+
+        $(root).css('white-space', 'nowrap');
     },
 
     clear: function()
     {
         this._raise_dataChanged();
+        this._all = true;
+        this._c.root.removeClass('text-danger');
     },
 
-    _onActivate: function()
+    _onActivate: function(e)
     {
-        this._c.root.toggleClass('text-danger');
+        if ($(e.target).parents('.filter-holder').length > 0)
+            return;
+
+        document.addEventListener('click', this._d_onClickOutside, true);
+        this._c.holder.removeClass('hidden');
+        this._c.search.focus();
+
+        this._render();
+        this._renderCaption();
+    },
+
+    _deactivate: function()
+    {
+        this._c.holder.addClass('hidden');
+        document.removeEventListener('click', this._d_onClickOutside, true);
+    },
+
+    _onOk: function()
+    {
+        this._c.root.toggleClass('text-danger', !this._all);
+
+        this._deactivate();
+        this._raise_dataChanged();
+    },
+
+    _onCancel: function()
+    {
+        this._deactivate();
+    },
+
+    _onClickOutside: function(e)
+    {
+        if (e.target && $(e.target).parents('.filter-holder').length > 0)
+            return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        this._deactivate();
+    },
+
+    _onSearch: function()
+    {
+        this._render();
+    },
+
+    _render: function()
+    {
+        var res = '';
+        var tpl = '<li><label class="checkbox-inline"><input type="checkbox" value="{0}" {1}> {2}</label></li>';
+
+        var search = this._options.search ? (this._c.search.val() || '').toLocaleLowerCase() : '';
+        var noSearch = search == '';
+
+        if (this._options.empty && noSearch)
+            res += String.format(tpl, '', 'data-empty="true"' + (this._empty ? 'checked' : ''), '&lt;пустое значение&gt;');
+
+        var item;
+        var len = this._items.length;
+        for (var i = 0; i < len; i++)
+        {
+            item = this._items[i];
+            if (noSearch || ((item.caption || '').toLocaleLowerCase().indexOf(search) >= 0 ))
+                res += String.format(tpl, item.value, this._checked[item.value] ? 'checked' : '', item.caption);
+        }
+
+        this._c.list.html(res);
+    },
+
+    setItems: function(items)
+    {
+        this._items = items || [];
+        this._checked = {};
+        this._empty = false
     },
 
     getValues: function()
     {
+        var res = [];
+        var len = this._items.length;
+        for (var i = 0; i < len; i++)
+            if (this._checked[this._items[i].value])
+                res.push(this._items[i].value);
 
+        if (!this._options.empty)
+            return res;
+
+        return {
+            values: res,
+            empty: this._empty};
+    },
+
+    setValues: function(values) // todo !!!
+    {
+    },
+
+    _onChange: function(e)
+    {
+        if (!e || !e.target)
+            return;
+
+        var tgt = e.target;
+        if ($(tgt).attr('data-empty') == 'true')
+            this._empty = tgt.checked;
+        else
+            this._checked[tgt.value] = tgt.checked;
+        this._renderCaption();
+    },
+
+    _renderCaption: function()
+    {
+        var str = [];
+
+        var count = 0;
+        var len = this._items.length;
+        for (var i = 0; i < len; i++)
+            if (this._checked[this._items[i].value])
+                count++;
+        str.push(String.format('{0} из {1}', count, len));
+
+        var op = this._options;
+        var hasEmpty = op.empty && this._empty;
+        if (hasEmpty)
+        {
+            if (count == 0)
+                str.splice(0, 1);
+            str.push('&lt;пусто&gt;');
+        }
+
+        this._all = count == len && (!op.empty || hasEmpty) ||
+            op.emptyMeansAll && count == 0 && !hasEmpty;
+
+        if (this._all)
+            str = ['все'];
+
+        this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')))
     },
 
     on_dataChanged: function(h)
