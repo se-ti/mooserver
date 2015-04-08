@@ -19,7 +19,6 @@ CAdmin = function(after)
     this._cbReread = $cd(this, this.reRead);
     this._iframe = null;
 
-
     this._init(after);
 }
 
@@ -187,11 +186,13 @@ CLogs = function(after)
     CPage.call(this, 'logs', 'Логи', null);
 
     this._rm = null;
-    this._levels = null;
+    this._rowLimit = null;
     this._table = null;
     this._body = null;
     this._filter = null;
 
+    this._d_reRead = $cd(this, this.reRead);
+    this._d_clearFilters = $cd(this, this._clearFilters);
     this._init(after);
 }
 
@@ -223,23 +224,23 @@ CLogs.prototype =
         var je = $('<div class="col-xs-12"></div>')
             .appendTo(row);
 
+        var ctrl = $('<div class="form-inline" style="margin-bottom: 0.5em;"><div class="form-group"><label for="log-select">Записей: </label> <select id="log-select" class="form-control"><option value="100" selected>100</option><option value="500">500</option><option value="3000">3000</option></select></div> <button type="button" disabled class="btn btn-default btn-sm" style="margin-left: 1em;">Очистить фильтр</button></div>')
+            .appendTo(je);
 
-        var sel = '<table class="col-xs-2"><tr><td><select size="5" class="form-control" multiple><option value="0">info</option><option value="1">trace</option><option value="2">debug</option><option value="3">error</option><option value="4">critical</option></select></td></tr></table>';
-
-        this._levels = $(sel)
-            .appendTo(je)
-            .find('select')
-            .change($cd(this, this.reRead));
+        this._rowLimit = ctrl.find('select')
+            .change(this._d_reRead);
+        this._clearFilters = ctrl.find('button')
+            .click(this._d_clearFilters);
 
         this._table = $('<table class="hidden table table-striped table-condensed"></table>')
             .appendTo(je);
         this._table.html('<thead><tr><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead><tbody></tbody>');
         this._body = this._table.find('tbody');
 
-        /*var items = [{caption: 'info', value: 0}, {caption: 'trace', value: 1}, {caption: 'debug', value: 2}, {caption: 'error', value: 3}, {caption: 'critical', value: 4}];
-        this._filter = new CColumnFilter(this._table.find('th').get(2), 'levels', {search: true, empty: false, emptyMeansAll: true})
-            .on_dataChanged($cd(this, this.reRead));
-        this._filter.setItems(items);*/
+        var items = [{caption: 'info', value: 0}, {caption: 'trace', value: 1}, {caption: 'debug', value: 2}, {caption: 'error', value: 3}, {caption: 'critical', value: 4}];
+        this._filter = new CColumnFilter(this._table.find('th').get(2), 'levels', {search: false})
+            .on_dataChanged(this._d_reRead);
+        this._filter.setItems(items);
     },
 
     activate: function(s)
@@ -248,17 +249,20 @@ CLogs.prototype =
         this.reRead();
     },
 
+    _clearFilters: function()
+    {
+        this._filter.clear();
+        this.reRead();
+    },
+
     reRead: function()
     {
-        var param = {limit: 200, levels:[]};
+        var param = {
+            limit: this._rowLimit.val(),
+            levels: this._filter.getValues()
+        };
 
-        var e = this._levels.get(0);
-        for (var i = 0; i < e.options.length; i++)
-            if (e.options[i].selected)
-                param.levels.push(e.options[i].value);
-
-        if (this._filter)
-            param.levels = this._filter.getValues();
+        this._clearFilters.get(0).disabled = !this._filter.isActive();
 
         $ajax('getLogs', param, $cd(this, this._onReRead));
     },

@@ -46,10 +46,29 @@ button:last-of-type {margin-right: 0;}
 .ll-extend input[type="checkbox"] {position: relative; top: 1px;}
 .ctxMenu .leaflet-popup-tip-container {display:none;}
 
+.filter-activator
+{
+    font-size: smaller;
+    margin-left: 0.75em;
+}
+
+.filter-holder
+{
+    position: absolute;
+}
+
 .filter-holder > .panel-body > ul
 {
     list-style: outside none none;
     padding: 0.3em 0;
+    max-height: 20em;
+    overflow-y: auto;
+}
+.filter-holder ul li input[type="checkbox"]
+{
+    position: relative;
+    top: 1px;
+    margin-right: 0.25em;
 }
 
 </style>

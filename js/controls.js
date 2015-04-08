@@ -2095,11 +2095,13 @@ CColumnFilter = function(root, key, options)
         cancelBtn: null
     };
 
-
     this._key = key;
     this._items = [];
     this._checked = {};
     this._empty = false;
+    this._curChecked = {};
+    this._curEmpty = false;
+
     this._all = false;
 
     this._options = $.extend({search: true, empty: false, emptyMeansAll: true}, options);
@@ -2118,13 +2120,13 @@ CColumnFilter.prototype =
     _buildIn: function(root)
     {
         var c = this._c;
-        c.root = $('<span style="font-size: smaller; margin-left: 0.75em;" class="glyphicon glyphicon-filter"></span>')
+        c.root = $('<span class="filter-activator glyphicon glyphicon-filter"></span>')
             .appendTo(root);
         $(root)
             .css('cursor', 'pointer')
             .click(this._d_onActivate);
 
-        c.holder = $('<div class="hidden filter-holder panel panel-default" style="position: fixed;"><div class="panel-body"><div><input type="text" class="form-control"/></div><ul></ul><div><button class="btn btn-primary btn-sm">OK</button><button class="btn btn-default btn-sm">Отменить</button></div></div></div>')
+        c.holder = $('<div class="hidden filter-holder panel panel-default"><div class="panel-body"><div><input type="text" class="form-control"/></div><ul></ul><div><button class="btn btn-primary btn-sm">OK</button><button class="btn btn-default btn-sm">Отменить</button></div></div></div>')
             .appendTo(root);
         c.okBtn = c.holder.find('button:first')
             .click(this._d_onOk);
@@ -2142,8 +2144,9 @@ CColumnFilter.prototype =
 
     clear: function()
     {
-        this._raise_dataChanged();
-        this._all = true;
+        this._checked = {};
+        this._empty = false;
+        this._all = this._options.emptyMeansAll;
         this._c.root.removeClass('text-danger');
     },
 
@@ -2156,18 +2159,24 @@ CColumnFilter.prototype =
         this._c.holder.removeClass('hidden');
         this._c.search.focus();
 
+        this._curChecked = $.extend({}, this._checked);
+        this._curEmpty = this._empty;
         this._render();
         this._renderCaption();
     },
 
     _deactivate: function()
     {
+        this._curChecked = this._checked;
+        this._curEmpty = this._empty;
         this._c.holder.addClass('hidden');
         document.removeEventListener('click', this._d_onClickOutside, true);
     },
 
     _onOk: function()
     {
+        this._checked = this._curChecked;
+        this._empty = this._curEmpty;
         this._c.root.toggleClass('text-danger', !this._all);
 
         this._deactivate();
@@ -2211,17 +2220,25 @@ CColumnFilter.prototype =
         {
             item = this._items[i];
             if (noSearch || ((item.caption || '').toLocaleLowerCase().indexOf(search) >= 0 ))
-                res += String.format(tpl, item.value, this._checked[item.value] ? 'checked' : '', item.caption);
+                res += String.format(tpl, item.value, this._curChecked[item.value] ? 'checked' : '', item.caption);
         }
 
         this._c.list.html(res);
+    },
+
+    getKey: function()
+    {
+        return this._key;
     },
 
     setItems: function(items)
     {
         this._items = items || [];
         this._checked = {};
-        this._empty = false
+        this._empty = false;
+
+        this._curChecked = $.extend({}, this._checked);
+        this._curEmpty = this._empty;
     },
 
     getValues: function()
@@ -2251,39 +2268,60 @@ CColumnFilter.prototype =
 
         var tgt = e.target;
         if ($(tgt).attr('data-empty') == 'true')
-            this._empty = tgt.checked;
+            this._curEmpty = tgt.checked;
         else
-            this._checked[tgt.value] = tgt.checked;
+            this._curChecked[tgt.value] = tgt.checked;
         this._renderCaption();
     },
 
     _renderCaption: function()
     {
         var str = [];
-
-        var count = 0;
-        var len = this._items.length;
-        for (var i = 0; i < len; i++)
-            if (this._checked[this._items[i].value])
-                count++;
-        str.push(String.format('{0} из {1}', count, len));
-
-        var op = this._options;
-        var hasEmpty = op.empty && this._empty;
-        if (hasEmpty)
-        {
-            if (count == 0)
-                str.splice(0, 1);
-            str.push('&lt;пусто&gt;');
-        }
-
-        this._all = count == len && (!op.empty || hasEmpty) ||
-            op.emptyMeansAll && count == 0 && !hasEmpty;
+        var st = this._stat();
 
         if (this._all)
             str = ['все'];
+        else
+        {
+            if (st.count != 0)
+                str.push(String.format('{0} из {1}', st.count, st.len));
+            if (st.empty)
+                str.push('&lt;пусто&gt;');
+        }
 
         this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')))
+    },
+
+    _stat: function()
+    {
+        var op = this._options;
+
+        var res = {
+            len: 0,
+            count: 0,
+            empty: op.empty && this._curEmpty,
+            all: true
+        };
+
+        if (this._items)
+        {
+            res.len = this._items.length;
+            for (var i = 0; i < res.len; i++)
+                if (this._curChecked[this._items[i].value])
+                    res.count++;
+        }
+
+        this._all = res.count == res.len && (!op.empty || res.empty) ||
+            op.emptyMeansAll && res.count == 0 && !res.empty;
+        res.all = this._all;
+
+        return res;
+    },
+
+    isActive: function()
+    {
+        this._stat();
+        return !this._all;
     },
 
     on_dataChanged: function(h)
