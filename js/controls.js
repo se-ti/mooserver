@@ -2146,6 +2146,9 @@ CColumnFilter.prototype =
     {
         this._checked = {};
         this._empty = false;
+        this._curChecked = {};
+        this._curEmpty = this._empty;
+
         this._all = this._options.emptyMeansAll;
         this._c.root.removeClass('text-danger');
     },
@@ -2157,7 +2160,8 @@ CColumnFilter.prototype =
 
         document.addEventListener('click', this._d_onClickOutside, true);
         this._c.holder.removeClass('hidden');
-        this._c.search.focus();
+        this._c.search.val('')
+            .focus();
 
         this._curChecked = $.extend({}, this._checked);
         this._curEmpty = this._empty;
