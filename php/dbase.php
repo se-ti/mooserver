@@ -970,13 +970,23 @@ class CMooseDb extends CTinyDb
 		$this->Query($query);
     }
 
-    function GetGateData(CTinyAuth $auth, $limit = null, $justErr)
+    function GetGateData(CTinyAuth $auth, $limit = null, $justErr, $phoneIds)
     {
         if (!$auth->canAdmin())
             $this->ErrRights();
 
         $limit = ($limit === null) ? 100 : $this->ValidateId($limit, "Недопустимое значение limit", 1);
         $justErr = $justErr === true ? ' (s.id is null or m.id is null or char_length(rs.text) < 50) ' : 'true';
+
+        if ($phoneIds === null)
+            $phones = 'true';
+        else
+        {
+            $phones = filter_var($phoneIds, FILTER_VALIDATE_INT, array('flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => array('min_range' => 1)));
+            if (!$phones)
+                $this->Err(ErrWrongPhoneId);
+            $phones = 'rs.phone_id in (' . implode(', ', $phones). ')';
+        }
 
         $access = $this->CanSeeCond($auth, 'p');
 
@@ -990,7 +1000,7 @@ class CMooseDb extends CTinyDb
             left join sms s on s.raw_sms_id = rs.id
             left join moose m on m.id = s.moose
 
-            where true and {$access['cond']} and $justErr
+            where true and {$access['cond']} and $justErr and $phones
             order by id desc limit $limit";
 
         $result = $this->Query($query);
