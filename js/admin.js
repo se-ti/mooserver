@@ -139,6 +139,7 @@ CAdmin.prototype = {
         console.log('check');
 
         var doc = this._iframe.get(0).contentWindow.document.body.innerHTML;
+		//console.log(doc);
 		//alert(doc);
         var result = ((doc || '') == '') ? null : JSON.parse(doc);
 
@@ -150,13 +151,23 @@ CAdmin.prototype = {
         }
         else
         {
+			var s="";
             if (result.log && result.log.length > 0)
             {
-                var s = result.log.join("\n");
-                alert(s);
-                if (console.log)
-                    console.log(s);
+                s = result.log.join("\n");
             }
+			
+			if (result.status && result.status.length > 0)
+				{
+					if (s.length > 0 )
+						s+="\n";
+					s+=result.status;
+				}
+				
+			alert(s);
+			
+            if (console.log)
+                console.log(s);
 
             if ((result.error || '') != '')
                 alert(result.error);

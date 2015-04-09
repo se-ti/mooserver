@@ -70,6 +70,12 @@ function parseFile($name, $uploadName)
 			continue;
 			}
 
+		if ( !mb_check_encoding ( $StringArray[2], 'UTF-8') || !mb_check_encoding ( $StringArray[3], 'UTF-8') || !mb_check_encoding ( $StringArray[5], 'UTF-8') || !mb_check_encoding ( $StringArray[7], 'UTF-8'))
+		{
+			$Log [ 'Wrong encoding -- use UTF-8!' ][] = $StringCounter;
+			continue;
+		}			
+			
         $timeString = str_replace('.', '-', $StringArray[5]);
 		$SmsTime = strtotime($timeString); // Change '.' to '-' to make strtotime think date is in american notation
 		
