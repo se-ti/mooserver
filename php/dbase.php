@@ -680,7 +680,7 @@ class CMooseDb extends CTinyDb
 
 		$cond = implode($ids, ", ");
 		if ($cond != '')
-			$cond = "and p.id in ($cond)";
+			$cond = "and p.id in ($cond) and sms_id is not null";
 
 		$timeCond = $this->TimeCondition('position.stamp', $start, $end);
         $access = $this->CanSeeCond($auth, 'p');
