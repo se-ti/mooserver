@@ -2092,7 +2092,8 @@ CColumnFilter = function(root, key, options)
         search: null,
         list: null,
         okBtn: null,
-        cancelBtn: null
+        cancelBtn: null,
+        resetBtn: null
     };
 
     this._key = key;
@@ -2104,11 +2105,12 @@ CColumnFilter = function(root, key, options)
 
     this._all = false;
 
-    this._options = $.extend({search: true, empty: false, emptyMeansAll: true}, options);
+    this._options = $.extend({search: true, reset: true, empty: false, emptyMeansAll: true}, options);
 
     this._d_onActivate = $cd(this, this._onActivate);
     this._d_onOk = $cd(this, this._onOk);
     this._d_onCancel = $cd(this, this._onCancel);
+    this._d_onReset = $cd(this, this._onReset);
     this._d_onSearch = $cd(this, this._onSearch);
     this._d_onClickOutside = $cd(this, this._onClickOutside);
     this._d_onChange = $cd(this, this._onChange);
@@ -2117,6 +2119,15 @@ CColumnFilter = function(root, key, options)
 
 CColumnFilter.prototype =
 {
+    _tpl:  '<div class="hidden filter-holder panel panel-default">' +
+            '<div class="panel-body">' +
+                '<button class="btn btn-default btn-sm" style="margin-bottom: .7em;">Очистить</button>' +
+                '<div><input type="text" class="form-control"/></div>' +
+                '<ul></ul>' +
+                '<div class="filter-buttons"><button class="btn btn-default btn-sm pull-right">Отменить</button><button class="btn btn-primary btn-sm">OK</button></div>' +
+            '</div>' +
+           '</div>',
+
     _buildIn: function(root)
     {
         var c = this._c;
@@ -2126,12 +2137,15 @@ CColumnFilter.prototype =
             .css('cursor', 'pointer')
             .click(this._d_onActivate);
 
-        c.holder = $('<div class="hidden filter-holder panel panel-default"><div class="panel-body"><div><input type="text" class="form-control"/></div><ul></ul><div><button class="btn btn-primary btn-sm">OK</button><button class="btn btn-default btn-sm">Отменить</button></div></div></div>')
+        c.holder = $(this._tpl)
             .appendTo(root);
-        c.okBtn = c.holder.find('button:first')
+        c.okBtn = c.holder.find('.filter-buttons button:last')
             .click(this._d_onOk);
-        c.cancelBtn = c.holder.find('button:last')
+        c.cancelBtn = c.holder.find('.filter-buttons button:first')
             .click(this._d_onCancel);
+        c.resetBtn = c.holder.find('button:first')
+            .click(this._d_onReset)
+            .toggle(this._options.reset);
         c.list = c.holder.find('ul')
             .change(this._d_onChange);
         c.search = c.holder.find('input')
@@ -2190,6 +2204,13 @@ CColumnFilter.prototype =
     _onCancel: function()
     {
         this._deactivate();
+    },
+
+    _onReset: function()
+    {
+        this._curChecked = {};
+        this._curEmpty = false;
+        this._render();
     },
 
     _onClickOutside: function(e)
@@ -2293,7 +2314,8 @@ CColumnFilter.prototype =
                 str.push('&lt;пусто&gt;');
         }
 
-        this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')))
+        this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')));
+        this._c.resetBtn.get(0).disabled = st.empty == false && st.count == 0;
     },
 
     _stat: function()
