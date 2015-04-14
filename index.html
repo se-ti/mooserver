@@ -829,7 +829,7 @@ CBeacon.prototype = {
             return;
 
         var jTgt = $(e.target);
-        var cell = jTgt.parents('td:first');
+        var cell = jTgt.is('td') ? jTgt : jTgt.parents('td:first');
         var id = cell.attr('data-id');
         if ((id || '') != '')
         {
