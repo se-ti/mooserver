@@ -2211,6 +2211,7 @@ CColumnFilter.prototype =
         this._curChecked = {};
         this._curEmpty = false;
         this._render();
+        this._renderCaption();
     },
 
     _onClickOutside: function(e)
