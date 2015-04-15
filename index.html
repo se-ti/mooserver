@@ -1079,7 +1079,7 @@ CGate = function(after)
 CGate.prototype =
 {
     _ctrlTpl: '<div class="form-inline" style="margin-bottom: 0.5em;"><div class="form-group"><label for="gate-select">Записей: </label> <select id="gate-select" class="form-control"><option value="100">100</option><option value="500" selected>500</option><option value="3000">3000</option></select></div>'
-                +' <div class="checkbox" style="margin-left: 1em;"> <label> <input type="checkbox" checked />  Только ошибочные</label></div>'
+                +' <div class="checkbox" style="margin-left: 1em;"> <label> <input type="checkbox"/> Только ошибочные</label></div>'
                 +' <button type="button" disabled class="btn btn-default btn-sm" style="margin-left: 1em;">Очистить фильтр</button></div>',
 
     match: function(hash)
@@ -1195,7 +1195,7 @@ CGate.prototype =
     {
         if (!this._head)
             this._head = this._table.find('thead')
-                .html('<tr><th>id</th><th>stamp</th><th>гейт</th><th>прибор</th><th>лось</th><th>статус</th>' + (this._isSuper ? '<th></th>' : '') + '</tr>');
+                .html('<tr><th>id</th><th>stamp</th><th>гейт</th><th>прибор</th><th>животное</th><th>статус</th>' + (this._isSuper ? '<th></th>' : '') + '</tr>');
 
         var phones = CApp.single().getPhones();
         if (!phones || this._phoneFilter)

@@ -1443,14 +1443,12 @@ CHeatSett.prototype =
 
         var tpl = '<div class="panel panel-default" style="margin-top: 3ex;"> ' +
             '<div class="panel-body form-horizontal"> ' +
-            '<div class="row -form-group" style="margin-bottom: 1ex;"><div class="col-sm-offset-4 col-sm-8"><div class="checkbox "><label><input type="checkbox"/> Weight heatMap</label></div></div></div>'+
+            '<div class="row -form-group" style="margin-bottom: 1ex;"><div class="col-sm-offset-4 col-sm-8"><div class="checkbox "><label><input type="checkbox"/> учитывать активность</label></div></div></div>'+
             '<div class="row"><label for="hs_level" class="col-sm-4 control-label">Level</label><div class="col-sm-8"><input class="form-control" type="text" placeholder="level" value="20" id="hs_level"/></div></div>' +
             '<div class="row"><label for="hs_degree" class="col-sm-4 control-label">Degree</label><div class="col-sm-8"><input class="form-control" type="text" placeholder="degree" value="1" id="hs_degree"/></div></div>' +
             '<div class="row"><label for="hs_step" class="col-sm-4 control-label">Step</label><div class="col-sm-8"><input class="form-control" type="text" placeholder="degree" value="1" id="hs_step"/></div></div>' +
             '</div>' +
             '</div>';
-
-        //tpl = '<div class="checkbox form-control"><label><input type="checkbox"/> Weight heatMap</label></div>';
 
         var e =  $(tpl).appendTo(root);
         c.root = e;
@@ -1593,11 +1591,10 @@ CMooseMap.prototype = {
     {
         var el = $(this.map.getContainer()).find('.leaflet-control-layers-list');
         var e = $('<div class="leaflet-control-layers-list ll-extend"></div>').insertAfter(el);
-        //e.append('<div><label><input type="checkbox"><span> взвешенный</span></label></div>');
         e.append('<div class="leaflet-control-layers-separator"/>');
 
         var t = this;
-        $(String.format('<div><label><input type="checkbox" {0}><span> show invalid</span></label></div>', this._showInvalid ? 'checked' : ''))
+        $(String.format('<div><label><input type="checkbox" {0}><span> показывать невалидные</span></label></div>', this._showInvalid ? 'checked' : ''))
             .appendTo(e)
             .find('input')
             .change(function(e){t._showInvalid = this.checked; t.update()});

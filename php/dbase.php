@@ -757,7 +757,7 @@ class CMooseDb extends CTinyDb
         $result = $this->Query($query);
         $result->closeCursor();
 
-        Log::t($this, $auth, 'reassignSms', "перевешиваем на лося '$moose', rawSmsIds: '$ids'");
+        Log::t($this, $auth, 'reassignSms', "перевешиваем на животное '$moose', rawSmsIds: '$ids'");
         return array('res' => true, 'rc' => $result->rowCount());
     }
 
