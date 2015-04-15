@@ -1870,7 +1870,7 @@ CMooseMap.prototype = {
             d.setTime(Date.parse(ll._time));
             var c = String.format("{0}<br/>{1} N, {2} E", d.toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
             if (ll._cnt != null)
-                c += String.format('<br/>Activity: {0} / {1}', ll._sum || 0, ll._cnt || 0);
+                c += String.format('<br/>Активность: {0} / {1}', ll._sum || 0, ll._cnt || 0);
             p.setContent(c);
 
             if (!p._isOpen)                         // HACK 2 !!!
