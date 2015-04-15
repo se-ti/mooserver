@@ -1531,7 +1531,7 @@ CMooseMap = function(root, id, root2)
     this._idx = null;
     this._blockMarker = false;
 
-    this._showInvalid = true;
+    this._showInvalid = false;
     this._canToggle = false;
     this._forPrint = false;
 
@@ -1712,6 +1712,7 @@ CMooseMap.prototype = {
                 pt._valid = valid;
                 pt._cnt = src[j].cnt;
                 pt._sum = src[j].sum;
+                pt._str = src[j].str;
                 ll.push(pt);
 
                 if (hasHeat)
@@ -1757,8 +1758,8 @@ CMooseMap.prototype = {
         var shift;
         switch (e.keyCode)
         {
-            case 65: shift = -10; break; // a
-            case 68: shift = 10; break; // d
+            case 65: shift = -12; break; // a
+            case 68: shift = 12; break; // d
             case 83: shift = -1; break; // s
             case 87: shift = 1; break; // w
             default: return;
@@ -1870,7 +1871,7 @@ CMooseMap.prototype = {
             d.setTime(Date.parse(ll._time));
             var c = String.format("{0}<br/>{1} N, {2} E", d.toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
             if (ll._cnt != null)
-                c += String.format('<br/>Активность: {0} / {1}', ll._sum || 0, ll._cnt || 0);
+                c += String.format('<br/>Активность: {2} ({0} / {1})', ll._sum || 0, ll._cnt || 0, ll._str || '');
             p.setContent(c);
 
             if (!p._isOpen)                         // HACK 2 !!!
@@ -1997,6 +1998,7 @@ CMooseMapHelper.glueTrackData = function(result)
 
     var i;
     var j;
+    var tPt;
     var delta = 31 * 60 * 1000; // bit more than half an hour;
 
     var track = result.track;
@@ -2009,7 +2011,7 @@ CMooseMapHelper.glueTrackData = function(result)
         var t = track[i].tm;
         j = 0;
         var idx = aLen - 1;
-        while (idx > j+1)				// двоичный поиск
+        while (idx > j+1)				// binary search
         {
             var pos = Math.floor((idx + j) / 2);
             if (t - act[pos].tm > delta)
@@ -2020,13 +2022,16 @@ CMooseMapHelper.glueTrackData = function(result)
         if (j < aLen && t - act[j].tm < delta)
             idx = j;
 
-        track[i].sum = 0;
-        track[i].cnt = 0;
+        tPt = track[i];
+        tPt.sum = 0;
+        tPt.cnt = 0;
+        tPt.str = '';
         if (idx >= 0 && t - act[idx].tm < delta)
             for (j = idx; j < aLen && act[j].tm - t < delta; j++)
             {
-                track[i].cnt++;
-                track[i].sum += act[j][1];
+                tPt.cnt++;
+                tPt.sum += act[j][1];
+                tPt.str += act[j][1]; // == 0 ? '.' : '!';
             }
     }
 
