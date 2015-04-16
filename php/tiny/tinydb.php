@@ -175,7 +175,11 @@ class CTinyDb
 			return;
 		$session = $this->db->quote($session);
 
-		$query = "delete from session where id = $session";
+        $short = CTinyAuth::Short;
+        $long = CTinyAuth::Long;
+		$query = "delete from session where id = $session
+		    or DATE_ADD(last, INTERVAL $short SECOND) < UTC_TIMESTAMP
+		    or DATE_ADD(start, INTERVAL $long SECOND) < UTC_TIMESTAMP";
         $this->Query($query);
     }
 

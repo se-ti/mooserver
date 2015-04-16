@@ -16,7 +16,7 @@ class CTinyAuth
     const MinGroup = 1001;  // см alter table users AUTO_INCREMENT = 1001
 
 	const Short = 3600; // 1 hour
-	const Long = 43200; // 30 days
+	const Long = 2592000; // 30 days
 
 	protected $id;
 	protected $name;
