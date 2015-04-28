@@ -176,7 +176,7 @@ class CTinyAuth
         return $this->tryLoginInt($db, $login, $pass, true);
     }
 
-    protected function canLoginDirectly($usr)
+    protected function canLoginDirectly($usr, $needSession)
     {
         return isset($usr['id']) && $usr['removed'] == null && $usr['is_group'] == false;
     }

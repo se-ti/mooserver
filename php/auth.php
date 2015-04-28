@@ -80,6 +80,8 @@ class CMooseAuth extends CTinyAuth
         if ($feed == true && array_search(self::Feeders, $orgs) === false )
             $orgs[] = self::Feeders;
 
+        $db->beginTran();
+
         $pwd = $db->CreateToken(6);
         $res = $db->CreateUser($this, $name, $comment, password_hash($pwd, PASSWORD_BCRYPT), $orgs, false, 'Не задан логин пользователя', "Пользователь '$name' уже есть в системе");
 
