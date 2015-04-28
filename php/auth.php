@@ -36,6 +36,11 @@ class CMooseAuth extends CTinyAuth
 		$this->groups[] = self::Feeders;
 	}
 
+    protected function canLoginDirectly($usr, $needSession)
+    {
+        return parent::canLoginDirectly($usr, $needSession) && $usr['is_gate'] != $needSession;
+    }
+
     function gateLogin(CTinyDb $db, $gate, $pwd = null)
     {
         if (!defined('TINY_API_LOGIN'))
@@ -48,7 +53,7 @@ class CMooseAuth extends CTinyAuth
             return $this->tryLoginInt($db, $gate, $pwd, false);
 
         $usr = $db->UserByLogin($gate);
-        if (!isset($usr['id']) || $usr['removed'] != null || $usr['is_group'] == true)
+        if (! parent::canLoginDirectly($usr, false))
             return 'no such user';
 
         if (isset($usr['block']) && $usr['block'] > time())

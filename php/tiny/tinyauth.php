@@ -176,6 +176,11 @@ class CTinyAuth
         return $this->tryLoginInt($db, $login, $pass, true);
     }
 
+    protected function canLoginDirectly($usr)
+    {
+        return isset($usr['id']) && $usr['removed'] == null && $usr['is_group'] == false;
+    }
+
 	protected function tryLoginInt(CTinyDb $db, $login, &$pass, $needSession)
 	{
 		if ($db == null)
@@ -183,9 +188,8 @@ class CTinyAuth
 
 		$this->setAnonymous();
 		$usr = $db->UserByLogin($login);
-		if (!isset($usr['id']) || $usr['removed'] != null || $usr['is_group'] == true || $usr['is_gate'] == $needSession)       // todo вынести знания про лосиную специфику из tiny
+		if (!$this->canLoginDirectly($usr, $needSession))
 			return false;
-
 
 		if (isset($usr['block']) && $usr['block'] > time())
         {
@@ -206,7 +210,7 @@ class CTinyAuth
 		$this->setUser($usr);
         if ($needSession)
 		    $this->startSession($db);
-        Log::t($db, $this, "auth", "login successful" . ($needSession ? '' : ' as gate'));
+        Log::t($db, $this, "auth", "login successful" . ($needSession ? '' : ' no session'));
 		return true;
 	}
 
