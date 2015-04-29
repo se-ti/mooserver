@@ -164,6 +164,13 @@ class CMooseDb extends CTinyDb
         return $timeCond;
     }
 
+    protected function addGroupsCanAdmin(&$groups)
+    {
+        $groups = parent::addGroupsCanAdmin($groups);
+        $groups[] = CMooseAuth::Feeders;                       // даже если у самого прав нет -- его можно добавить
+        return $groups;
+    }
+
 	function AddMoose(CMooseAuth $auth, $phoneId, $name, $demo, $org)
 	{
 		if (!$auth->canAdmin())

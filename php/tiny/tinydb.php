@@ -499,6 +499,11 @@ class CTinyDb
         return $res;
     }
 
+    protected function addGroupsCanAdmin(&$groups)
+    {
+        return $groups;
+    }
+
     protected function SetUserGroups(CTinyAuth $auth, $userId, array $groupIds)
     {
         if (!$auth->canAdmin())
@@ -509,7 +514,7 @@ class CTinyDb
             $this->Err("недопустимый id группы");
 
         $canUse = $this->GetUsersGroups($auth->id());
-        $canUse[] = CMooseAuth::Feeders; // даже если у самого прав нет -- его можно добавить
+        $this->addGroupsCanAdmin($canUse);
 
         $isSuper = $auth->isSuper();
 
