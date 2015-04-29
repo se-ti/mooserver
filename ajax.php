@@ -67,6 +67,7 @@ try {
 }
 catch (Exception $e)
 {
+    $db->rollback();
     Log::e($db, $auth, $mName, $e->getMessage());
     dieError($e->getMessage());
 }
