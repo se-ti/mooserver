@@ -83,7 +83,7 @@ class CMooseAuth extends CTinyAuth
         $db->beginTran();
 
         $pwd = $db->CreateToken(6);
-        $res = $db->CreateUser($this, $name, $comment, password_hash($pwd, PASSWORD_BCRYPT), $orgs, false, 'Не задан логин пользователя', "Пользователь '$name' уже есть в системе");
+        $res = $db->CreateUser($this, $name, $comment, password_hash($pwd, PASSWORD_BCRYPT), true, $orgs, 'Не задан логин пользователя', "Пользователь '$name' уже есть в системе");
 
         $token = $db->SetUserToken($this, $res, CTinyDb::Verify);
 
@@ -117,12 +117,19 @@ class CMooseAuth extends CTinyAuth
         return $res;
     }
 
-    function AddGate(CTinyDb $db, $name, $comment, array $orgs)
+    function AddGate(CMooseDb $db, $name, $comment, array $orgs)
     {
         if (array_search(self::Feeders, $orgs) === false )
             $orgs[] = self::Feeders;
 
-        return $db->CreateUser($this, $name, $comment, null, $orgs, true, 'Не задано название гейта', "Гейт '$name' уже есть в системе");
+        $db->beginTran();
+        $res = $db->CreateUser($this, $name, $comment, null, false, $orgs, 'Не задано название гейта', "Гейт '$name' уже есть в системе");
+        $db->MakeUserGate($this, $res);
+        $db->commit();
+
+        Log::t($db, $this, 'create', "Create gate, login: '$name', name: '$comment'");
+
+        return $res;
     }
 
     function UpdateGate(CTinyDb $db, $id, $name, $comment, $orgs)

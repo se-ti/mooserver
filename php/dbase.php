@@ -970,6 +970,15 @@ class CMooseDb extends CTinyDb
 		$this->Query($query);
     }
 
+    function MakeUserGate(CMooseAuth $auth, $userId)
+    {
+        if (!$auth->canAdmin() || !$this->CanAccess($auth, $userId, false))
+            $this->ErrRights();
+
+        $query = "update users set is_gate = 1 where id = $userId";
+        $this->Query($query);
+    }
+
     function GetGateData(CTinyAuth $auth, $limit = null, $justErr, $phoneIds)
     {
         if (!$auth->canAdmin())

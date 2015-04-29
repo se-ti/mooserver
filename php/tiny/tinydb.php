@@ -67,10 +67,13 @@ class CTinyDb
 
     public function beginTran()
     {
-        if ($this->db == null)
-            return;
+        $old = $this->useTran;
+        if ($this->db == null || $old)
+            return $old;
+
         $this->useTran = true;
         $this->db->beginTransaction();
+        return $old;
     }
     public function commit()
     {
@@ -330,7 +333,7 @@ class CTinyDb
      */
     protected function CanAccess(CTinyAuth $auth, $id, $isGroup)
     {
-        if ($auth->isSuper() ||  $auth->id() == $id && $id  > CTinyAuth::Anonymous)
+        if ($auth->isSuper() || $auth->id() == $id && $id > CTinyAuth::Anonymous)
             return true;
 
         if (!$auth->canAdmin())
@@ -467,34 +470,31 @@ class CTinyDb
 
     // todo validate email for users
     // todo требовать пароль для всех
-    function CreateUser(CTinyAuth $auth, $login, $name, $pwdHash, array $groups, $isGate, $errNoName, $errDuplicate)
+    function CreateUser(CTinyAuth $auth, $login, $name, $pwdHash, $requirePassword, array $groups, $errNoName, $errDuplicate)
     {
         if (!$auth->canAdmin())
             $this->ErrRights();
 
         $v = $this->ValidateNameComment($login, $name, $errNoName);
-        $isGate = filter_var($isGate, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-        if ($isGate === null)
-            $this->Err("Недопустимое значение флага isGate");
 
-        if ($isGate == false && $pwdHash === null)
+        if ($requirePassword == true && $pwdHash === null)
             $this->Err('Для создаваемого пользователя не указан пароль');
 
         $pwdHash =  ($pwdHash !== null  && is_string($pwdHash)) ?  $this->db->quote($pwdHash)  : 'null';
-        $isGateVal = $isGate ? 1 : 0;
 
-        $query = "insert into users (login, name, is_group, is_gate, pwd) values ({$v['name']}, {$v['comment']}, 0, $isGateVal, $pwdHash)";
+        $query = "insert into users (login, name, is_group, pwd) values ({$v['name']}, {$v['comment']}, 0, $pwdHash)";
 
-        $this->beginTran();
+        $hadTran = $this->beginTran();
         $this->Query($query, $errDuplicate);
 
         $res = $this->db->lastInsertId();
         $this->SetUserGroups($auth, $res, $groups);
 
-        $this->commit();
-
-        $type = $isGate ? 'gate' : 'user';
-        Log::t($this, $auth, 'create', "Create $type, login: '$login', name: '$name'");
+        if (!$hadTran)
+        {
+            $this->commit();
+            Log::t($this, $auth, 'create', "Create user, login: '$login', name: '$name'");
+        }
 
         return $res;
     }
@@ -553,6 +553,7 @@ class CTinyDb
 
         return $token;
     }
+
     function SetUserToken(CTinyAuth $auth, $userId, $type)
     {
         if ($auth == null)
