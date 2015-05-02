@@ -186,7 +186,7 @@ class CMooseDb extends CTinyDb
                 $this->ErrRights();
         }
 
-        $name = $this->db->quote($this->ValidateTrim($name, self::ErrEmptyMoose));
+        $name = $this->ValidateTrimQuote($name, self::ErrEmptyMoose);
 
 		$query = "insert into moose (phone_id, name, demo, group_id) values (null, $name, {$vd['demo']}, {$vd['group']})";
 
@@ -234,7 +234,7 @@ class CMooseDb extends CTinyDb
             $pCond = "and phone.id = $pId";
         }
 
-        $name = $this->db->quote($this->ValidateTrim($name, self::ErrEmptyMoose));
+        $name = $this->ValidateTrimQuote($name, self::ErrEmptyMoose);
 
         $query = "update moose, phone
             set phone_id = null, name = $name, moose.demo = {$vd['demo']}, moose.group_id = {$vd['group']} $pUpdate
@@ -267,7 +267,7 @@ class CMooseDb extends CTinyDb
                 $this->ErrRights();
         }
 
-        $phone = $this->db->quote($this->ValidateTrim($phone, self::ErrEmptyPhone));
+        $phone = $this->ValidateTrimQuote($phone, self::ErrEmptyPhone);
         $canonical = $this->db->quote(self::CanonicalPhone($phone));
 
         $this->beginTran();
@@ -308,7 +308,7 @@ class CMooseDb extends CTinyDb
         }
 
         $vd = $this->ValidateOrgs($auth, $demo, $org);
-        $phone = $this->db->quote($this->ValidateTrim($phone, self::ErrEmptyPhone));
+        $phone = $this->ValidateTrimQuote($phone, self::ErrEmptyPhone);
         $canonical = $this->db->quote(self::CanonicalPhone($phone));
 
         $this->beginTran();

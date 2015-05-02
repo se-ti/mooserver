@@ -289,7 +289,7 @@ class CTinyDb
 		return $this->UserBy("login = " . $this->db->quote($login));
 	}
 
-    protected function ValidateTrim($str, $err = 'строка должна быть не пустой')
+    protected function ValidateTrimQuote($str, $err = 'строка должна быть не пустой')
     {
         if ($str == null || ! is_string($str))
             $this->Err($err);
@@ -297,12 +297,12 @@ class CTinyDb
         $str = trim($str);
         if (strlen($str) == 0)
             $this->Err($err);
-        return $str;
+        return $this->db->quote($str);
     }
 
     private function ValidateNameComment($name, $comment, $errNoName = 'не задано имя')
     {
-        return array('name' =>$this->db->quote($this->ValidateTrim($name, $errNoName)),
+        return array('name' => $this->ValidateTrimQuote($name, $errNoName),
                     'comment' => ($comment !== null && is_string($comment)) ? $this->db->quote(trim($comment)) : 'null');
     }
 
