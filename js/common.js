@@ -18,6 +18,27 @@ function $cd(ctx, func)
 	};
 }
 
+// ['яблоко', 'яблока', 'яблок']
+function $decline(num, forms)
+{
+    if (isNaN(num) ||  forms instanceof Array == false)
+        return "";
+    if (forms.length < 3)
+        return forms[0];
+
+    var nd = num % 10;
+    switch (num % 100)
+    {
+        case 11: case 12: case 13: case 14: return forms[2];
+        default: return nd == 0 || nd > 4 ? forms[2] : (nd == 1 ? forms[0] : forms[1]);
+    }
+}
+
+function $decl(num, forms)
+{
+    return '' + num + ' ' + $decline(num, forms);
+}
+
 function $selAdd(select, idx, value, text)
 {
 	if (!select)
