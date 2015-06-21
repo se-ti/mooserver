@@ -63,10 +63,10 @@ function csvTimeHeader()
 	$start = @$_POST['start'];
 	$end   = @$_POST['end'];
 	if ($start != null)
-		$res .= "с\t$start\t". gmdate('Y-m-d H:i:s', strtotime($start)) . "\n";
+		$res .= "с;" . csvEscape($start) . ";". csvEscape(gmdate('Y-m-d H:i:s', strtotime($start))) . "\n";
 
 	if ($end != null)
-		$res .= "по\t$end\n";
+		$res .= "по;" . csvEscape($end) . "\n";
 
 	return $res;
 }
@@ -97,12 +97,12 @@ function exportBeacons()
             $phones[] = $phone;
         
 		foreach($phoneData['data'] as $row)
-			$rows[] = $phone ."\t". implode("\t", $row);
+			$rows[] = csvEscape($phone, true) .";". implode(";", array_map('csvEscape', $row));
 	}
 
 	$header = "Экспорт маяков\n";
 	$header .= csvTimeHeader();
-	$header .="\nМаяк\tПолучено\tпоследняя точка\tвн. id\tV\tT C\tGPS on мин\tGSM tries";
+	$header .="\nМаяк;Получено;последняя точка;вн. id;V;T C;GPS on мин;GSM tries;rawSms id";
 
     $fname = count($phones) == 1 ? preg_replace('/[^\dx]/', '', $phones[0]) : 'beacons';
 	
@@ -121,20 +121,22 @@ function exportActivity()
 
 	$rows = array(); 
 	$names = array();
+    $qNames = array();
 	if ($data != null)
 		foreach($data as $moose)
 		{
 			$name = mooseName($moo, $moose['id']);
 			$names[] = $name;
-            $name .= "\t";
+            $name = csvEscape($name);
+            $qNames[] = $name;
 		
 			foreach($moose['activity'] as $mark)
-				$rows[] = $name . implode("\t", $mark);
+				$rows[] = $name . ";" . implode(";", array_map("csvEscape", $mark));
 		}
 
-	$header = "Экспорт активности для:\t" . implode("\t", $names) . "\n";
+	$header = "Экспорт активности для:;" . implode(";", $qNames) . "\n";
 	$header .= csvTimeHeader();
-	$header .= "\nживотное\tвремя\tактивен";
+	$header .= "\nживотное;время;активен;валиден";
 
 	$fname = implode('_', $names);
 	if ($fname == '')

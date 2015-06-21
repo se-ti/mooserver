@@ -113,6 +113,14 @@ function getBeaconData($forExport = false)
 	return $db->GetBeaconStat($auth, $ids, _safeTime('start'), _safeTime('end'), $all, $forExport);
 }
 
+function csvEscape($cell, $forceText = false)
+{
+    $pfx = $forceText ? '=' : '';
+    return $forceText == false && preg_match("/[\";\n]/im", $cell) != 1 ?      // if contains quote, semicolon or new line
+        $cell :
+        ($pfx. '"' . str_replace('"', '""', $cell) . '"');
+}
+
 
 /************************************** service functions *********************************************/
 
