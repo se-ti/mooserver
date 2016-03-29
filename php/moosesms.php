@@ -156,7 +156,7 @@ class CMooseSMS
 			return;
 		}
 		
-		if ( $DayOfYear > 365 - 14 && date("M", $this->time) < 2) 
+		if ( $DayOfYear > 365 - 14 && date("m", $this->time) < 2) 
 			$EpochYear--; 	// The message does not carry a year, which it's generated in.
 							// If the message is received in the beginning of an year, but was sent
 							// in the end of an year, mostly probably it was the previous year.
