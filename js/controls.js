@@ -35,10 +35,10 @@ CLogin.prototype =
 
         '<button class="btn btn-success" type="button" id="activate">Войти</button> ' +
 
-		'<button class="btn btn-success hidden" type="button" id="login">Войти</button> ' +
+		// '<button class="btn btn-success hidden" type="button" id="login">Войти</button> ' +
 
         '<div class="form-group has-feedback has-warning">' +
-			'<button class="btn btn-warning" type="button" id="logout">Выход</button>' +
+			'<button class="btn btn-warning hidden" type="button" id="logout">Выход</button>' +
 		'</div> ' +
 	  '</form>' +
 	  '<p class="navbar-text navbar-right" id="name"><a href="#profile" class="navbar-link">root</a></p>',

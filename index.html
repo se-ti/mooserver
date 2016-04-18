@@ -1273,8 +1273,14 @@ CGate.prototype =
         var je = $(e.target);
         if (!je.hasClass('del') && !je.hasClass('chmoose'))
         {
-            if (je.parents('tr').length > 0)
+            this._body.find('tr').removeClass('success');
+            var rows = je.parents('tr');
+            if (rows.length > 0)
+            {
+                $(rows[0]).addClass('success');
                 this._mapHelper.drawRawSms(this._map, this._getSmsId(e));
+            }
+
             return;
         }
 
