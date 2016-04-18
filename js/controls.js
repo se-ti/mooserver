@@ -38,10 +38,10 @@ CLogin.prototype =
 		// '<button class="btn btn-success hidden" type="button" id="login">Войти</button> ' +
 
         '<div class="form-group has-feedback has-warning">' +
-			'<button class="btn btn-warning hidden" type="button" id="logout">Выход</button>' +
+			'<button class="btn btn-warning" type="button" style="display: none;" id="logout">Выход</button>' +
 		'</div> ' +
 	  '</form>' +
-	  '<p class="navbar-text navbar-right" id="name"><a href="#profile" class="navbar-link">root</a></p>',
+	  '<p class="navbar-text navbar-right" id="name"><a href="#profile" class="navbar-link"></a></p>',
 
 
     _modal: //'<!-- Modal -->' +
