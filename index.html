@@ -1273,6 +1273,8 @@ CGate.prototype =
         if (!e || !e.target)
             return;
         var je = $(e.target);
+        if (je.parents('thead').length > 0)
+                return;
 
         this._body.find('tr').removeClass('success');
         var rows = je.parents('tr');
