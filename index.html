@@ -1271,15 +1271,17 @@ CGate.prototype =
         if (!e || !e.target)
             return;
         var je = $(e.target);
+
+        this._body.find('tr').removeClass('success');
+        var rows = je.parents('tr');
+        if (rows.length > 0)
+            $(rows[0]).addClass('success');
+
+
         if (!je.hasClass('del') && !je.hasClass('chmoose'))
         {
-            this._body.find('tr').removeClass('success');
-            var rows = je.parents('tr');
             if (rows.length > 0)
-            {
-                $(rows[0]).addClass('success');
                 this._mapHelper.drawRawSms(this._map, this._getSmsId(e));
-            }
 
             return;
         }
