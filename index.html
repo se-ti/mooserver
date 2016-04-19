@@ -42,6 +42,9 @@ button:last-of-type,
 button.pull-right {margin-right: 0;}
 button.pull-right {margin-left: 0.7em;}
 
+td.smsText { overflow-x: hidden; text-overflow: ellipsis; }
+td.smsSmallText {font-size:13px}
+
 .leaflet-control label {margin-bottom: inherit; font-weight: inherit;}
 .ll-extend input[type="checkbox"] {position: relative; top: 1px;}
 .ctxMenu .leaflet-popup-tip-container {display:none;}
@@ -1174,7 +1177,7 @@ CGate.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr data-id="{0}"><td rowspan="{7}">{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td>{8}</tr>';
+        var tpl = '<tr data-id="{0}"><td rowspan="2">{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td>{7}</tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
@@ -1182,9 +1185,8 @@ CGate.prototype =
             var d = new Date();
             d.setTime(Date.parse(it.stamp));
             var stat = this._itemStatus(it);
-            body += String.format(tpl, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, stat.needText ? 2: 1, this._renderButtons(it, stat));
-            if (stat.needText)
-                body += String.format('<tr><td colspan="6" style="overflow-x: hidden; text-overflow: ellipsis;"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.toHTML(it.text));
+            body += String.format(tpl, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
+                    + String.format('<tr data-id="{0}"><td colspan="6" class="smsText {2}"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.toHTML(it.text), stat.needText ? '' : 'smsSmallText');
         }
 
         this._table.removeClass('hidden');
