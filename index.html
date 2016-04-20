@@ -43,7 +43,8 @@ button.pull-right {margin-right: 0;}
 button.pull-right {margin-left: 0.7em;}
 
 td.smsText { overflow-x: hidden; text-overflow: ellipsis; }
-td.smsSmallText {font-size:13px}
+td.smsSmallText {font-size:13px}    /*здесь будут еще 2 вложенных <small>*/
+td.smsSmallText2 {font-size:9px}
 
 .leaflet-control label {margin-bottom: inherit; font-weight: inherit;}
 .ll-extend input[type="checkbox"] {position: relative; top: 1px;}
@@ -1002,6 +1003,8 @@ CSingleBeacon.prototype =
                 }
 
                 body += String.format('<tr data-id="{0}">{1}</tr>', phd[j][7], line);
+                if (phd[j].length > 8 && (phd[j][8] || '') != '')
+                        body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="7">{1}</td></tr>', phd[j][7], phd[j][8]);
             }
         }
 
