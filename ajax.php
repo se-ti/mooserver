@@ -62,12 +62,23 @@ $method = @$methods[$mName];
 if ($method == null)
     dieError("Method '$mName' not supported");
 
+$needComp = $mName == 'getData' || $mName == 'getBeaconData' || $mName == 'getGateData';
+
 try {
+    if ($needComp)
+        ob_start('ob_gzhandler');
+    
     echo json_encode($method());
+    
+    if ($needComp)
+        ob_end_flush();
 }
 catch (Exception $e)
 {
     $db->rollback();
+    if ($needComp)
+        ob_end_clean();
+    
     Log::e($db, $auth, $mName, $e->getMessage());
     dieError($e->getMessage());
 }

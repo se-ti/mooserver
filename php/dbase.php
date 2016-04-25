@@ -704,7 +704,7 @@ class CMooseDb extends CTinyDb
 				left join sms on sms.raw_sms_id = rs.id
 				left join (select sms_id, max(stamp) as st from position where true $timeCond group by sms_id) pos on pos.sms_id = sms.id
 				left join moose m on m.phone_id = p.id
-				where $expCond $cond $active and {$access['cond']}
+				where $expCond $cond $active and {$access['cond']} 
 
 			 order by phone, pos.st desc";
 
@@ -716,6 +716,9 @@ class CMooseDb extends CTinyDb
 			$ph = $row['pId'];
 			if (!isset($res[$ph]))
 				$res[$ph] = array('id' => $ph, 'phone' => self::Obfuscate($auth, $row['phone']), 'canonical' => self::Obfuscate($auth, $row['canonical']), 'moose' => $row['mName'], 'active' => $row['active'] == 1, 'data' => array());
+
+            if ($row['pos_time'] == null)
+                continue;
 
 			$res[$ph]['data'][] = array($row['tm'], $row['pos_time'], $row['int_id'], $row['volt'], $row['temp'], $row['gps_on'], $row['gsm_tries'], $row['rsId'], $addText ? $row['text'] : null);
 		}
