@@ -76,8 +76,9 @@ function getData()
 function getSms()
 {
     global $auth, $db;
-    if (!$auth->canAdmin() && !$auth->canFeed())
-        dieError(CTinyDb::ErrCRights);
+	// todo: аккуратнее проверить права, с учетом demo и т.п.
+    /*if (!$auth->canAdmin() && !$auth->canFeed())
+        dieError(CTinyDb::ErrCRights);*/
 
     $smsId = checkId(@$_POST['rawSmsId'], 'Недопустимый id sms', false);
 

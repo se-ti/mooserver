@@ -136,7 +136,7 @@ function $ajax(method, param, success, fail)
             if (console && console.log)
                 console.log(textStatus);
         };
-    
+
     r.fail(fail);
 	return r;
 }
@@ -263,6 +263,8 @@ CPage.prototype =
 
         if (this._text)
             document.title = 'MooServer: ' + this._text;
+
+        CApp.single().error('');
 
         this._isActive = true;
     },
