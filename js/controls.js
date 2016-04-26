@@ -616,7 +616,6 @@ CProfileNameEdit.prototype =
     {
         if (result.error)
         {
-
             CApp.single().error(result.error);
             return;
         }
@@ -1815,8 +1814,7 @@ CMooseMap.prototype = {
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
 
@@ -2069,8 +2067,7 @@ CMooseMapHelper.prototype =
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
 

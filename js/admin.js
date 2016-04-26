@@ -109,8 +109,7 @@ CAdmin.prototype = {
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
 
@@ -282,8 +281,7 @@ CLogs.prototype =
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
         if (!this._table)

@@ -450,8 +450,7 @@ CMoose.prototype =
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
 
@@ -539,8 +538,7 @@ CMoose.prototype =
 	{
 		if (result.error)
 		{
-			if (console)
-				console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
 			return;
 		}
 
@@ -730,8 +728,7 @@ CBeacon.prototype = {
 	{
 		if (result.error)
 		{
-			if (console)
-				console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
 			return;
 		}
 		if (!this._stat)
@@ -960,8 +957,7 @@ CSingleBeacon.prototype =
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
         if (!this._table)
@@ -1156,8 +1152,7 @@ CGate.prototype =
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
 
@@ -1313,8 +1308,7 @@ CGate.prototype =
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
 
@@ -1479,8 +1473,7 @@ CProfile.prototype = {
     {
         if (result.error)
         {
-            if (console)
-                console.log(result.error);
+            log('Ошибка Ajax: ' + result.error);
             return;
         }
         var c = this._c;

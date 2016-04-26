@@ -130,8 +130,14 @@ function $ajax(method, param, success, fail)
 		success: success,
 		type: 'post'
 		});
-	if (fail)
-		r.fail(fail);
+
+    fail = fail || function(jqXHR, textStatus, errorThrown)
+        {
+            if (console && console.log)
+                console.log(textStatus);
+        };
+    
+    r.fail(fail);
 	return r;
 }
 
@@ -139,6 +145,8 @@ function $ajax(method, param, success, fail)
 function log(msg)
 {
     CApp.single().error(String.toHTML(msg));
+    if (console)
+        console.log(msg);
 }
 
 CControl = function()
