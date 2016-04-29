@@ -133,8 +133,9 @@ function $ajax(method, param, success, fail)
 
     fail = fail || function(jqXHR, textStatus, errorThrown)
         {
-            if (console && console.log)
-                console.log(textStatus);
+            log(String.format("Запрос к '{0}' завершился ошибкой: {1}, {2}", this.url, jqXHR.status, errorThrown));
+            /*if (console && console.log)
+                console.log(textStatus);*/
         };
 
     r.fail(fail);
