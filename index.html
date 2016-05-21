@@ -27,14 +27,22 @@ td .note {visibility: hidden;}
 tr:hover > td > .note {visibility: visible;}
 table.hideControls tr:hover > td > .note {visibility: hidden;}
 
+
 div.bold {font-weight: bold;}
 
 .mainmap {min-height:700px; max-height:1024px;}
 .map2 {min-height:450px; max-height:500px;}
 .map3 {min-height:400px; max-height:400px; width:100%; margin: 1.5em 0;}
 
-.panel+.affix {margin-top: -1.2em;}
-.panel.hidden+.affix {margin-top: inherit;}
+@media (min-width: 768px) {
+    .moo-affix {
+        position: fixed;
+        transform: translate3d(0px, 0px, 0px);
+    }
+}
+
+.panel+.moo-affix {margin-top: -1.2em;}
+.panel.hidden+.moo-affix {margin-top: inherit;}
 .map-panel {width: 263px;}
 
 button {margin-right: 0.7em; }
@@ -48,6 +56,8 @@ button.pull-right {margin-left: 0.7em;}
 {    background-color: #f9f9f9;}
 
 .table-moo-striped > tbody > tr.success > td {background-color: #dff0d8;}
+
+
 
 td.smsText { overflow-x: hidden; text-overflow: ellipsis; }
 td.smsSmallText {font-size:13px}    /*здесь будут еще 2 вложенных <small>*/
@@ -637,7 +647,7 @@ CBeacon.prototype = {
                 .on_sendSuccess(this._c_reRead)
 			    .on_change($cd(this, this._phoneSelect));
 
-        var holder = $('<div class="map-panel" data-spy="affix"></div>')
+        var holder = $('<div class="map-panel moo-affix" data-spy="-affix"></div>')
                 .appendTo(this._rm);
         this._map = new CMooseMap(holder, 'map3', null);
         this._map.update({canToggle: false});
@@ -910,7 +920,7 @@ CSingleBeacon.prototype =
             .find('button')
             .click($cd(this, this._export));
 
-        var holder = $('<div class="map-panel" data-spy="affix"></div>')
+        var holder = $('<div class="map-panel moo-affix" data-spy="-affix"></div>')
                 .appendTo(this._rm);
 
         this._map = new CMooseMap(holder, 'map3', null);
@@ -1124,7 +1134,7 @@ CGate.prototype =
         //$('<p>Gates and messages stat! for feeders & root & admin</p><p>manage gates for root & admin</p>')
 //                .appendTo(je);
 
-        var map = $('<div class="affix col-xs-12 col-sm-3"></div>')
+        var map = $('<div class="moo-affix col-xs-12 col-sm-3"></div>')
                 .appendTo(this._rm);
         this._rm.css('height', '500px');
 
