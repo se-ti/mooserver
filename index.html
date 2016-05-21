@@ -42,6 +42,13 @@ button:last-of-type,
 button.pull-right {margin-right: 0;}
 button.pull-right {margin-left: 0.7em;}
 
+
+.table-moo-striped > tbody > tr:nth-child(4n+1) > td,
+.table-moo-striped > tbody > tr:nth-child(4n+2) > td
+{    background-color: #f9f9f9;}
+
+.table-moo-striped > tbody > tr.success > td {background-color: #dff0d8;}
+
 td.smsText { overflow-x: hidden; text-overflow: ellipsis; }
 td.smsSmallText {font-size:13px}    /*здесь будут еще 2 вложенных <small>*/
 td.smsSmallText2 {font-size:9px}
@@ -890,7 +897,7 @@ CSingleBeacon.prototype =
             .append('<h1><small></small></h1>')
             .appendTo(row);
         this._phone = je.find('h1 small');
-        this._table = $('<table class="hidden table table-striped"></table>')
+        this._table = $('<table class="hidden table table-moo-striped"></table>')
             .click(this._c_rawClick)
             .appendTo(je);
 
@@ -1000,7 +1007,7 @@ CSingleBeacon.prototype =
 
                 body += String.format('<tr data-id="{0}">{1}</tr>', phd[j][7], line);
                 if (phd[j].length > 8 && (phd[j][8] || '') != '')
-                        body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="7">{1}</td></tr>', phd[j][7], phd[j][8]);
+                        body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="7">{1}</td></tr>', phd[j][7], String.makeBreakable(phd[j][8]));
             }
         }
 
@@ -1109,7 +1116,7 @@ CGate.prototype =
         this._justErr = ctrl.find('input[type="checkbox"]')
                 .change(this._c_reRead);
 
-        this._table = $('<table class="hidden table table-striped"><thead></thead><tbody></tbody></table>')
+        this._table = $('<table class="hidden table table-moo-striped"><thead></thead><tbody></tbody></table>')
                 .click(this._c_delClick)
                 .appendTo(je);
         this._body = this._table.find('tbody');
@@ -1175,7 +1182,7 @@ CGate.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr data-id="{0}"><td rowspan="2">{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td>{7}</tr>';
+        var tpl = '<tr data-id="{0}"><td>{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td>{7}</tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
@@ -1184,7 +1191,7 @@ CGate.prototype =
             d.setTime(Date.parse(it.stamp));
             var stat = this._itemStatus(it);
             body += String.format(tpl, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
-                    + String.format('<tr data-id="{0}"><td colspan="6" class="smsText {2}"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.toHTML(it.text), stat.needText ? '' : 'smsSmallText');
+                    + String.format('<tr data-id="{0}"><td colspan="7" class="smsText {2}"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText');
         }
 
         this._table.removeClass('hidden');

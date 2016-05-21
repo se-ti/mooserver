@@ -115,6 +115,22 @@ String.toHTML = function(str)
     return res;
 }
 
+String.makeBreakable = function(str, head, chunk)
+{
+    head = head || 70;
+    chunk = chunk || 15;
+
+    if ((str || '') == '')
+        return str;
+
+    var len = str.length;
+    var res = [String.toHTML(str.substr(0, Math.min(head, len)))];
+    for (var i = head; i < len; i += chunk)
+        res.push(String.toHTML(str.substr(i, Math.min(chunk, len - i))));
+
+    return res.join('<wbr/>');
+}
+
 if (String.prototype.trim === undefined)   // ie8 and prev
     String.prototype.trim = function()
     {
