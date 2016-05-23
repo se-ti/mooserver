@@ -253,7 +253,7 @@ CPage.prototype =
 
         if (!this._text)
             return;
-        this._menu = $(String.format('<li><a href="{0}">{1}</a></li>', this._hash , this._text));
+        this._menu = $(String.format('<li class="hidden"><a href="{0}">{1}</a></li>', this._hash , this._text));
         this._menu.appendTo(menuRoot);
     },
 
@@ -296,6 +296,9 @@ CPage.prototype =
     {
         if (console)
             console.log('override CPage.setRights');
+
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
     },
 
     stdExport: function(action, title)

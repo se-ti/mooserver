@@ -37,7 +37,7 @@ CAdmin.prototype = {
         if (!menuRoot || !this._text)
             return;
 
-        this._menu = $('<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">' + this._text + '<span class="caret"></span></a> <ul class="dropdown-menu" role="menu"></ul></li>')
+        this._menu = $('<li class="dropdown hidden"><a href="#" class="dropdown-toggle" data-toggle="dropdown">' + this._text + '<span class="caret"></span></a> <ul class="dropdown-menu" role="menu"></ul></li>')
             .appendTo(menuRoot);
         this._menu.find('ul')
             .append(this._menus);

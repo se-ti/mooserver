@@ -434,6 +434,9 @@ CMoose.prototype =
 
 	setRights: function(rights)
 	{
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
+
 		if (this.send)
 			this.send.toggle(rights.canFeed || false);
         this._canAdmin  = rights.canAdmin;
@@ -677,6 +680,9 @@ CBeacon.prototype = {
 
 	setRights: function(rights)
 	{
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
+
 		if (this._send)
 			this._send.toggle(rights.isRoot || rights.canFeed);
 
@@ -1057,6 +1063,9 @@ CSingleBeacon.prototype =
 
     setRights: function(rights)
     {
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
+
         if (this._isActive)
             this.reRead();
 
