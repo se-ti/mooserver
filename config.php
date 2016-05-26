@@ -11,6 +11,7 @@ $mooSett = array(
 
     "timezone" => "Europe/Minsk",       // timezone according to http://php.net/manual/en/timezones.php
 
+    "appName" => "Mooserver",
     "name" => "moosemaster",
     "mail" => "info@moosemaster",          // mail from
     "defaultMail" => "info@moosemaster",   // mail to
