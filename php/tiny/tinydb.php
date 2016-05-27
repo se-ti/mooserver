@@ -134,7 +134,7 @@ class CTinyDb
         if (!$res && ($dupMessage === null || !$this->ErrDuplicate($dupMessage)))
         {
             $err = $this->db->errorInfo();
-            $this->Err("Query failed: sqe: {$err[0]} code '{$err[1]}' error: {$err[2]} at request: <br/>$query");
+            $this->Err("Query failed: sqe: {$err[0]} code '{$err[1]}' error: {$err[2]} at request: \n$query");
         }
 
         return $res;

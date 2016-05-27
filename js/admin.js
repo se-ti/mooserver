@@ -301,7 +301,6 @@ CLogs.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var head = '<thead><tr><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead>';
         var tpl = '<tr><td>{0}</td><td style="white-space: nowrap;">{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td></tr>';
         for (var i = 0; i < len; i++)
         {
