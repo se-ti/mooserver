@@ -788,7 +788,7 @@ CMooseChooser.prototype =
 {
 	_buildIn: function(elem, multi)
 	{
-		var tpl = String.format('<select class="form-control"{0} style="margin-top:3ex"></select>', (multi ? ' multiple size="9"' : '') );
+		var tpl = String.format('<select class="form-control"{0} style="margin-top:2.5ex"></select>', (multi ? ' multiple size="9"' : '') );
 		this.select = $(tpl).appendTo(elem).change($cd(this, this.change));
 	},
 
@@ -859,6 +859,225 @@ CMooseChooser.prototype =
 }
 CMooseChooser.inheritFrom(CControl);
 
+CPeriodChooser = function(elem)
+{
+    CControl.call(this);
+    this.c = {
+        all: null,
+        exact: null,
+        st: null,
+        en: null,
+        holder: null,
+        err: null,
+        opts : null
+    };
+
+    this._d_optClick = $cd(this, this._onOptClick);
+    this._d_dateCahnge = $cd(this, this._dateChange);
+
+    this._buildIn(elem);
+}
+
+CPeriodChooser.prototype =
+{
+    _buildIn: function(elem)
+    {
+        var tpl = '<div>' +
+                    '<div class="btn-group btn-group-sm" data-toggle="buttons">' +
+                        '<label class="btn btn-default"><input type="radio" name="options"autocomplete="off">Вч. и сегодня</label>' +
+                        '<label class="btn btn-default"><input type="radio" name="options"autocomplete="off">Неделя</label>' +
+                        '<label class="btn btn-default active"><input type="radio" name="options" autocomplete="off" checked>Месяц</label>' +
+                        '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Все</label>' +
+                        '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off" disabled>Точно...</label>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="form-horizontal hidden date-holder" style="margin-top: 1.5ex"><div class="form-group"><label class="control-label col-xs-2 col-sm-1">с</label><div class="col-xs-7 col-sm-9 col-md-6 col-lg-5"><input type="text" class="form-control" placeholder="дд.мм.гггг/></div></div>' +
+                                 '<div class="form-group"><label class="control-label col-xs-2 col-sm-1">по</label><div class="col-xs-7 col-sm-9 col-md-6 col-lg-5"><input type="text" class="form-control" placeholder="дд.мм.гггг"/></div></div>' +
+
+                '<div class="panel -row alert alert-danger hidden" role="alert"></div>' +
+            '</div>';
+
+        var je = $(tpl).appendTo(elem);
+
+        var c = this.c;
+        c.opts = je.find('.btn-group input').change(this._d_optClick);
+        c.all = this.c.opts[3];
+        c.exact = this.c.opts[4];
+
+        c.holder = $(je[1]);
+        c.st = c.holder.find('input:first').change(this._d_dateCahnge);
+        c.en = c.holder.find('input:last').change(this._d_dateCahnge);
+
+        c.err = c.holder.find('.alert');
+    },
+
+    _isExact: function()
+    {
+        return this.c.exact.checked;
+    },
+
+    // показывать границы времени, если не были заданы
+    setTimes: function(st, en, force)
+    {
+        return;
+
+        /*if (force)
+            this._canSetAuto = true;
+        if (!this._canSetAuto || st == null || en == null)
+            return;
+
+        var d = new Date();
+        this._stMonth.get(0).selectedIndex = st.getMonth() + 1;
+        this._stYear.get(0).selectedIndex = d.getFullYear() - st.getFullYear() +1;
+        this._enMonth.get(0).selectedIndex = en.getMonth() + 1;
+        this._enYear.get(0).selectedIndex = d.getFullYear() - en.getFullYear() +1;
+
+        this._canSetAuto = true;*/
+    },
+
+    getTimes: function()
+    {
+        var en = null;
+        var st = null;
+
+        if (this.c.all.checked)
+            ;
+        else if (this._isExact())
+        {
+            st = this._parseDate(this.c.st.val().trim());
+            en = this._parseDate(this.c.en.val().trim());
+            if (en)     // до конца дня
+                en.setHours(23, 59, 59, 999);
+        }
+        else
+            st = new Date();
+
+        if (this.c.opts[0].checked)
+            st.setTime(st.getTime() - 24 * 60 * 60 * 1000);
+        if (this.c.opts[1].checked)
+            st.setTime(st.getTime() - 7 * 24 * 60 *60 * 1000);
+        else if (this.c.opts[2].checked)
+            st.setMonth(st.getMonth() - 1);
+
+        if (st)
+            st.setHours(0, -31, 0, 0);  // чтобы зацепить активность за пред. полчаса
+
+        return {start: st, end: en};
+    },
+
+    _dateChange: function(e)
+    {
+        if (this._validate())
+            this._raise_periodChange(this.getTimes());
+    },
+
+    _onOptClick: function()
+    {
+        var c = this.c;
+        var exact = this._isExact();
+        this.c.holder.toggleClass('hidden', !exact);
+        if (exact)
+            c.st.get(0).focus();
+
+        console.log('on opt: ex: ' + exact);
+
+        if (this._validate())
+            this._raise_periodChange(this.getTimes());
+    },
+
+    _validate: function()
+    {
+        if (!this._isExact())
+            return true;
+
+        var st = null;
+        var en = null;
+
+        var c = this.c;
+        var val = c.st.val().trim();
+
+        if (val != '' && (st = this._parseDate(val)) == null)
+            return this._showErr('Неправильная дата начала');
+        if (st != null)
+            this._toStr(st, c.st);
+
+        val = c.en.val().trim();
+        if (val != '' && (en = this._parseDate(val)) == null)
+            return this._showErr('Неправильная дата окончания');
+        if (en != null)
+            this._toStr(en, c.en);
+
+        if (st != null && en != null && st > en)
+            return this._showErr('Дата окончания раньше даты начала');
+
+        return this._showErr('');
+    },
+
+    _showErr: function(mess)
+    {
+        var ok = (mess || '') == '';
+        this.c.err
+            .toggleClass('hidden', ok)
+            .text(mess||'');
+
+        return ok;
+    },
+
+    _parseDate: function(str)
+    {
+        var d = new Date();
+
+        var r = /^(\d{1,2})\s*[ \.-\/]\s*(\d{1,2})(\s*[ \.-\/]\s*(\d{2}|\d{4}))?$/;
+        var m = r.exec(str);
+        if (!m)
+            return null;
+
+        if (console.log)
+            console.log(String.format("parse '{0}': {1} {2} {3}", str, m[1], m[2], m[4]));
+
+        var y = Number(m[4] || d.getFullYear());
+        if (y < 100)
+            y = ((y > 90) ? 1900 : 2000) + y;  //91 -> 1991, 16 -> 2016
+
+        if (m[2] > 12 || m[2] == 0)
+            return null;
+
+        if (m[1] > 31 || m[1] == 0)
+            return null;
+
+        if (m[1] > 30 && (m[2] == 4 || m[2] == 6 || m[2] == 9 || m[2] == 11))
+            return null;
+
+        // leap year
+        if (m[2] == 2 && (m[1] > 29 || m[1] == 29 && (y % 4 != 0 || y%100 == 0 && y %400 != 0)))
+            return null;
+
+        if (console.log)
+            console.log(String.format("SFE {0}: {1} {2} {3}", str, m[1], m[2], y));
+        d.setFullYear(y, m[2] - 1, m[1]);
+
+        return d;
+    },
+
+    _toStr: function(date, control)
+    {
+        control.val(String.format("{0}.{1}.{2}", date.getDate(), date.getMonth()+1, date.getFullYear()));
+    },
+
+    on_periodChange: function(h) {
+        return this.on("periodChange", h);
+    },
+
+    remove_periodChange: function(h) {
+        return this.remove("periodChange", h);
+    },
+
+    _raise_periodChange: function(period) {
+        this.raise("periodChange", period);
+    }
+}
+CPeriodChooser.inheritFrom(CControl);
+
 CChooser = function(elem)
 {
 	CControl.call(this);
@@ -887,7 +1106,7 @@ CChooser.prototype =
 		this._err = $(je[1]);
 
 		je = je.find('select')
-			.change($cd(this, this.dateChange));
+			.change($cd(this, this._dateChange));
 		this._stMonth = $(je.get(0));
 		this._stYear = $(je.get(1));
 		this._enMonth = $(je.get(2));
@@ -915,7 +1134,7 @@ CChooser.prototype =
 		}
 	},
 
-	dateChange: function()
+	_dateChange: function()
 	{
 		var times = this.getTimes();
 		if (times.start != null && times.end != null && times.end <= times.start)
@@ -975,10 +1194,7 @@ CChooser.prototype =
 			m = to ? 11 : 0;
 
 		d.setFullYear(y, (to ? 1 : 0) + m, 1);
-		d.setUTCHours(0);
-		d.setUTCMinutes(0);
-		d.setUTCSeconds(0);
-		d.setUTCMilliseconds(0);
+		d.setUTCHours(0, 0, 0, 0);
 		return d;
 	},
 

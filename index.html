@@ -50,7 +50,6 @@ button:last-of-type,
 button.pull-right {margin-right: 0;}
 button.pull-right {margin-left: 0.7em;}
 
-
 .table-moo-striped > tbody > tr:nth-child(4n+1) > td,
 .table-moo-striped > tbody > tr:nth-child(4n+2) > td
 {    background-color: #f9f9f9;}
@@ -400,7 +399,7 @@ CMoose.prototype =
         var rm = $(this._tpl_right).appendTo(row); /*правое меню*/
 		var je = $(this._tpl_main).appendTo(row);
 
-        this.periodChooser = new CChooser(rm)
+        this.periodChooser = new CPeriodChooser(rm)//new CChooser(rm)
                 .on_periodChange($cd(this, this._periodChange));
 
         this.mooseChooser = new CMooseChooser(rm, true)
