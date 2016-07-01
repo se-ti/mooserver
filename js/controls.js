@@ -891,7 +891,7 @@ CPeriodChooser.prototype =
                         '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off" disabled>Точно...</label>' +
                     '</div>' +
                 '</div>' +
-                '<div class="form-horizontal hidden date-holder" style="margin-top: 1.5ex"><div class="form-group"><label class="control-label col-xs-2 col-sm-1">с</label><div class="col-xs-7 col-sm-9 col-md-6 col-lg-5"><input type="text" class="form-control" placeholder="дд.мм.гггг/></div></div>' +
+                '<div class="form-horizontal hidden date-holder" style="margin-top: 1.5ex"><div class="form-group"><label class="control-label col-xs-2 col-sm-1">с</label><div class="col-xs-7 col-sm-9 col-md-6 col-lg-5"><input type="text" class="form-control" placeholder="дд.мм.гггг"/></div></div>' +
                                  '<div class="form-group"><label class="control-label col-xs-2 col-sm-1">по</label><div class="col-xs-7 col-sm-9 col-md-6 col-lg-5"><input type="text" class="form-control" placeholder="дд.мм.гггг"/></div></div>' +
 
                 '<div class="panel -row alert alert-danger hidden" role="alert"></div>' +
