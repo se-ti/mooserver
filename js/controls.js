@@ -2051,6 +2051,9 @@ CMooseMap.prototype = {
         if (!this._canToggle)
             return;
 
+        /*if (e.originalEvent.button != 2)
+         return;*/
+
         var ll = this._marker.getLatLng();
         if (ll.mId == null || ll.key == null)
             return;
