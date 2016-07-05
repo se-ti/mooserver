@@ -181,7 +181,7 @@ CLogin.prototype =
         c.forget.parent().toggleClass('hidden', this._forget);
         this.c.loginErr.parent().addClass('has-error').removeClass('has-success');
 
-        c.login.html(this._forget ? "Забыл пароль" : "Войти");
+        c.login.html(this._forget ? "Отправить письмо для смены пароля" : "Войти");
         c.dialog.find('.modal-title').text(this._forget ? "Восстановление пароля" : "Авторизация");
 
         this.c.login.removeClass('hidden');
@@ -1763,6 +1763,10 @@ CMooseMap = function(root, id, root2)
 
 CMooseMap.prototype = {
 
+    _markerColor: "#00f",
+    _activeMarker: '#0c0',
+    _invalidMarker: '#f00',
+
     _buildIn: function(root, clss, root2)
     {
         var container = $('<div class="'+ clss + '"></div>').appendTo(root);
@@ -1934,7 +1938,7 @@ CMooseMap.prototype = {
                     this.heatMap.pushData(src[j][0], src[j][1], this._heatLevel(heatSett, src[j]));
 
                 if (!valid)
-                    this.invalidLayer.addLayer(L.circleMarker(pt, {color: "#f00", radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1}));
+                    this.invalidLayer.addLayer(L.circleMarker(pt, {color: this._invalidMarker, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1}));
             }
             series.setLatLngs(ll);
             this.data.push(series);
@@ -2048,11 +2052,20 @@ CMooseMap.prototype = {
 
     _onContextMenu: function(e)
     {
+        if (e.originalEvent.button != 2)
+        {
+            if (this._marker)
+            {
+                this._marker.setStyle({color: this._activeMarker});
+                var ll = this._marker.getLatLng();
+                if (ll.idx != null)
+                    this._idx = ll.idx;
+            }
+            return;
+        }
+
         if (!this._canToggle)
             return;
-
-        /*if (e.originalEvent.button != 2)
-         return;*/
 
         var ll = this._marker.getLatLng();
         if (ll.mId == null || ll.key == null)
@@ -2081,6 +2094,7 @@ CMooseMap.prototype = {
     _onShowMarker: function()
     {
         var ll = this._marker.getLatLng();
+        this._marker.setStyle({color: this._markerColor});
         var p = this._marker._popup;            // HACK !!!
         if (p)
         {
@@ -2098,7 +2112,7 @@ CMooseMap.prototype = {
 
     _initMarker: function(pt)
     {
-        this._marker = L.circleMarker(pt, {color: "#00f", radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1});
+        this._marker = L.circleMarker(pt, {color: this._markerColor, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1});
 
         this._marker.bindPopup('', {closeButton: false, offset: L.point(0, -3)});
         this._marker.on('mouseover', this._d_onShowMarker)
@@ -2111,7 +2125,7 @@ CMooseMap.prototype = {
         if (this._blockMarker)
             return;
 
-        var nearest = this._nearestPt(e.latlng);
+        var nearest = this._nearestPt(e.latlng); // тормозит на большом кол-ве точек
         var dist = nearest ? e.latlng.distanceTo(nearest) : 10000;
 
         if (!this._marker)
@@ -2149,9 +2163,8 @@ CMooseMap.prototype = {
             min = this._nearest(pt, this.data[i].getLatLngs());
             if (!min)
                 continue;
-            min.mId = this.data[i].__id;
-            min.key = this.data[i].__key;
 
+            min = this._extendMarkerPoint(min, this.data[i]);
             minDist = pt.distanceTo(min);
             break;
         }
@@ -2166,12 +2179,18 @@ CMooseMap.prototype = {
                 continue;
 
             minDist = dist;
-            min = point;
-            min.mId = this.data[i].__id;
-            min.key = this.data[i].__key;
+            min = this._extendMarkerPoint(point, this.data[i]);
         }
 
         return min;
+    },
+
+    _extendMarkerPoint: function(point, track)
+    {
+        // а idx в нее добавили внутри _nearest
+        point.mId = track.__id;
+        point.key = track.__key;  // признак, откуда точка -- из лося, или rawSms
+        return point;
     },
 
     _nearest: function(pt, points)
@@ -2192,7 +2211,8 @@ CMooseMap.prototype = {
             idx = i;
         }
 
-        return idx >= 0 ? points[idx] : null;
+        points[idx].idx = idx;
+        return points[idx];
     }
 }
 CMooseMap.inheritFrom(CControl);
