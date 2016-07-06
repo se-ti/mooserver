@@ -1885,6 +1885,9 @@ CMooseMap.prototype = {
         if (this.invalidLayer)
             this.invalidLayer.clearLayers();
 
+        if (this._marker)
+            this.map.removeLayer(this._marker);
+
         this.data = [];
     },
 
