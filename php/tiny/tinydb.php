@@ -666,7 +666,7 @@ class CTinyDb
         $this->Query($query);
     }
 
-    function GetLogs(CTinyAuth $auth, $levels, $ops, $limit)
+    function GetLogs(CTinyAuth $auth, $levels, $ops, $search, $limit)
     {
         if (!$auth->canAdmin())
             $this->ErrRights();
@@ -706,6 +706,14 @@ class CTinyDb
                 $opsCond = 'operation in ('. implode(', ', $qops) .')';
         }
 
+        $searchCond = 'true';
+        if ($search !== null && trim($search) != '')
+        {
+            $search = $this->ValidateTrimQuote($search);
+            $search = substr($search, 1, strlen($search)-2);    // отрезаем кавычки с краев -- т.к. добавим свои
+            $searchCond = "(message like '%$search%' or login like '%$search%')" ;
+        }
+
         $limit = $limit === null ? '' : " limit " . $this->ValidateId($limit, "Недопустимое значение limit", 1);
 
         $id = $auth->id();
@@ -719,7 +727,7 @@ class CTinyDb
         $query = "select l.*, DATE_FORMAT(l.stamp,'%Y-%m-%dT%TZ') as sstamp, u.login from logs l
             left join users u on u.id = l.user_id
             $join
-            where true and $cond and $opsCond and $joinCond
+            where true and $cond and $opsCond and $joinCond and $searchCond
             order by id desc $limit";
 
         $result = $this->Query($query);
