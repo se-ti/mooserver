@@ -200,6 +200,7 @@ CLogs = function(after)
     this._table = null;
     this._body = null;
     this._filter = null;
+    this._filter2 = null;
 
     this._d_reRead = $cd(this, this.reRead);
     this._d_clearFilters = $cd(this, this._clearFilters);
@@ -251,6 +252,21 @@ CLogs.prototype =
         this._filter = new CColumnFilter(this._table.find('th').get(2), 'levels', {search: false, reset: false})
             .on_dataChanged(this._d_reRead);
         this._filter.setItems(items);
+
+        var items2 = [{caption: 'addSms', value: 'addSms'},
+            {caption: 'activity_times', value: 'activity_times'},
+            {caption: 'auth', value: 'auth'},
+            {caption: 'gate', value: 'gate'},
+            {caption: 'getBeaconData', value: 'getBeaconData'},
+            {caption: 'reassignSms', value: 'reassignSms'},
+            {caption: 'request restore', value: 'request restore'},
+            {caption: 'togglePoint', value: 'togglePoint'},
+            // {caption: '', value: ''},
+            {caption: 'webClient', value: 'webClient'}];
+        
+        this._filter2 = new CColumnFilter(this._table.find('th').get(6), 'ops', {search: true, reset: false})
+            .on_dataChanged(this._d_reRead);
+        this._filter2.setItems(items2);
     },
 
     activate: function(s)
@@ -262,6 +278,7 @@ CLogs.prototype =
     _clearFilters: function()
     {
         this._filter.clear();
+        this._filter2.clear();
         this.reRead();
     },
 
@@ -269,10 +286,11 @@ CLogs.prototype =
     {
         var param = {
             limit: this._rowLimit.val(),
-            levels: this._filter.getValues()
+            levels: this._filter.getValues(),
+            ops: this._filter2.getValues()
         };
 
-        this._clearFilters.get(0).disabled = !this._filter.isActive();
+        this._clearFilters.get(0).disabled = !this._filter.isActive() && !this._filter2.isActive();
 
         $ajax('getLogs', param, $cd(this, this._onReRead));
     },
