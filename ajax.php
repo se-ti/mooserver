@@ -38,6 +38,7 @@ $methods = array('sendSMS' => 'addSeries', // ajaxName => functionName
     'getBeaconData' => 'getBeaconData', // see common
     'getGateData' => 'getGateData',
     'getLogs' => 'getLogs',
+    'log' => 'addLog',
     'getMoose' => 'getMooses',
     'getMooseRoot' => 'getMooses',
     'getUsers' => 'getUsers',
@@ -500,12 +501,29 @@ function getLogs()
     $levels = @$_POST['levels'];
     if ($levels != null)
     {
-        $levels = filter_var($levels, FILTER_VALIDATE_INT, array('options' => array('min_range' => 0, 'max_range' => 4), 'flags' => FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY));
+        $levels = filter_var($levels, FILTER_VALIDATE_INT, array('options' => array('min_range' => CTinyDb::LogInfo, 'max_range' => CTinyDb::LogCritical), 'flags' => FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY));
         if ($levels === false)
             dieError('недопустимые уровни логов');
     }
 
-    return $db->GetLogs($auth, $levels, $limit);
+    $ops = @$_POST['ops'];
+    if ($ops != null && (!is_array($ops) || count($ops) != count(array_filter($ops))))
+        dieError('недопустимая операция');
+
+    return $db->GetLogs($auth, $levels, $ops, $limit);
+}
+
+function addLog()
+{
+    global $auth, $db;
+
+    $message = $title = varNotEmpty('message', true, "Не указано сообщение");
+    $level = filter_var($_POST['level'], FILTER_VALIDATE_INT, array('options' => array('min_range' => CTinyDb::LogInfo, 'max_range' => CTinyDb::LogCritical)));
+    if ($level === false)
+        dieError('недопустимый уровень логов');
+    
+    $db->AddLogRecord($auth, $level, 'webClient', $message);
+    return 'ok';
 }
 
 /*function resetDb()

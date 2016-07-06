@@ -164,6 +164,7 @@ function log(msg)
     CApp.single().error(String.toHTML(msg));
     if (console)
         console.log(msg);
+    $ajax('log', {level: 4, message: msg}, function(){}, function(){}); // чтобы не зацикливался при глобальных проблемах с сетью, сервером и т.п.
 }
 
 CControl = function()

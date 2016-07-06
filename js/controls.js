@@ -979,8 +979,6 @@ CPeriodChooser.prototype =
         if (exact)
             c.st.get(0).focus();
 
-        console.log('on opt: ex: ' + exact);
-
         if (this._validate())
             this._raise_periodChange(this.getTimes());
     },

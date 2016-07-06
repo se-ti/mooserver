@@ -666,7 +666,7 @@ class CTinyDb
         $this->Query($query);
     }
 
-    function GetLogs(CTinyAuth $auth, $levels, $limit)
+    function GetLogs(CTinyAuth $auth, $levels, $ops, $limit)
     {
         if (!$auth->canAdmin())
             $this->ErrRights();
@@ -690,6 +690,22 @@ class CTinyDb
             }
         }
 
+        $opsCond = 'true';
+        if ($ops != null)
+        {
+            if (!is_array($ops))
+                $this->Err("недопустимый список операций");
+            $qops = array();
+            foreach ($ops as $op)
+                if ($op == null || !is_string($op))
+                    $this->Err('недопустимая операция');
+                else
+                    $qops[] = $this->db->quote($op);
+            
+            if (count($qops) > 0)
+                $opsCond = 'operation in ('. implode(', ', $qops) .')';
+        }
+
         $limit = $limit === null ? '' : " limit " . $this->ValidateId($limit, "Недопустимое значение limit", 1);
 
         $id = $auth->id();
@@ -703,7 +719,7 @@ class CTinyDb
         $query = "select l.*, DATE_FORMAT(l.stamp,'%Y-%m-%dT%TZ') as sstamp, u.login from logs l
             left join users u on u.id = l.user_id
             $join
-            where true and $cond and $joinCond
+            where true and $cond and $opsCond and $joinCond
             order by id desc $limit";
 
         $result = $this->Query($query);
