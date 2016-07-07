@@ -75,7 +75,7 @@ CLogin.prototype =
 
                             '<div class="form-group has-error has-feedback">'+
                                 '<label class="control-label" id="logError"></label>' +
-                                '<a href="#" ">Забыл пароль</a>' +
+                                '<a href="#" ">Восстановление пароля</a>' +
                             '</div>' +
 
                         '</form>' +
