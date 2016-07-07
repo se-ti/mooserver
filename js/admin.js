@@ -199,11 +199,13 @@ CLogs = function(after)
     this._rowLimit = null;
     this._table = null;
     this._body = null;
+    this._search = null;
     this._filter = null;
     this._filter2 = null;
 
     this._d_reRead = $cd(this, this.reRead);
     this._d_clearFilters = $cd(this, this._clearFilters);
+    this._d_onEnter = $cd(this, this._onEnter);
     this._init(after);
 }
 
@@ -235,13 +237,17 @@ CLogs.prototype =
         var je = $('<div class="col-xs-12"></div>')
             .appendTo(row);
 
-        var ctrl = $('<div class="form-inline" style="margin-bottom: 0.5em;"><div class="form-group"><label for="log-select">Записей: </label> <select id="log-select" class="form-control"><option value="100" selected>100</option><option value="500">500</option><option value="3000">3000</option></select></div> <button type="button" disabled class="btn btn-default btn-sm" style="margin-left: 1em;">Очистить фильтр</button></div>')
+        var ctrl = $('<div class="form-inline" style="margin-bottom: 0.5em;"><div class="form-group"><label for="log-select">Записей: </label> <select id="log-select" class="form-control"><option value="100" selected>100</option><option value="500">500</option><option value="3000">3000</option></select></div> <input type="text" class="form-control" placeholder="Поиск"> <button type="button" disabled class="btn btn-default btn-sm" style="margin-left: 1em;">Очистить фильтр</button></div>')
             .appendTo(je);
 
         this._rowLimit = ctrl.find('select')
             .change(this._d_reRead);
         this._clearFilters = ctrl.find('button')
             .click(this._d_clearFilters);
+        
+        this._search = ctrl.find('input')
+            .change(this._d_reRead)
+            .keydown(this._d_onEnter);
 
         this._table = $('<table class="hidden table table-striped table-condensed"></table>')
             .appendTo(je);
@@ -261,7 +267,6 @@ CLogs.prototype =
             {caption: 'reassignSms', value: 'reassignSms'},
             {caption: 'request restore', value: 'request restore'},
             {caption: 'togglePoint', value: 'togglePoint'},
-            // {caption: '', value: ''},
             {caption: 'webClient', value: 'webClient'}];
         
         this._filter2 = new CColumnFilter(this._table.find('th').get(6), 'ops', {search: true, reset: false})
@@ -279,19 +284,29 @@ CLogs.prototype =
     {
         this._filter.clear();
         this._filter2.clear();
+        this._search.val('');
         this.reRead();
+    },
+
+    _onEnter: function(e)
+    {
+        if (e.which == 13)
+        {
+            e.preventDefault();
+            this.reRead();
+        }
     },
 
     reRead: function()
     {
         var param = {
-            search: null,
+            search: (this._search.val()||'').trim(),
             limit: this._rowLimit.val(),
             levels: this._filter.getValues(),
             ops: this._filter2.getValues()
         };
 
-        this._clearFilters.get(0).disabled = !this._filter.isActive() && !this._filter2.isActive();
+        this._clearFilters.get(0).disabled = !this._filter.isActive() && !this._filter2.isActive() && param.search == '';
 
         $ajax('getLogs', param, $cd(this, this._onReRead));
     },
@@ -308,7 +323,7 @@ CLogs.prototype =
 
         this._render(result.logs);
         
-        if (this._filter2.getValues().length == 0 && result.ops != null && result.ops.length > 0)
+        if (!this._filter2.isActive() && result.ops != null && result.ops.length > 0)
         {
             var items = [];
             for (var i =0; i < result.ops.length; i++)
