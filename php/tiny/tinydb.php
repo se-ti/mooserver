@@ -743,8 +743,16 @@ class CTinyDb
                 'op' => $r['operation'],
                 'message' => $r['message']);
         }
+        
+        $query = "select distinct operation
+                    from logs
+                    order by operation";
+        $result = $this->Query($query);
+        $ops = array();
+        foreach($result as $r)
+            $ops[] = $r['operation'];
 
-        return $res;
+        return array('logs' => $res, 'ops' => $ops);
     }
 }
 

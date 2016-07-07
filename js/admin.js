@@ -285,6 +285,7 @@ CLogs.prototype =
     reRead: function()
     {
         var param = {
+            search: null,
             limit: this._rowLimit.val(),
             levels: this._filter.getValues(),
             ops: this._filter2.getValues()
@@ -305,7 +306,16 @@ CLogs.prototype =
         if (!this._table)
             return;
 
-        this._render(result);
+        this._render(result.logs);
+        
+        if (this._filter2.getValues().length == 0 && result.ops != null && result.ops.length > 0)
+        {
+            var items = [];
+            for (var i =0; i < result.ops.length; i++)
+                items.push({caption: result.ops[i], value: result.ops[i]});
+            
+            this._filter2.setItems(items);
+        }
     },
 
     _render: function(result)
