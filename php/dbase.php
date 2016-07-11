@@ -363,10 +363,11 @@ class CMooseDb extends CTinyDb
 
         $phoneCond = $fShowRights ? 'true' : 'active = true';
 
-        $query = "select distinct moose.id, phone, moose.name, phone_id, moose.group_id as mgid, moose.demo as mdemo
+        $query = "select distinct moose.id, phone, moose.name, phone_id, moose.group_id as mgid, moose.demo as mdemo, DATE_FORMAT(mint,'%Y-%m-%dT%TZ') as min_t, DATE_FORMAT(maxt,'%Y-%m-%dT%TZ') as max_t
 		            from moose
 		            {$access['join']}
 		            left join (select phone, id from phone where $phoneCond) p on phone_id = p.id
+		            left join (select s.moose, min(ps.stamp) as mint, max(ps.stamp) as maxt from sms s inner join position ps on ps.sms_id = s.id group by moose) mm on moose.id = mm.moose
 		            where {$access['cond']}
 		            order by moose.name asc";
 
@@ -375,7 +376,7 @@ class CMooseDb extends CTinyDb
 		$arr = array();
 		foreach ($result as $row)
         {
-            $line = array("id" => $row['id'], "name" =>$row['name'], "phone" => self::Obfuscate($auth, $row['phone']));
+            $line = array("id" => $row['id'], "name" =>$row['name'], "phone" => self::Obfuscate($auth, $row['phone']), "min" => $row['min_t'], "max" => $row['max_t']);
             if ($fShowRights)
             {
                 $line['phoneId'] = $row['phone_id'];
