@@ -1225,6 +1225,7 @@ CGate.prototype =
             d.setTime(Date.parse(it.stamp));
             var stat = this._itemStatus(it);
             body += String.format(tpl, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
+                    + String.format('<tr data-id="{0}"><td colspan="7" class="smsText {2}"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText'); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
         }
 
         this._table.removeClass('hidden');
