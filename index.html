@@ -887,6 +887,20 @@ CSingleBeacon = function(after)
     this._init(after);
 }
 
+CSingleBeacon.activityText = function(sms)
+{
+    if ((sms || '') == '')
+        return '<none>';
+
+    var headerLen = 6;
+    var activityLen = 25;
+
+    if (sms.length < headerLen + activityLen)
+        return 'sms too short!';
+
+    return sms.substr(headerLen + 1, activityLen - 1);  // первый символ -- день в активности see: CMooseSMS::ProcessActivity
+};
+
 CSingleBeacon.prototype =
 {
     cold: -11.5,
@@ -1024,7 +1038,7 @@ CSingleBeacon.prototype =
 
                 body += String.format('<tr data-id="{0}">{1}</tr>', phd[j][7], line);
                 if (phd[j].length > 8 && (phd[j][8] || '') != '')
-                        body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="7">{1}</td></tr>', phd[j][7], String.makeBreakable(phd[j][8]));
+                    body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="7">{1}</td></tr>', phd[j][7], String.makeBreakable(phd[j][8]));
             }
         }
 
@@ -1211,7 +1225,6 @@ CGate.prototype =
             d.setTime(Date.parse(it.stamp));
             var stat = this._itemStatus(it);
             body += String.format(tpl, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
-                    + String.format('<tr data-id="{0}"><td colspan="7" class="smsText {2}"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText');
         }
 
         this._table.removeClass('hidden');
