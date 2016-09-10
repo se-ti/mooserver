@@ -1748,6 +1748,7 @@ CMooseMap = function(root, id, root2)
     this._canToggle = false;
     this._forPrint = false;
 
+
     this._d_render = $cd(this, this._render);
     this._d_onMove = $cd(this, this._onMove);
     this._d_onKeyDown = $cd(this, this._onKeyDown);
@@ -1764,6 +1765,8 @@ CMooseMap.prototype = {
     _markerColor: "#00f",
     _activeMarker: '#0c0',
     _invalidMarker: '#f00',
+
+    _inflateSett : { threshold: 100, large: 0.0008, small: 0.003},
 
     _buildIn: function(root, clss, root2)
     {
@@ -1865,13 +1868,26 @@ CMooseMap.prototype = {
 
         if (this.data.length > 0)
         {
-            var bnd = this.data[0].getBounds();
-            for (var j = 1; j < this.data.length; j++)
-                bnd = bnd.extend(this.data[j].getBounds());
             if (this._fitBounds)
-                this.map.fitBounds(bnd);
+            {
+                var bnd = this.data[0].getBounds();
+                for (var j = 1; j < this.data.length; j++)
+                    bnd = bnd.extend(this.data[j].getBounds());
+
+                this.map.fitBounds(this._inflateBounds(bnd));
+            }
+
             this._fitBounds = false;
         }
+    },
+
+    _inflateBounds: function(bounds)
+    {
+        if (!bounds)
+            return bounds;
+
+        var d = bounds.getSouthEast().distanceTo(bounds.getNorthWest()) > this._inflate.threshold ? this._inflate.large : this._inflate.small;
+        return bounds.extend([[bounds.getSouth() - d, bounds.getWest() - d], [bounds.getNorth() + d, bounds.getEast() + d]]);
     },
 
     clearTracks: function()
