@@ -632,6 +632,7 @@ CSmsControl = function(parent)
 {
 	CControl.call(this);
 
+    this.activator = null;
 	this.address = null;
 	this.time = null;
 	this.text = null;
@@ -643,7 +644,7 @@ CSmsControl = function(parent)
 }
 
 CSmsControl.prototype = {
-        _tpl:   '<div class="panel panel-default" style="margin-top: 3ex;"> ' +
+    _tpl:   '<div class="panel panel-default" style="margin-top: 3ex;"> ' +
 		'<div class="panel-body"> ' +
 		    '<select class="form-control"></select><br/> ' +
 		    '<input  type="text" class="form-control" placeholder="2012-07-31T03:00:00Z" maxlength="26"/><br/> ' +
@@ -653,8 +654,13 @@ CSmsControl.prototype = {
 		  '</div>' +
 		'</div>',
 
+    _activator: '<div><button class="btn btn-default" data-type="activity" style="margin-top: 3ex;">Добавить SMS...</button></div>',
+
+
 	_buildIn: function(root)
 	{
+        this.activator = $(this._activator).appendTo(root).find('button').click($cd(this, this._onActivator));
+
 		var content = $(this._tpl).appendTo(root);
 		this.address = content.find('select').change($cd(this, this._change));
 		this.time = content.find('input');
@@ -663,9 +669,19 @@ CSmsControl.prototype = {
 		this.err = content.find('div.alert');
 	},
 
+    _onActivator: function()
+    {
+        this.activator.parent().addClass('hidden');
+        this.address.parent().parent().removeClass('hidden');
+        this.err.addClass('hidden').html('');
+
+        this.address.focus();
+    },
+
 	toggle: function(show)
 	{
-		this.address.parent().parent().toggleClass('hidden', !show);
+        this.activator.parent().toggleClass('hidden', !show);
+		this.address.parent().parent().toggleClass('hidden', true/*!show*/);
 		this.err.addClass('hidden').html('');
 	},
 
@@ -1748,6 +1764,7 @@ CMooseMap = function(root, id, root2)
     this._canToggle = false;
     this._forPrint = false;
 
+    this._inflate = (root2 == null) ? this._inflateSett : { threshold: 300, large: 0.002, small: 0.008}; // на большом экране надо больше увеличивтаь зону просмотра
 
     this._d_render = $cd(this, this._render);
     this._d_onMove = $cd(this, this._onMove);
