@@ -644,7 +644,7 @@ CSmsControl = function(parent)
 }
 
 CSmsControl.prototype = {
-    _tpl:   '<div class="panel panel-default" style="margin-top: 3ex;"> ' +
+    _tpl:   '<div class="panel panel-default hidden" style="margin-top: 3ex;"> ' +
 		'<div class="panel-body"> ' +
 		    '<select class="form-control"></select><br/> ' +
 		    '<input  type="text" class="form-control" placeholder="2012-07-31T03:00:00Z" maxlength="26"/><br/> ' +
@@ -654,7 +654,7 @@ CSmsControl.prototype = {
 		  '</div>' +
 		'</div>',
 
-    _activator: '<div><button class="btn btn-default" data-type="activity" style="margin-top: 3ex;">Добавить SMS...</button></div>',
+    _activator: '<div class="hidden"><button class="btn btn-default" data-type="activity" style="margin-top: 3ex;">Добавить SMS...</button></div>',
 
 
 	_buildIn: function(root)
@@ -677,24 +677,20 @@ CSmsControl.prototype = {
 
     collapse: function(collapse)
     {
-        console.log('coll: ' + collapse)
         this.err.addClass('hidden').html('');
+        var ap = this.address.parent().parent();
 
-        if (this.activator.parent().hasClass('hidden') && this.address.parent().hasClass('hidden')) // disabled
+        if (this.activator.parent().hasClass('hidden') && ap.hasClass('hidden')) // disabled
             return;
 
         this.activator.parent().toggleClass('hidden', !collapse);
-        this.address.parent().parent().toggleClass('hidden', collapse);
+        ap.toggleClass('hidden', collapse);
     },
 
 	toggle: function(show)
 	{
 	    this.collapse(true);
         this.activator.parent().toggleClass('hidden', !show);
-
-        /*this.activator.parent().toggleClass('hidden', !show);
-		this.address.parent().parent().toggleClass('hidden', !show);
-		this.err.addClass('hidden').html('');*/
 	},
 
 	selectPhone: function(phone)
