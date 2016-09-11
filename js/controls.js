@@ -671,18 +671,30 @@ CSmsControl.prototype = {
 
     _onActivator: function()
     {
-        this.activator.parent().addClass('hidden');
-        this.address.parent().parent().removeClass('hidden');
+        this.collapse(false);
+        this.address.focus();
+    },
+
+    collapse: function(collapse)
+    {
+        console.log('coll: ' + collapse)
         this.err.addClass('hidden').html('');
 
-        this.address.focus();
+        if (this.activator.parent().hasClass('hidden') && this.address.parent().hasClass('hidden')) // disabled
+            return;
+
+        this.activator.parent().toggleClass('hidden', !collapse);
+        this.address.parent().parent().toggleClass('hidden', collapse);
     },
 
 	toggle: function(show)
 	{
+	    this.collapse(true);
         this.activator.parent().toggleClass('hidden', !show);
-		this.address.parent().parent().toggleClass('hidden', true/*!show*/);
-		this.err.addClass('hidden').html('');
+
+        /*this.activator.parent().toggleClass('hidden', !show);
+		this.address.parent().parent().toggleClass('hidden', !show);
+		this.err.addClass('hidden').html('');*/
 	},
 
 	selectPhone: function(phone)

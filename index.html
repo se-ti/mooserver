@@ -431,6 +431,9 @@ CMoose.prototype =
 			this.map.invalidateSize();
         if (this.periodChooser)
             this.periodChooser.setTimes(null, null, true);
+
+        if (this.send)
+            this.send.collapse(true);
 	},
 
 	setRights: function(rights)
@@ -665,6 +668,8 @@ CBeacon.prototype = {
         var phones = CApp.single().getPhones();
         if (phones && this._send)
             this._send.setData(phones);
+        if (this._send)
+            this._send.collapse(true);
 
         if (this._map)
         {
