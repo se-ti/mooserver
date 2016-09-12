@@ -667,11 +667,11 @@ CBeacon.prototype = {
 
 	activate: function(s)
 	{
-		CPage.callBaseMethod(this, 'activate', [s]);
-		this.reRead();
+        CPage.callBaseMethod(this, 'activate', [s]);
+        this.reRead();
         var phones = CApp.single().getPhones();
         if (phones && this._send)
-            this._send.setData(phones);
+            this._send.setData(phones, CApp.single().getMoose());
         if (this._send)
             this._send.collapse(true);
 
@@ -684,8 +684,8 @@ CBeacon.prototype = {
 
 	setData: function(data)
 	{
-		if (this._send)
-			this._send.setData(data.phones);
+        if (this._send)
+            this._send.setData(data.phones, data.mooses);
 	},
 
 	setRights: function(rights)
@@ -693,8 +693,8 @@ CBeacon.prototype = {
         if (this._menu)
             this._menu.toggleClass('hidden', !this._isAvailable);
 
-		if (this._send)
-			this._send.toggle(rights.isRoot || rights.canFeed);
+        if (this._send)
+            this._send.toggle(rights.isRoot || rights.canFeed);
 
         if (this._showAll)
         {
@@ -753,7 +753,7 @@ CBeacon.prototype = {
 	},
 	
 	reRead: function()
-	{		
+	{
 		$ajax('getBeaconData', this._getParam(), $cd(this, this._onReRead));
 	},
 
@@ -917,7 +917,7 @@ CSingleBeacon.prototype =
 
     match: function(hash)
     {
-        var re = /\#beacon\/(\d+)/
+        var re = /\#beacon\/(\d+)/;
         var res = re.exec(hash);
         if (res == null || res.length < 2)
             return false;

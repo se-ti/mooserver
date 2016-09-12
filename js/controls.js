@@ -805,6 +805,10 @@ CMooseChooser = function(elem, multiple)
 {
 	CControl.call(this);
 	this.select = null;
+    this.filter = null;
+
+    this._d_change = $cd(this, this.change);
+    this._d_filterChange = $cd(this, this._filterChange);
 	this._buildIn(elem, multiple);
 }
 
@@ -812,8 +816,18 @@ CMooseChooser.prototype =
 {
 	_buildIn: function(elem, multi)
 	{
+	    var tpl2 = '<div class="hidden" style="margin-top: 2.5ex;">' +
+                '<div class="btn-group btn-group-sm" data-toggle="buttons">' +
+                '<label class="btn btn-default"><input type="radio" name="mooseFilt" autocomplete="off">Все</label>' +
+                '<label class="btn btn-default active"><input type="radio" name="mooseFilt" autocomplete="off" checked>С данными</label>' +
+                '<label class="btn btn-default"><input type="radio" name="mooseFilt" autocomplete="off">Активные</label>' +
+                '</div>' +
+            '</div>';
+
+        this.filter = $(tpl2).appendTo(elem).change(this._d_filterChange);
+        
 		var tpl = String.format('<select class="form-control"{0} style="margin-top:2.5ex"></select>', (multi ? ' multiple size="9"' : '') );
-		this.select = $(tpl).appendTo(elem).change($cd(this, this.change));
+		this.select = $(tpl).appendTo(elem).change(this._d_change);
 	},
 
 	setData: function(mooses)
@@ -860,6 +874,11 @@ CMooseChooser.prototype =
 				res.push({value: opt[i].value, phone: opt[i].phone});
 		return res;
 	},
+
+    _filterChange: function()
+    {
+    // if sel change raise change!
+    },
 
 	change: function()
 	{
@@ -908,8 +927,8 @@ CPeriodChooser.prototype =
     {
         var tpl = '<div>' +
                     '<div class="btn-group btn-group-sm" data-toggle="buttons">' +
-                        '<label class="btn btn-default"><input type="radio" name="options"autocomplete="off">Вчера и сегодня</label>' +
-                        '<label class="btn btn-default"><input type="radio" name="options"autocomplete="off">Неделя</label>' +
+                        '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Вчера и сегодня</label>' +
+                        '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Неделя</label>' +
                         '<label class="btn btn-default active"><input type="radio" name="options" autocomplete="off" checked>Месяц</label>' +
                         '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Все</label>' +
                         '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off" disabled>Точно...</label>' +
