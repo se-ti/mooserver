@@ -2647,3 +2647,64 @@ CColumnFilter.prototype =
     }
 }
 CColumnFilter.inheritFrom(CControl);
+
+CTipControl = function(root, tips)
+{
+    this._tips = null;
+    this._root = null;
+    this._text = null;
+
+    this._buildIn(root);
+    this.setTips(tips);
+}
+
+CTipControl.prototype =
+{
+    _buildIn: function(root)
+    {
+        if (!root)
+            return;
+
+        this._root = $(root);
+
+        this._text = this._root.append('Совет: <span class="text-muted -small"></span>').find('span');
+    },
+
+    setTips: function(tips, random)
+    {
+        this._tips = tips || [];
+        this._curTip = -1;
+
+        if (random || false)
+            return this.random();
+        return this.next();
+    },
+
+    random: function()
+    {
+        this._curTip = this._tips.length > 0 ? Math.floor(Math.random() * this._tips.length) : 0;
+        return this._drawTip();
+    },
+
+    next: function()
+    {
+        this._curTip = this._tips.length > 0 ? ((this._curTip + 1) % this._tips.length) : 0;
+        return this._drawTip();
+    },
+
+    toggle: function(show)
+    {
+        if (!this._root)
+            return;
+
+        this._root.toggleClass('hidden', !show);
+        return this;
+    },
+
+    _drawTip: function()
+    {
+        if (this._root)
+            this._text.html(this._tips.length > 0 ? this._tips[this._curTip] : '');
+        return this;
+    }
+}

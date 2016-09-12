@@ -380,6 +380,7 @@ CMoose = function(after)
 	this.periodChooser = null;
 	this.mooseChooser = null;
 	this.send = null;
+    this.tipControl = null;
 
 	this._exportBtn = null;
     this._fitBounds = true;
@@ -419,21 +420,24 @@ CMoose.prototype =
 			.on_change($cd(this, this._phoneSelect));
         $('<div class="pull-right text-muted small"><small>программирование: <a href="https://github.com/se-ti/">se-ti</a>, <a href="https://github.com/av-p/">AVP</a>, маяки: <a href="https://github.com/av-p/">AVP</a></small></div>')
                 .appendTo(je);
-        $('<div>Совет: <span class="text-muted -small">Используйте клавиши <small><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></small> для перемещения вдоль трека</span></div>')
-                .appendTo(je);
+
+        this.tipControl = new CTipControl($('<div></div>').appendTo(je),
+                ['Используйте клавиши <small><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></small> для перемещения вдоль трека',
+                    'Зажав <small><kbd>Ctrl</kbd></small> можно выбрать треки нескольких животных']);
 	},
 
 	activate: function(s)
 	{
 		CPage.callBaseMethod(this, 'activate', [s]);
         this._reloadMoose();
+
         if (this.map)
 			this.map.invalidateSize();
         if (this.periodChooser)
             this.periodChooser.setTimes(null, null, true);
-
         if (this.send)
             this.send.collapse(true);
+        this.tipControl.random();
 	},
 
 	setRights: function(rights)
