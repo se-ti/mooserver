@@ -138,7 +138,7 @@ function login()
 	else
 		$res = $auth->tryLogout($db);
 
-	return array('res' => $res, 'rights' => getRights());
+	return ['res' => $res, 'data' => getMooses()];
 }
 
 function getProfile()

@@ -130,7 +130,7 @@ class CTinyDb
 
     protected function Query($query, $dupMessage = null)
     {
-        $res = $this->db->query($query);
+        $res = $this->db->query($query, PDO::FETCH_ASSOC);
         if (!$res && ($dupMessage === null || !$this->ErrDuplicate($dupMessage)))
         {
             $err = $this->db->errorInfo();

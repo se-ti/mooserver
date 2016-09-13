@@ -139,9 +139,10 @@ CLogin.prototype =
         this._setupDialog();
     },
 
-	setup: function(rights)
+	setup: function(appData)
 	{
-		rights = rights || {};
+        appData = appData || {};
+		var rights = appData.rights || {};
 
 		var c = this.c;
 
@@ -155,7 +156,7 @@ CLogin.prototype =
 
 		this.logged = rights.isLogged;
 
-		this._raise_onSetup(rights);
+		this._raise_onSetup(appData);
 	},
 
     _clearErrors: function()
@@ -268,7 +269,7 @@ CLogin.prototype =
                 this.c.dialog.modal('hide');
         }
 
-		this.setup(result.rights);
+		this.setup(result.data);
 		//this._raise_onSetup(result.rights);
 	},
 
@@ -282,9 +283,9 @@ CLogin.prototype =
 		return this.remove("setup", h);
 	},
 
-	_raise_onSetup:	function(rights)
+	_raise_onSetup:	function(appData)
 	{
-		this.raise("setup", rights);
+		this.raise("setup", appData);
 	}
 }
 CLogin.inheritFrom(CControl);
@@ -825,7 +826,7 @@ CMooseChooser.prototype =
             '</div>';
 
         this.filter = $(tpl2).appendTo(elem).change(this._d_filterChange);
-        
+
 		var tpl = String.format('<select class="form-control"{0} style="margin-top:2.5ex"></select>', (multi ? ' multiple size="9"' : '') );
 		this.select = $(tpl).appendTo(elem).change(this._d_change);
 	},

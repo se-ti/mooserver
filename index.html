@@ -187,6 +187,16 @@ CApp.prototype = {
         };
     },
 
+    getData: function()
+    {
+        var g = this._global;
+        return {
+            rights: g.rights,
+            mooses: g.moose,
+            phones: g.phones
+        };
+    },
+
     getRights: function()
     {
         return this._global.rights;
@@ -314,16 +324,18 @@ CController.prototype = {
 			}
 	},
 
-	_onRightsChange: function(rights)
+	_onRightsChange: function(appData)
 	{
         var app = CApp.single();
         app.clearData();
-        app.setRights(rights);
+        app.setRights(appData.rights);
+        app.setMoose(appData.mooses);
+        app.setPhones(appData.phones);
 
         //console.log('orc: ' + rights.isRoot);
 
 		for (var i = 0; i < this._pages.length; i++)
-			this._pages[i].setRights(rights);
+			this._pages[i].setRights(appData.rights);
 	},
 
 	getMoose: function()
@@ -339,12 +351,7 @@ CController.prototype = {
 			return;
         }
 
-        var app = CApp.single();
-        app.setRights(result.rights);
-        app.setMoose(result.mooses);
-        app.setPhones(result.phones);
-
-		this._pass.setup(result.rights);
+		this._pass.setup(result);
 
 		for (var i = 0; i < this._pages.length; i++)
 			this._pages[i].setData(result);
@@ -450,7 +457,7 @@ CMoose.prototype =
         this._canAdmin  = rights.canAdmin;
 
         this.map.update({canToggle: this._canAdmin});
-        this._reloadMoose();
+        this.setData(CApp.single().getData());
 	},
 
 	setData: function(data)
@@ -464,7 +471,9 @@ CMoose.prototype =
 			if (data.mooses && data.mooses.length > 0)
 			{
 				this.mooseChooser.selectMoose(data.mooses[0].id);
-				this.reRead(null);
+
+                if (this._isActive)
+				    this.reRead(null);
 			}
 		}
 	},
@@ -703,7 +712,11 @@ CBeacon.prototype = {
         }
 
         if (this._isActive)
+        {
             this.reRead();
+            var d = CApp.single().getData();
+            this._send.setData(d.phones, d.mooses);
+        }
 
         if (this._map)
             this._map.update({canToggle: rights.canAdmin});
