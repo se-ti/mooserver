@@ -32,45 +32,45 @@ function getRights()
 // думать про версионность, таймстемпы, не передавать лишнего
 function getData()
 {
-	global $db, $auth;
+    global $db, $auth;
 
     $t1 = microtime(true);
-	$ids = _safeIds();
-	if ($ids == null)
-		return array();
+    $ids = _safeIds();
+    if ($ids == null)
+        return array();
 
-	$start = _safeTime('start');
-	$end = _safeTime('end');
+    $start = _safeTime('start');
+    $end = _safeTime('end');
 
     $t2 = microtime(true);
-	$mData = $db->GetMooseTracks($auth, $ids, $start, $end);
+    $mData = $db->GetMooseTracks($auth, $ids, $start, $end);
     $t3 = microtime(true);
-	$aData = $db->GetMooseActivity($auth, $ids, $start, $end);
+    $aData = $db->GetMooseActivity($auth, $ids, $start, $end);
     $t4 = microtime(true);
 
-	// add activity to data
-	$i = 0;
-	$idx = array();
-	foreach ($mData as &$moose)
-		$idx[$moose['id']] = $i++;
+    // add activity to data
+    $i = 0;
+    $idx = array();
+    foreach ($mData as &$moose)
+        $idx[$moose['id']] = $i++;
 
     $t5 = microtime(true);
 
-	foreach ($aData as $activity)
-	{
-		$mId = $activity['id'];
-		$act = $activity['activity'];
-		if (isset($idx[$mId]))
-			$mData[$idx[$mId]]['activity'] = $act;
-		else
-			$mData[] = array('id' => $mId, 'activity' => $act);
-	}
+    foreach ($aData as $activity)
+    {
+        $mId = $activity['id'];
+        $act = $activity['activity'];
+        if (isset($idx[$mId]))
+            $mData[$idx[$mId]]['activity'] = $act;
+        else
+            $mData[] = array('id' => $mId, 'activity' => $act);
+    }
 
     $t6 = microtime(true);
 
-    //Log::d($db, $auth, 'times', "total: '" . ($t6-$t1) . "' tracks: '" . ($t3-$t2) . "' act: '" . ($t4-$t3));
+    //Log::d($db, $auth, 'times', sprintf("total: %4.0f tracks: %4.0f act %4.0f ms", ($t6-$t1) * 1000, ($t3-$t2) * 1000, ($t4-$t3) * 1000));
 
-	return $mData;
+    return $mData;
 }
 
 function getSms()
