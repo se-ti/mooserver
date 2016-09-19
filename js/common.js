@@ -149,7 +149,10 @@ function $ajax(method, param, success, fail)
 
     fail = fail || function(jqXHR, textStatus, errorThrown)
         {
-            log(String.format("Запрос к '{0}' завершился ошибкой: {1}, {2}", this.url, jqXHR.status, errorThrown));
+            var rt = jqXHR.responseText || '';
+            var respStat = jqXHR.status == 200 ? String.format("response len: {0}, head: {1}...", rt.length, rt.substr(0, 50)): '';
+
+            log(String.format("Запрос к '{0}' завершился ошибкой: {1}, statusText: {2}, err: {3}, {4}, head: {5}", this.url, jqXHR.status, jqXHR.statusText, textStatus, errorThrown, respStat));
             /*if (console && console.log)
                 console.log(textStatus);*/
         };
