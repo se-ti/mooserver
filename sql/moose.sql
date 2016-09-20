@@ -1,6 +1,6 @@
 /**
  * Created by Serge Titov for mooServer project
- * 2014 - 2015
+ * 2014 - 2016
  */
 
 create table stamp
@@ -14,8 +14,8 @@ create table phone
 	phone text(25) not null,
   canonical text(25) not null,
 	active bit default 1,
-  group_id int,       -- принадлежит организации
-  demo bit default 1, -- принадлежит виден всем
+  group_id int,       -- РїСЂРёРЅР°РґР»РµР¶РёС‚ РѕСЂРіР°РЅРёР·Р°С†РёРё
+  demo bit default 1, -- РїСЂРёРЅР°РґР»РµР¶РёС‚ РІРёРґРµРЅ РІСЃРµРј
 	unique (phone(25)),
   unique (canonical(25)),
   foreign key (group_id) references users (id)
@@ -28,8 +28,8 @@ create table moose
 	phone_id int unique,
 	name text(25) not null,
 	comment text,
-  group_id int,         -- принадлежит организации
-  demo bit default 1,   -- принадлежит виден всем
+  group_id int,         -- РїСЂРёРЅР°РґР»РµР¶РёС‚ РѕСЂРіР°РЅРёР·Р°С†РёРё
+  demo bit default 1,   -- РїСЂРёРЅР°РґР»РµР¶РёС‚ РІРёРґРµРЅ РІСЃРµРј
 	unique (name(25)),
 	foreign key (phone_id) references phone (id),
   foreign key (group_id) references users (id)
@@ -40,16 +40,16 @@ create table raw_sms
 (
 	id int primary key auto_increment,
 	phone_id int not null,
-	stamp datetime not null,	-- время получения смс-гейтом
+	stamp datetime not null,	-- РІСЂРµРјСЏ РїРѕР»СѓС‡РµРЅРёСЏ СЃРјСЃ-РіРµР№С‚РѕРј
 	text text(165),
 
-	user_id int not null, 		-- кто ее добавил
+	user_id int not null, 		-- РєС‚Рѕ РµРµ РґРѕР±Р°РІРёР»
 	ip text(64) not null,
 	xfw_ip text(64) not null,
 
 	foreign key (user_id) references users (id),
 	foreign key (phone_id) references phone (id), 
-	unique (phone_id, text(165))   -- пока не надо :)
+	unique (phone_id, text(165))   -- РїРѕРєР° РЅРµ РЅР°РґРѕ :)
 );
 
 create table sms
@@ -109,3 +109,5 @@ insert into usergroups (user_id, group_id)
   (1003, 1001);
 
 alter table users add column is_gate bit default 0;
+alter table moose add column upd_stamp datetime DEFAULT 0;
+create index activity_sms on activity (sms_id);
