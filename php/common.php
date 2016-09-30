@@ -43,12 +43,10 @@ function getData()
     $end = _safeTime('end');
 
     $stamp = intval(@$_POST['stamp']);
-    $serverStamp = $db->GetMooseTimestamps($auth, $ids);
-    if ($serverStamp !== false)
-        $serverStamp = strtotime($serverStamp);
+    $stamps = $db->GetMooseTimestamps($auth, $ids);
 
-    if ($stamp > 0 && $serverStamp !== false && $stamp >= $serverStamp) // todo думать про права
-        return ['useCache' => true];
+    if ($stamp > 0 && count($ids) == 1 && $stamps !== false && isset($stamps[$ids[0]]) && $stamp >= $stamps[$ids[0]]) // todo думать про права
+        return [['id' => $ids[0], 'useCache' => true]];
 
     $t2 = microtime(true);
     $mData = $db->GetMooseTracks($auth, $ids, $start, $end);
@@ -62,10 +60,8 @@ function getData()
     foreach ($mData as &$moose)
     {
         $idx[$moose['id']] = $i++;
-        if ($serverStamp !== false)
-            $moose['stamp'] = $serverStamp;
-        //if ($stamps !== false && isset($stamps[$moose['id']]))
-          //  $moose['stamp'] =  $stamps[$moose['id']];
+        if ($stamps !== false && isset($stamps[$moose['id']]))
+            $moose['stamp'] =  $stamps[$moose['id']];
     }
     // add cache marks
 

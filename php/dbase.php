@@ -588,7 +588,7 @@ class CMooseDb extends CTinyDb
         $cond = implode($ids, ", ");
         $access = $this->CanSeeCond($auth, 'm', false, 'moose');
 
-        $query = "select DATE_FORMAT(max(upd_stamp),'%Y-%m-%dT%TZ') as stamp  
+        $query = "select id, DATE_FORMAT(upd_stamp, '%Y-%m-%dT%TZ') as stamp  
                 from moose m
                 {$access['join']}
                 where id in ($cond) and {$access['cond']}";
@@ -596,11 +596,7 @@ class CMooseDb extends CTinyDb
         $result = $this->Query($query);
         $res = [];
         foreach ($result as $row)
-        {
-            $result->closeCursor();
-            return $row['stamp'];
-            $res[$row['id']] = $row['stamp'];
-        }
+            $res[$row['id']] = strtotime($row['stamp']);
         $result->closeCursor();
 
         return $res;

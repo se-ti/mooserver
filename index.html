@@ -615,33 +615,26 @@ CMoose.prototype =
 
 		this.source = [];
 
-        if (result.useCache)
+        for (var i = 0; i < result.length; i++)
         {
-            this.source = [CApp.single().getMooseData(jqXHR.param.ids[0])];
-            if (this.source[0].data && this.source[0].data.length > 0)
-            {
-                st = this.source[0].data[0].tm;
-                en = this.source[0].data[this.source[0].data.length-1].tm;
-            }
-        }
-        else
-            for (var i = 0; i < result.length; i++)
+            if (result[i].useCache)
+                gtd = CApp.single().getMooseData(result[i].id);
+            else
             {
                 gtd = CMooseMapHelper.glueTrackData(result[i]);
-                var src = {id: result[i].id, key: 'mooseId', data: gtd};
-
-                this.source.push(src);
-                CApp.single().addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, result[i].stamp, src);
-
-                if (!gtd || !gtd || gtd.length <= 0)
-                    continue;
-
-                len = gtd.length;
-                if (st == null  || st > gtd[0].tm)
-                    st = gtd[0].tm;
-                if (en == null  || en < gtd[len-1].tm)
-                    en = gtd[len-1].tm;
+                CApp.single().addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, result[i].stamp, gtd);
             }
+
+            this.source.push({id: result[i].id, key: 'mooseId', data: gtd});
+            if (!gtd || !gtd || gtd.length <= 0)
+                continue;
+
+            len = gtd.length;
+            if (st == null  || st > gtd[0].tm)
+                st = gtd[0].tm;
+            if (en == null  || en < gtd[len-1].tm)
+                en = gtd[len-1].tm;
+        }
 
 		this.map.render(this.source, this._fitBounds);
         if (st != null)
