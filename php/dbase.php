@@ -119,6 +119,30 @@ class CMooseDb extends CTinyDb
         return false;
     }
 
+    // should be called only with verified $rawSmsIds
+    protected function GetRawSmsMooses(CMooseAuth $auth, $rawSmsIds)
+    {
+        if ($rawSmsIds == null || count($rawSmsIds) == 0)
+            return [];
+
+        $ids = implode(", ", $rawSmsIds);
+        $query = "select distinct s.moose
+                    from raw_sms rs
+                    left join sms s on s.raw_sms_id = rs.id
+                    where rs.id = ($ids) and s.moose is not null";
+
+        $res = $this->Query($query);
+        $result = [];
+        foreach ($res as $r)
+            $result[] = $r['moose'];
+
+        return $result;
+    }
+
+
+    /// $name -- table alias in query
+    /// $simple -- true -- return query parts, false -- return query results
+    /// $table -- real table name. Used only when $simple == false
     private function CanSeeCond(CTinyAuth $auth, $name, $simple = true, $table = null)
     {
         if ($auth->isSuper())
@@ -541,6 +565,47 @@ class CMooseDb extends CTinyDb
         return $res;
     }
 
+    // call on update: +new sms, + reassign sms, + toggle is point valid , import === new sms, + DeleteRawSms
+    protected function SetMooseTimestamp(CTinyAuth $auth, $ids)
+    {
+        $ids = filter_var($ids, FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY);
+        if ($ids === false || count($ids) == 0)
+            return;
+        $cond = implode($ids, ", ");
+        $query = "update moose 
+                    set upd_stamp = UTC_TIMESTAMP 
+                    where id in ($cond)";
+
+        $this->Query($query);
+    }
+
+    function GetMooseTimestamps(CTinyAuth $auth, $ids)
+    {
+        $ids = filter_var($ids, FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY);
+        if ($ids === false || count($ids) == 0)
+            return false;
+
+        $cond = implode($ids, ", ");
+        $access = $this->CanSeeCond($auth, 'm', false, 'moose');
+
+        $query = "select DATE_FORMAT(max(upd_stamp),'%Y-%m-%dT%TZ') as stamp  
+                from moose m
+                {$access['join']}
+                where id in ($cond) and {$access['cond']}";
+
+        $result = $this->Query($query);
+        $res = [];
+        foreach ($result as $row)
+        {
+            $result->closeCursor();
+            return $row['stamp'];
+            $res[$row['id']] = $row['stamp'];
+        }
+        $result->closeCursor();
+
+        return $res;
+    }
+
 	function GetMooseTracks(CTinyAuth $auth, $ids, $start, $end)
 	{
         $t0 = microtime(true);
@@ -597,18 +662,19 @@ class CMooseDb extends CTinyDb
 
 		$timeCond = $this->TimeCondition('activity.stamp', $start, $end);
         $access = $this->CanSeeCond($auth, 'm', false, 'moose');
-		
+
 		$query = "select DATE_FORMAT(activity.stamp,'%Y-%m-%dT%TZ') as stamp, max(active) as active, valid, sms.moose as moose
-				from activity
+				from activity				
 				inner join sms on activity.sms_id = sms.id
 				inner join moose m on m.id = sms.moose
 				{$access['join']}
-				where sms.moose in ($cond) $timeCond and {$access['cond']}
+				where  sms.moose in ($cond) $timeCond and {$access['cond']}
 				 group by activity.stamp, valid, sms.moose
 				order by sms.moose asc, activity.stamp asc ";
 
         $t1 = microtime(true);
 		$result = $this->Query($query);
+        //Log::d($this, $auth, "activity_times", $query);
         $t2 = microtime(true);
 
         $res = array();
@@ -628,8 +694,8 @@ class CMooseDb extends CTinyDb
 
         $t3 = microtime(true);
 
-        //Log::d($this, $auth, "activity_times", "total: '" . ($t3-$t0) . "' que: '" . ($t2-$t1) . "' retr: '" . ($t3-$t2));
-		return $retVal;
+        Log::d($this, $auth, "activity_times", sprintf("total: %.4f query: %.4f, retrieve %4f", ($t3-$t0), ($t2-$t1), ($t3-$t2)));
+        return $retVal;
 	}
 
     function GetSmsTrack(CTinyAuth $auth, $rawSmsId)
@@ -752,23 +818,31 @@ class CMooseDb extends CTinyDb
 
     function ReassignSmses(CMooseAuth $auth, $smsIds, $moose)
     {
-        $moose = $moose != null ? $this->ValidateId($moose, self::ErrWrongMooseId, 1): 'null';
+        $qmoose = $moose != null ? $this->ValidateId($moose, self::ErrWrongMooseId, 1): 'null';
 
-        if (!$auth->isSuper() || !$this->CanModify($auth, $moose, true))     // todo разрешить не только super, проверка на права
+        if (!$auth->isSuper() || !$this->CanModify($auth, $qmoose, true))     // todo разрешить не только super, проверка на права
             $this->ErrRights();
 
         $ids = filter_var($smsIds, FILTER_VALIDATE_INT, array('flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => array('min_range' => 1)));
         if ($ids === false || count($ids) == 0)
             return $this->Err(self::ErrWrongSmsId);
 
-        $ids = implode(', ', $ids);
+        $qids = implode(', ', $ids);
 
         $query = "update sms
-          set moose = $moose
-          where raw_sms_id in ($ids)";
+          set moose = $qmoose
+          where raw_sms_id in ($qids)";
 
+        $this->beginTran();
         $result = $this->Query($query);
         $result->closeCursor();
+
+        $mooses = $this->GetRawSmsMooses($auth, $ids);
+        if ($moose != null)
+            $mooses[] = $moose;
+        $this->SetMooseTimestamp($auth, $mooses);
+
+        $this->commit();
 
         Log::t($this, $auth, 'reassignSms', "перевешиваем на животное '$moose', rawSmsIds: '$ids'");
         return array('res' => true, 'rc' => $result->rowCount());
@@ -780,7 +854,12 @@ class CMooseDb extends CTinyDb
         if (!$this->CanModify($auth, $mooseId, true))
             $this->ErrRights();
 
-        return $this->CoreTogglePoint($auth, $time, $valid, "moose = $mooseId");
+        $this->beginTran();
+        $res = $this->CoreTogglePoint($auth, $time, $valid, "moose = $mooseId");
+        $this->SetMooseTimestamp($auth, [$mooseId]);
+        $this->commit();
+
+        return $res;
     }
 
     function TogglePoint2(CMooseAuth $auth, $rawSmsId, $time, $valid)
@@ -789,7 +868,12 @@ class CMooseDb extends CTinyDb
         if (!$this->CanModifySms($auth, $rawSmsId))
             $this->ErrRights();
 
-        return $this->CoreTogglePoint($auth, $time, $valid, "raw_sms_id = $rawSmsId");
+        $this->beginTran();
+        $res = $this->CoreTogglePoint($auth, $time, $valid, "raw_sms_id = $rawSmsId");
+        $this->SetMooseTimestamp($auth, $this->GetRawSmsMooses($auth, [$rawSmsId]));
+        $this->commit();
+
+        return $res;
     }
 
     private function CoreTogglePoint(CMooseAuth $auth, $time, $valid, $condition)
@@ -829,6 +913,8 @@ class CMooseDb extends CTinyDb
 
         $this->beginTran();
 
+        $mooses = $this->GetRawSmsMooses($auth, [$rawSmsId]);
+
         $query = "delete from activity where sms_id in (select id from sms where raw_sms_id = $rawSmsId)";
         $this->Query($query);
 
@@ -840,6 +926,8 @@ class CMooseDb extends CTinyDb
 
         $query = "delete from raw_sms where id = $rawSmsId";
         $this->Query($query);
+
+        $this->SetMooseTimestamp($auth, $mooses);
 
         $this->commit();
 
@@ -854,8 +942,8 @@ class CMooseDb extends CTinyDb
 		$prop = $this->PhoneProp($auth, $phone);
         if ($moose != null)
             $prop['mooseId'] = $this->MooseProp($auth, $moose);
-		if ($prop['mooseId'] == null)
-			$prop['mooseId'] = 'null';
+
+        $qMooseId = $prop['mooseId'] != null ? $prop['mooseId'] : 'null';
 
         $this->beginTran();
 		$rawSmsId = $this->AddRawSms($prop['phoneId'], $msg, $auth->id());
@@ -872,7 +960,7 @@ class CMooseDb extends CTinyDb
 		}
 
 		$query = "insert into sms (moose, raw_sms_id, int_id, volt, temp, gsm_tries, gps_on) 
-				values ( {$prop['mooseId']}, $rawSmsId, {$msg->id}, 
+				values ( $qMooseId, $rawSmsId, {$msg->id}, 
 						{$msg->volt}, {$msg->temp}, {$msg->gsmTries}, {$msg->gpsOn})";
 		$this->Query($query);
 
@@ -882,7 +970,9 @@ class CMooseDb extends CTinyDb
 		if ($msg->activity != null)
 			$this->AddActivity($smsId, $msg->activity);
 
-		// todo set global timestamp
+        if ($prop['mooseId'] != null)
+            $this->SetMooseTimestamp($auth, [$prop['mooseId']]);    // todo set global timestamp
+
         $this->commit();
 		$res['sms'] = $smsId;
 		$res['temp'] = $msg->temp;

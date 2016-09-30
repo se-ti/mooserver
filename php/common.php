@@ -42,20 +42,36 @@ function getData()
     $start = _safeTime('start');
     $end = _safeTime('end');
 
+    $stamp = intval(@$_POST['stamp']);
+    $serverStamp = $db->GetMooseTimestamps($auth, $ids);
+    if ($serverStamp !== false)
+        $serverStamp = strtotime($serverStamp);
+
+    if ($stamp > 0 && $serverStamp !== false && $stamp >= $serverStamp) // todo думать про права
+        return ['useCache' => true];
+
     $t2 = microtime(true);
     $mData = $db->GetMooseTracks($auth, $ids, $start, $end);
     $t3 = microtime(true);
     $aData = $db->GetMooseActivity($auth, $ids, $start, $end);
     $t4 = microtime(true);
 
-    // add activity to data
+
     $i = 0;
     $idx = array();
     foreach ($mData as &$moose)
+    {
         $idx[$moose['id']] = $i++;
+        if ($serverStamp !== false)
+            $moose['stamp'] = $serverStamp;
+        //if ($stamps !== false && isset($stamps[$moose['id']]))
+          //  $moose['stamp'] =  $stamps[$moose['id']];
+    }
+    // add cache marks
 
     $t5 = microtime(true);
 
+    // add activity to data
     foreach ($aData as $activity)
     {
         $mId = $activity['id'];
@@ -63,7 +79,10 @@ function getData()
         if (isset($idx[$mId]))
             $mData[$idx[$mId]]['activity'] = $act;
         else
-            $mData[] = array('id' => $mId, 'activity' => $act);
+        {
+            $mData[] = array('id' => $mId, 'activity' => $act, 'stamp' => $serverStamp);
+            $idx[$mId] = $i++;
+        }
     }
 
     $t6 = microtime(true);

@@ -109,5 +109,5 @@ insert into usergroups (user_id, group_id)
   (1003, 1001);
 
 alter table users add column is_gate bit default 0;
-alter table moose add column upd_stamp datetime DEFAULT 0;
-create index activity_sms on activity (sms_id);
+alter table moose add column upd_stamp datetime DEFAULT "1980-01-01 00:00:00";
+-- create index activity_sms on activity (sms_id);
