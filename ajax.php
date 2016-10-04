@@ -56,7 +56,7 @@ $methods = array('sendSMS' => 'addSeries', // ajaxName => functionName
     'verifyToken' => 'verifyToken',
     'login' => 'login',
 
-    //'test' => 'test'
+    //'test' => 'CTest::ok'
     );
 
 $method = @$methods[$mName];
@@ -69,7 +69,7 @@ try {
     if ($needComp)
         ob_start('ob_gzhandler');
     
-    echo json_encode($method());
+    echo json_encode(call_user_func($method));
     
     if ($needComp)
         ob_end_flush();
