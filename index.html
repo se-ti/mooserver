@@ -567,8 +567,20 @@ CMoose.prototype =
 		if (times.end)
 			param.end = times.end.toJSON();
 
-        if (param.ids && param.ids.length == 1)
-            param.stamp = CApp.single().getMooseStamp(param.ids[0], param.start, param.end);
+        /*if (param.ids && param.ids.length == 1)
+            param.stamp = CApp.single().getMooseStamp(param.ids[0], param.start, param.end);*/
+
+        if (param.ids)
+        {
+            var stamps = [];
+            for (var i =0; i < param.ids.length; i++)
+            {
+                var st = CApp.single().getMooseStamp(param.ids[i], param.start, param.end);
+                if (st)
+                    stamps.push({id: param.ids[i], stamp: st});
+            }
+            param.stamps = stamps;
+        }
 
 		return param;
 	},

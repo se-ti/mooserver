@@ -583,7 +583,7 @@ class CMooseDb extends CTinyDb
     {
         $ids = filter_var($ids, FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY);
         if ($ids === false || count($ids) == 0)
-            return false;
+            return null;
 
         $cond = implode($ids, ", ");
         $access = $this->CanSeeCond($auth, 'm', false, 'moose');

@@ -1,7 +1,7 @@
 <?
 /**
  * Created by Serge Titov for mooServer project
- * 2014 - 2015
+ * 2014 - 2016
  */
 
 if (!defined('IN_MOOSE'))
@@ -29,59 +29,80 @@ function getRights()
 	return $res;
 }
 
+
 // думать про версионность, таймстемпы, не передавать лишнего
 function getData()
 {
     global $db, $auth;
 
     $t1 = microtime(true);
-    $ids = _safeIds();
+    $ids = CMooseTools::safeIds();
     if ($ids == null)
         return array();
 
-    $start = _safeTime('start');
-    $end = _safeTime('end');
+    $start = CMooseTools::safeTime('start');
+    $end = CMooseTools::safeTime('end');
 
-    $stamp = intval(@$_POST['stamp']);
+    $clientStamps = CMooseTools::safeStamps(@$_POST['stamps']);
     $stamps = $db->GetMooseTimestamps($auth, $ids);
 
-    if ($stamp > 0 && count($ids) == 1 && $stamps !== false && isset($stamps[$ids[0]]) && $stamp >= $stamps[$ids[0]]) // todo думать про права
-        return [['id' => $ids[0], 'useCache' => true]];
+    // todo 1. сравнить clientStamps и serverStamps
+    //      2. удалить из ids те, для которых useCache = true
+    //      3. получить данные по оставшимся, добавить им serverStamps
+    //      4. склеить данные и useCache
+
+    $retrieveIds = [];
+    $useCache = [];
+    foreach ($ids as $id)
+    {
+        if (isset($clientStamps[$id]) && $stamps != null && isset($stamps[$id]) && $clientStamps[$id] >= $stamps[$id])
+            $useCache[] = ['id' => $id, 'useCache' => true];
+        else
+            $retrieveIds[] = $id;
+    }
 
     $t2 = microtime(true);
-    $mData = $db->GetMooseTracks($auth, $ids, $start, $end);
+    $mData = $db->GetMooseTracks($auth, $retrieveIds, $start, $end);
     $t3 = microtime(true);
-    $aData = $db->GetMooseActivity($auth, $ids, $start, $end);
+    $aData = $db->GetMooseActivity($auth, $retrieveIds, $start, $end);
     $t4 = microtime(true);
 
 
     $i = 0;
-    $idx = array();
-    foreach ($mData as &$moose)
-    {
-        $idx[$moose['id']] = $i++;
-        if ($stamps !== false && isset($stamps[$moose['id']]))
-            $moose['stamp'] =  $stamps[$moose['id']];
-    }
-    // add cache marks
+    $idx = [];
+    if ($mData != null)
+        foreach ($mData as &$moose)
+        {
+            $mId = $moose['id'];
+            $idx[$mId] = $i++;
+            if ($stamps != null && isset($stamps[$mId]))
+                $moose['stamp'] =  $stamps[$mId];
+        }
 
     $t5 = microtime(true);
 
     // add activity to data
-    foreach ($aData as $activity)
-    {
-        $mId = $activity['id'];
-        $act = $activity['activity'];
-        if (isset($idx[$mId]))
-            $mData[$idx[$mId]]['activity'] = $act;
-        else
+    if ($aData != null)
+        foreach ($aData as $activity)
         {
-            $mData[] = array('id' => $mId, 'activity' => $act, 'stamp' => $serverStamp);
-            $idx[$mId] = $i++;
+            $mId = $activity['id'];
+            $act = $activity['activity'];
+            if (isset($idx[$mId]))
+                $mData[$idx[$mId]]['activity'] = $act;
+            else
+            {
+                $mData[] = array('id' => $mId, 'activity' => $act);
+                if ($stamps != null && isset($stamps[$mId]))
+                    $mData[$i]['stamps'] = $stamps[$mId];
+                $idx[$mId] = $i++;
+            }
         }
-    }
 
     $t6 = microtime(true);
+
+    // add cache marks
+    foreach ($useCache as $res)
+        $mData[] = $res;
 
     //Log::d($db, $auth, 'times', sprintf("total: %4.0f tracks: %4.0f act %4.0f ms", ($t6-$t1) * 1000, ($t3-$t2) * 1000, ($t4-$t3) * 1000));
 
@@ -108,11 +129,11 @@ function getActivity()
 {
 	global $db, $auth;
 
-	$ids = _safeIds();
+	$ids = CMooseTools::safeIds();
 	if ($ids == null)
 		return array();
 
-	return $db->GetMooseActivity($auth, $ids, _safeTime('start'), _safeTime('end'));
+	return $db->GetMooseActivity($auth, $ids, CMooseTools::safeTime('start'), CMooseTools::safeTime('end'));
 }
 
 function getBeaconData($forExport = false)
@@ -120,46 +141,71 @@ function getBeaconData($forExport = false)
 	global $db;
     global $auth;
 
-	$ids = _safeIds();
+	$ids = CMooseTools::safeIds();
 	if ($ids == null)
 		$ids = array();
 
     $all = @$_POST['all'] == 'true' && $auth->isLogged();
 
-	return $db->GetBeaconStat($auth, $ids, _safeTime('start'), _safeTime('end'), $all, $forExport);
+	return $db->GetBeaconStat($auth, $ids, CMooseTools::safeTime('start'), CMooseTools::safeTime('end'), $all, $forExport);
 }
 
-function csvEscape($cell, $forceText = false)
+class CMooseTools
 {
-    $pfx = $forceText ? '=' : '';
-    return $forceText == false && preg_match("/[\";\n]/im", $cell) != 1 ?      // if contains quote, semicolon or new line
-        $cell :
-        ($pfx. '"' . str_replace('"', '""', $cell) . '"');
-}
 
+    public static function safeIds()
+    {
+        $ids = @$_POST['ids'];
+        if ($ids == null)
+            return null;
 
-/************************************** service functions *********************************************/
+        return filter_var($ids, FILTER_VALIDATE_INT, FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY);
+    }
 
-function _safeIds()
-{
-	$ids = @$_POST['ids'];
-	if ($ids == null)
-		return null;
+    public static function safeTime($param)
+    {
+        return isset($_POST[$param]) ? strtotime($_POST[$param]) : null;
+    }
 
-    return filter_var($ids, FILTER_VALIDATE_INT, FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY);
-}
+    public static function safeStamps($stamps)
+    {
+        //$stamps =;
+        if (!is_array($stamps))
+            return [];
 
-function _safeTime($param)
-{
-	return isset($_POST[$param]) ? strtotime($_POST[$param]) : null;
-}
+        $def = [
+            'id' => ['filter'    => FILTER_VALIDATE_INT,
+                'options'   => ['min_range' => 1]],
 
-function addSmsMessage($res)
-{
-    $msg = "sms added. Raw sms id: {$res['rawSms']}. ";
-    $msg .= (@$res['error'] != null) ? "Message parse error: {$res['error']}": "Sms id: {$res['sms']}";
+            'stamp' => ['filter'    => FILTER_VALIDATE_INT,
+                'options'   => ['min_range' => 1]]
+        ];
 
-    return $msg;
+        foreach ($stamps as $st)
+        {
+            $f = filter_var_array($st, $def);
+            if ($f['id']!= null && $f['id'] !== false && $f['stamp']!= null && $f['stamp'] !== false)
+                $res[$f['id']] = $f['stamp'];
+        }
+
+        return $res;
+    }
+
+    public static function addSmsMessage($res)
+    {
+        $msg = "sms added. Raw sms id: {$res['rawSms']}. ";
+        $msg .= (@$res['error'] != null) ? "Message parse error: {$res['error']}" : "Sms id: {$res['sms']}";
+
+        return $msg;
+    }
+
+    public static function csvEscape($cell, $forceText = false)
+    {
+        $pfx = $forceText ? '=' : '';
+        return $forceText == false && preg_match("/[\";\n]/im", $cell) != 1 ?      // if contains quote, semicolon or new line
+            $cell :
+            ($pfx. '"' . str_replace('"', '""', $cell) . '"');
+    }
 }
 
 ?>

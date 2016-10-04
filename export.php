@@ -63,10 +63,10 @@ function csvTimeHeader()
 	$start = @$_POST['start'];
 	$end   = @$_POST['end'];
 	if ($start != null)
-		$res .= "с;" . csvEscape($start) . ";". csvEscape(gmdate('Y-m-d H:i:s', strtotime($start))) . "\n";
+		$res .= "с;" . CMooseTools::csvEscape($start) . ";". CMooseTools::csvEscape(gmdate('Y-m-d H:i:s', strtotime($start))) . "\n";
 
 	if ($end != null)
-		$res .= "по;" . csvEscape($end) . "\n";
+		$res .= "по;" . CMooseTools::csvEscape($end) . "\n";
 
 	return $res;
 }
@@ -97,7 +97,7 @@ function exportBeacons()
             $phones[] = $phone;
         
 		foreach($phoneData['data'] as $row)
-			$rows[] = csvEscape($phone, true) .";". implode(";", array_map('csvEscape', $row));
+			$rows[] = CMooseTools::csvEscape($phone, true) .";". implode(";", array_map('CMooseTools::csvEscape', $row));
 	}
 
 	$header = "Экспорт маяков\n";
@@ -127,11 +127,11 @@ function exportActivity()
 		{
 			$name = mooseName($moo, $moose['id']);
 			$names[] = $name;
-            $name = csvEscape($name);
+            $name = CMooseTools::csvEscape($name);
             $qNames[] = $name;
-		
+
 			foreach($moose['activity'] as $mark)
-				$rows[] = $name . ";" . implode(";", array_map("csvEscape", $mark));
+				$rows[] = $name . ";" . implode(";", array_map("CMooseTools::csvEscape", $mark));
 		}
 
 	$header = "Экспорт активности для:;" . implode(";", $qNames) . "\n";
