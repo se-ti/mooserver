@@ -152,7 +152,7 @@ function $ajax(method, param, success, fail)
             var rt = jqXHR.responseText || '';
             var respStat = jqXHR.status == 200 ? String.format("response len: {0}, head: {1}...", rt.length, rt.substr(0, 50)): '';
 
-            var reqData = this.data ? '' : String.format(', req params: {0}', this.data);
+            var reqData = this.data ? String.format(', req params: {0}', this.data) : '';
 
             log(String.format("Запрос к '{0}' завершился ошибкой: {1}, statusText: {2}, err: {3}, {4}, head: {5}{6}", this.url, jqXHR.status, jqXHR.statusText, textStatus, errorThrown, respStat, reqData));
             /*if (console && console.log)
