@@ -930,8 +930,8 @@ CPeriodChooser.prototype =
                     '<div class="btn-group btn-group-sm" data-toggle="buttons">' +
                         '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Вчера и сегодня</label>' +
                         '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Неделя</label>' +
-                        '<label class="btn btn-default active"><input type="radio" name="options" autocomplete="off" checked>Месяц</label>' +
-                        '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Все</label>' +
+                        '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off">Месяц</label>' +
+                        '<label class="btn btn-default active"><input type="radio" name="options" autocomplete="off" checked>Все</label>' +
                         '<label class="btn btn-default"><input type="radio" name="options" autocomplete="off" disabled>Точно...</label>' +
                     '</div>' +
                 '</div>' +
