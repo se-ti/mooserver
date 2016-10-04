@@ -218,7 +218,7 @@ function changePwd()
     if (!is_string($new))
         dieError('Не задан новый пароль');
 
-    $res = $auth->ChangePassword($db, $old, $new);
+    $res = $auth->сhangePassword($db, $old, $new);
     if ($res !== true)
         dieError($res);
 
@@ -400,8 +400,8 @@ function addGate()
 
     $id = checkId($id, "Недопустимый id гейта", false);
 
-    $res = $auth->UpdateGate($db, $id, $title, $name, $orgs);
-    return array('id' => $id);
+    $auth->UpdateGate($db, $id, $title, $name, $orgs);
+    return ['id' => $id];
 }
 
 function addSeries()
@@ -425,7 +425,7 @@ function addSeries()
 	$msg = new CMooseSMS($sms, $time);
 
 	$res = $db->AddData($auth, $phone, $msg);
-    Log::t($db, $auth, "addSms", "via UI " . addSmsMessage($res));
+    Log::t($db, $auth, "addSms", "via UI " . CMooseTools::addSmsMessage($res));
 	return $res;
 }
 

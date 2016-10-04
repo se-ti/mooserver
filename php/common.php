@@ -30,7 +30,7 @@ function getRights()
 }
 
 
-// думать про версионность, таймстемпы, не передавать лишнего
+// думать про версии кеша, подгрузку по данных (чуть-чуть + все остальное)
 function getData()
 {
     global $db, $auth;
@@ -45,11 +45,6 @@ function getData()
 
     $clientStamps = CMooseTools::safeStamps(@$_POST['stamps']);
     $stamps = $db->GetMooseTimestamps($auth, $ids);
-
-    // todo 1. сравнить clientStamps и serverStamps
-    //      2. удалить из ids те, для которых useCache = true
-    //      3. получить данные по оставшимся, добавить им serverStamps
-    //      4. склеить данные и useCache
 
     $retrieveIds = [];
     $useCache = [];
@@ -152,7 +147,6 @@ function getBeaconData($forExport = false)
 
 class CMooseTools
 {
-
     public static function safeIds()
     {
         $ids = @$_POST['ids'];

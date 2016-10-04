@@ -111,7 +111,7 @@ function sms()  // todo add filtering
 		
     $res = $db->AddData($auth, $from, $msg);
 	
-    Log::t($db, $auth, "addSms", "via gate for '$from' " . addSmsMessage($res));
+    Log::t($db, $auth, "addSms", "via gate for '$from' " . CMooseTools::addSmsMessage($res));
     return $res;
 }
 
