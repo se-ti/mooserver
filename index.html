@@ -260,7 +260,7 @@ CApp.prototype = {
     getMooseStamp: function(id, stDate, enDate)
     {
         var mc = this._mooseCache[id];
-        return (mc && mc.st == stDate && mc.en == enDate) ? mc.stamp : null;
+        return (mc && (mc.st == null || mc.st && stDate && mc.st <= stDate) && (mc.en == null || mc.en && enDate && mc.en >= enDate)) ? mc.stamp : null;
     },
 
     getMooseData: function(id)
@@ -627,7 +627,10 @@ CMoose.prototype =
         for (var i = 0; i < result.length; i++)
         {
             if (result[i].useCache)
+            {
                 gtd = CApp.single().getMooseData(result[i].id);
+                gtd = CMooseMapHelper.filter(gtd, jqXHR.param.start ? new Date(Date.parse(jqXHR.param.start)) : null, jqXHR.param.end ? new Date(Date.parse(jqXHR.param.end)) : null);
+            }
             else
             {
                 gtd = CMooseMapHelper.glueTrackData(result[i]);

@@ -134,8 +134,13 @@ String.makeBreakable = function(str, head, chunk)
 if (String.prototype.trim === undefined)   // ie8 and prev
     String.prototype.trim = function()
     {
-        return this.replace(/^\s+|\s+$/gm, '');
+        return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/gm, '');
     }
+
+if (!Array.isArray)
+    Array.isArray = function(arg) {
+        return Object.prototype.toString.call(arg) === '[object Array]';
+    };
 
 function $ajax(method, param, success, fail)
 {

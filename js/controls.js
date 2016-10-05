@@ -2302,7 +2302,7 @@ CMooseMapHelper.glueTrackData = function(result)
 
     var track = result.track;
     var act = result.activity;
-    var aLen = act.length
+    var aLen = act.length;
     var len = track.length;
 
     for (i = 0; i < len; i++)
@@ -2335,6 +2335,47 @@ CMooseMapHelper.glueTrackData = function(result)
     }
 
     return track;
+}
+
+CMooseMapHelper.filter = function(gtd, stDate, enDate)
+{
+    if (!gtd || !Array.isArray(gtd))
+        return [];
+
+    var len = gtd.length;
+    var stIdx = stDate != null ? CMooseMapHelper._binarySearch(gtd, stDate) : 0;
+    var enIdx = enDate != null ? CMooseMapHelper._binarySearch(gtd, enDate) : len;
+
+    var res = [];
+    for (var i = stIdx; i < enIdx && i < len; i++)
+        res.push(gtd[i]);
+
+    return res;
+}
+
+// первый idx: arr[idx].tm > time или arr.length, если таких нет
+CMooseMapHelper._binarySearch = function(arr, time)
+{
+    var j = 0;
+    var pos;
+    var idx = arr.length - 1;
+
+    while (idx > j + 1)
+    {
+        pos = Math.floor((idx + j) / 2);
+        if (arr[pos].tm < time)
+            j = pos;
+        else
+            idx = pos;
+    }
+
+    if (j < arr.length && arr[j].tm > time) // все больше time
+        return j;
+
+    if (arr[idx].tm < time ) // все меньше time
+        return arr.length;
+
+    return idx;
 }
 
 CMooseMapHelper._strToTime = function(arr, idx)
