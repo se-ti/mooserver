@@ -99,7 +99,7 @@ function getData()
     foreach ($useCache as $res)
         $mData[] = $res;
 
-    //Log::d($db, $auth, 'times', sprintf("total: %4.0f tracks: %4.0f act %4.0f ms", ($t6-$t1) * 1000, ($t3-$t2) * 1000, ($t4-$t3) * 1000));
+    //Log::d($db, $auth, 'times', sprintf("data total: %4.0f tracks: %4.0f act %4.0f ms", ($t6-$t1) * 1000, ($t3-$t2) * 1000, ($t4-$t3) * 1000));
 
     return $mData;
 }

@@ -387,17 +387,18 @@ class CMooseDb extends CTinyDb
 
         $phoneCond = $fShowRights ? 'true' : 'active = true';
 
-        $query = "select distinct moose.id, phone, moose.name, phone_id, moose.group_id as mgid, moose.demo as mdemo, DATE_FORMAT(mint,'%Y-%m-%dT%TZ') as min_t, DATE_FORMAT(maxt,'%Y-%m-%dT%TZ') as max_t
+        $query = "select distinct moose.id, phone, moose.name, phone_id, moose.group_id as mgid, moose.demo as mdemo, DATE_FORMAT(mintt,'%Y-%m-%dT%TZ') as min_t, DATE_FORMAT(maxtt,'%Y-%m-%dT%TZ') as max_t
 		            from moose
 		            {$access['join']}
 		            left join (select phone, id from phone where $phoneCond) p on phone_id = p.id
-		            left join (select s.moose, min(ps.stamp) as mint, max(ps.stamp) as maxt from sms s inner join position ps on ps.sms_id = s.id group by moose) mm on moose.id = mm.moose
+		            /* left join (select s.moose, min(ps.stamp) as mint, max(ps.stamp) as maxt from sms s inner join position ps on ps.sms_id = s.id group by moose) mm on moose.id = mm.moose */
+		             left join (select s.moose, min(s.mint) as mintt, max(s.maxt) as maxtt from sms s group by moose) mm on moose.id = mm.moose 
 		            where {$access['cond']}
 		            order by moose.name asc";
 
 		$result = $this->Query($query);
 
-		$arr = array();
+        $arr = array();
 		foreach ($result as $row)
         {
             $line = array("id" => $row['id'], "name" =>$row['name'], "phone" => self::Obfuscate($auth, $row['phone']), "min" => $row['min_t'], "max" => $row['max_t']);
@@ -643,7 +644,7 @@ class CMooseDb extends CTinyDb
 
 
         $t3 = microtime(true);
-        //Log::d($this, $auth, "track_times", "total: '" . ($t4-$t0) ."' que: '" . ($t2-$t1) . "' retr: '" . ($t3-$t2));
+        //Log::d($this, $auth, "times", "track total: '" . ($t4-$t0) ."' que: '" . ($t2-$t1) . "' retr: '" . ($t3-$t2));
 		return $retVal;
 	}
 
@@ -670,7 +671,6 @@ class CMooseDb extends CTinyDb
 
         $t1 = microtime(true);
 		$result = $this->Query($query);
-        //Log::d($this, $auth, "activity_times", $query);
         $t2 = microtime(true);
 
         $res = array();
@@ -690,7 +690,7 @@ class CMooseDb extends CTinyDb
 
         $t3 = microtime(true);
 
-        Log::d($this, $auth, "activity_times", sprintf("total: %.4f query: %.4f, retrieve %4f", ($t3-$t0), ($t2-$t1), ($t3-$t2)));
+        //Log::d($this, $auth, "times", sprintf("activity total: %.4f query: %.4f, retrieve %4f", ($t3-$t0), ($t2-$t1), ($t3-$t2)));
         return $retVal;
 	}
 
@@ -965,6 +965,13 @@ class CMooseDb extends CTinyDb
 			$this->AddPoints($smsId, $msg->points);
 		if ($msg->activity != null)
 			$this->AddActivity($smsId, $msg->activity);
+
+        // set sms mint-maxt  todo а если точек нет?
+        $query = "update sms s set 
+                    mint = (select min(p.stamp) from position p where p.sms_id = $smsId), 
+                    maxt = (select max(p.stamp) from position p where p.sms_id = $smsId)
+                    WHERE s.id = $smsId";
+        $this->Query($query);
 
         if ($prop['mooseId'] != null)
             $this->SetMooseTimestamp($auth, [$prop['mooseId']]);    // todo set global timestamp
