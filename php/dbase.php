@@ -760,7 +760,7 @@ class CMooseDb extends CTinyDb
         $active = $all === true ? '' : ' and p.active = 1';
         $expCond = $export ? "rs.phone_id is not null and pos.sms_id is not null" : "true";
 
-		$query = "select p.id as pId, phone, canonical, active, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, DATE_FORMAT(pos.st,'%Y-%m-%dT%TZ') as pos_time, m.name as mName
+		$query = "select p.id as pId, phone, canonical, active, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, DATE_FORMAT(pos.st,'%Y-%m-%dT%TZ') as pos_time, m.name as mName, sms.moose as smsMid
 				from phone p
                 {$access['join']}
 				left join raw_sms rs on rs.phone_id = p.id
@@ -783,7 +783,7 @@ class CMooseDb extends CTinyDb
             if ($row['pos_time'] == null)
                 continue;
 
-			$res[$ph]['data'][] = array($row['tm'], $row['pos_time'], $row['int_id'], $row['volt'], $row['temp'], $row['gps_on'], $row['gsm_tries'], $row['rsId'], $addText ? $row['text'] : null);
+			$res[$ph]['data'][] = array($row['tm'], $row['pos_time'], $row['int_id'], $row['volt'], $row['temp'], $row['gps_on'], $row['gsm_tries'], $row['rsId'], $addText ? $row['text'] : null, $row['smsMid']);
 		}
 		$result->closeCursor();
 		
@@ -966,7 +966,7 @@ class CMooseDb extends CTinyDb
 		if ($msg->activity != null)
 			$this->AddActivity($smsId, $msg->activity);
 
-        // set sms mint-maxt  todo а если точек нет?
+        // set sms mint-maxt  todo а если точек нет?  и вообще сделать на триггерах
         $query = "update sms s set 
                     mint = (select min(p.stamp) from position p where p.sms_id = $smsId), 
                     maxt = (select max(p.stamp) from position p where p.sms_id = $smsId)

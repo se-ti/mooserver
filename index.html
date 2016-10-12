@@ -123,17 +123,19 @@ td.smsSmallText2 {font-size:9px}
       </div>
     </div> <!-- menu end -->
 
+
     <div class="container-fluid" >
-	    <div class="row" id="main">
-	    </div>
+        <div class="row" id="main">
+        </div>
     </div>
 
-<div class="container-fluid" >
-	<div class="row">
-		<div class="col-xs-12 col-sm-9" id='log'>
-		</div>
-	</div>
-</div>
+    <div class="container-fluid" >
+        <div class="row">
+            <div class="col-xs-12 col-sm-9" id='log'>
+            </div>
+        </div>
+    </div>
+
 
 	
 
@@ -1076,11 +1078,15 @@ CSingleBeacon.prototype =
 
     _render: function(result)
     {
-        var head = '<thead><th>Получено</th><th>посл. точка</th><th>вн. id</th><th>V</th><th>T &deg;C</th><th>gps on, мин</th><th>gsm tries</th></thead>';
+        var head = '<thead><th>Получено</th><th>посл. точка</th><th>вн. id</th><th>V</th><th>T &deg;C</th><th>gps on, мин</th><th>gsm tries</th><th>животное</th></thead>';
         var body = '';
         var line = '';
         var cls;
         var d = new Date();
+
+        var mooseNames = {};
+        var moose = CApp.single().getMoose();
+        (moose || []).forEach(function(v) { mooseNames[v.id] = v.name;   });
 
         for (var i = 0; i < result.length; i ++)
         {
@@ -1106,9 +1112,12 @@ CSingleBeacon.prototype =
                     line += '<td' +  cls + '>' + (phd[j][k] || '&nbsp;') + '</td>';
                 }
 
+                var smsMoose = phd[j].length > 8 ? (mooseNames[phd[j][9]] || '') : '';
+                line += '<td' + cls + '>' + String.toHTML(smsMoose) + '</td>';
+
                 body += String.format('<tr data-id="{0}">{1}</tr>', phd[j][7], line);
                 if (phd[j].length > 8 && (phd[j][8] || '') != '')
-                    body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="7">{1}</td></tr>', phd[j][7], String.makeBreakable(phd[j][8]));
+                    body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="8">{1}</td></tr>', phd[j][7], String.makeBreakable(phd[j][8]));
             }
         }
 
@@ -1716,6 +1725,46 @@ CConfirm.prototype =
     }
 }
 CConfirm.inheritFrom(CPage);
+
+CContacts = function(after, body)
+{
+    CPage.call(this, 'contacts', 'Контакты', body);
+}
+
+CContacts.prototype = {
+    setRights: function(rights)
+    {
+        this._isSuper = rights.isSuper;
+        this._isAvailable = true; // !rights.isSuper;
+
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
+
+        if (!this._isAvailable && this._isActive)
+            window.location.hash = '';
+    }
+}
+CContacts.inheritFrom(CPage);
+
+CDescription = function(after, body)
+{
+    CPage.call(this, 'description', 'О системе', body);
+}
+
+CDescription.prototype = {
+    setRights: function(rights)
+    {
+        this._isSuper = rights.isSuper;
+        this._isAvailable = !rights.isSuper;
+
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
+
+        if (!this._isAvailable && this._isActive)
+            window.location.hash = '';
+    }
+}
+CDescription.inheritFrom(CPage);
 
 var cont = new CController($get('main'));
 $(document).ready($cd(cont, cont.appInit));
