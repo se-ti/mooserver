@@ -2342,15 +2342,10 @@ CMooseMapHelper.filter = function(gtd, stDate, enDate)
     if (!gtd || !Array.isArray(gtd))
         return [];
 
-    var len = gtd.length;
     var stIdx = stDate != null ? CMooseMapHelper._binarySearch(gtd, stDate) : 0;
-    var enIdx = enDate != null ? CMooseMapHelper._binarySearch(gtd, enDate) : len;
+    var enIdx = enDate != null ? CMooseMapHelper._binarySearch(gtd, enDate) : gtd.length;
 
-    var res = [];
-    for (var i = stIdx; i < enIdx && i < len; i++)
-        res.push(gtd[i]);
-
-    return res;
+    return gtd.slice(stIdx, enIdx);
 }
 
 // первый idx: arr[idx].tm > time или arr.length, если таких нет
