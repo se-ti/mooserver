@@ -100,10 +100,15 @@ function test()
 function getMooses()
 {
 	global $db, $auth;
-	return array( 
-		'mooses' => $db->GetMooses($auth, false),
+
+    $t1 = microtime(true);
+    $m = $db->GetMooses($auth, false);
+    //Log::d($db, $auth, 'times', sprintf("get moose: %.4f", (microtime(true)-$t1)));
+
+	return [
+		'mooses' => $m,
 		'phones' => $db->GetPhones($auth, false),
-		'rights' => getRights());
+		'rights' => getRights()];
 }
 
 

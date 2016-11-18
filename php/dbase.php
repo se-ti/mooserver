@@ -1040,7 +1040,6 @@ class CMooseDb extends CTinyDb
 				(phone_id, stamp, text, user_id, ip, xfw_ip)
 				values ($phoneId, $stamp, $text, $userId, $ip, $xfwIp)";
 
-		$this->Query($query, self::ErrDupSms);
 
 		return $this->db->lastInsertId();		
 	}
