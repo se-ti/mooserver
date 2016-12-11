@@ -255,7 +255,7 @@ CLogs.prototype =
         this._body = this._table.find('tbody');
 
         var items = [{caption: 'info', value: 0}, {caption: 'trace', value: 1}, {caption: 'debug', value: 2}, {caption: 'error', value: 3}, {caption: 'critical', value: 4}];
-        this._filter = new CColumnFilter(this._table.find('th').get(2), 'levels', {search: false, reset: false})
+        this._filter = new CColumnFilter(this._table.find('th').get(3), 'levels', {search: false, reset: false})
             .on_dataChanged(this._d_reRead);
         this._filter.setItems(items);
 
@@ -269,7 +269,7 @@ CLogs.prototype =
             {caption: 'togglePoint', value: 'togglePoint'},
             {caption: 'webClient', value: 'webClient'}];
         
-        this._filter2 = new CColumnFilter(this._table.find('th').get(6), 'ops', {search: true, reset: false})
+        this._filter2 = new CColumnFilter(this._table.find('th').get(7), 'ops', {search: true, reset: false})
             .on_dataChanged(this._d_reRead);
         this._filter2.setItems(items2);
     },

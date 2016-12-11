@@ -1345,7 +1345,7 @@ CGate.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr data-id="{0}"><td>{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td>{7}</tr>';
+        var tpl = '<tr data-id="{1}"><td>{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>{8}</tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
@@ -1353,8 +1353,8 @@ CGate.prototype =
             var d = new Date();
             d.setTime(Date.parse(it.stamp));
             var stat = this._itemStatus(it);
-            body += String.format(tpl, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
-                    + String.format('<tr data-id="{0}"><td colspan="7" class="smsText {2}"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText'); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
+            body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
+                    + String.format('<tr data-id="{0}"><td colspan="8" class="smsText {2}"><small><small class="text-danger">{1}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText'); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
         }
 
         this._table.removeClass('hidden');
@@ -1365,7 +1365,7 @@ CGate.prototype =
     {
         if (!this._head)
             this._head = this._table.find('thead')
-                .html('<tr><th>id</th><th>stamp</th><th>гейт</th><th>прибор</th><th>животное</th><th>статус</th>' + (this._isSuper ? '<th></th>' : '') + '</tr>');
+                .html('<tr><th>#</th><th>id</th><th>stamp</th><th>гейт</th><th>прибор</th><th>животное</th><th>статус</th>' + (this._isSuper ? '<th></th>' : '') + '</tr>');
 
         var phones = CApp.single().getPhones();
         if (!phones || this._phoneFilter)
@@ -1375,7 +1375,7 @@ CGate.prototype =
         for (var i = 0; i < phones.length; i++)
             it.push({caption: phones[i].phone, value: phones[i].id});
 
-        this._phoneFilter = new CColumnFilter(this._head.find('th').get(3), 'phone')
+        this._phoneFilter = new CColumnFilter(this._head.find('th').get(4), 'phone')
                 .on_dataChanged(this._c_reRead);
         this._phoneFilter.setItems(it);
     },
