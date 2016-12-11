@@ -251,7 +251,7 @@ CLogs.prototype =
 
         this._table = $('<table class="hidden table table-striped table-condensed"></table>')
             .appendTo(je);
-        this._table.html('<thead><tr><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead><tbody></tbody>');
+        this._table.html('<thead><tr><th>#</th><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead><tbody></tbody>');
         this._body = this._table.find('tbody');
 
         var items = [{caption: 'info', value: 0}, {caption: 'trace', value: 1}, {caption: 'debug', value: 2}, {caption: 'error', value: 3}, {caption: 'critical', value: 4}];
@@ -344,14 +344,14 @@ CLogs.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr><td>{0}</td><td style="white-space: nowrap;">{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td></tr>';
+        var tpl = '<tr><td>{0}</td><td>{1}</td><td style="white-space: nowrap;">{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
 
             var d = new Date();
             d.setTime(Date.parse(it.stamp));
-            body += String.format(tpl, it.id, d.toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), String.toHTML(it.message));
+            body += String.format(tpl, i+1, it.id, d.toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), String.toHTML(it.message));
         }
 
         this._body.html(body);
