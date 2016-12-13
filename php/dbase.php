@@ -1040,7 +1040,7 @@ class CMooseDb extends CTinyDb
 				(phone_id, stamp, text, user_id, ip, xfw_ip)
 				values ($phoneId, $stamp, $text, $userId, $ip, $xfwIp)";
 
-		$this->Query($query, self::ErrDupSms + "phoneId: $phoneId, message: $text");
+		$this->Query($query, self::ErrDupSms . " phoneId: $phoneId, message: $text");
 
 		return $this->db->lastInsertId();		
 	}
@@ -1099,7 +1099,7 @@ class CMooseDb extends CTinyDb
         {
             $phones = filter_var($phoneIds, FILTER_VALIDATE_INT, array('flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => array('min_range' => 1)));
             if (!$phones)
-                $this->Err(ErrWrongPhoneId);
+                $this->Err(self::ErrWrongPhoneId);
             $phones = 'rs.phone_id in (' . implode(', ', $phones). ')';
         }
 
