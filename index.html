@@ -1020,7 +1020,7 @@ CSingleBeacon = function(after)
     this._map = null;
     this._mapHelper = null;
 
-    this._c_rawClick = $cd(this, this._rawClick);
+    this._c_rowClick = $cd(this, this._rowClick);
     this._init(after);
 }
 
@@ -1066,7 +1066,7 @@ CSingleBeacon.prototype =
             .appendTo(row);
         this._phone = je.find('h1 small');
         this._table = $('<table class="hidden table table-moo-striped"></table>')
-            .click(this._c_rawClick)
+            .on('click', 'tbody > tr', this._c_rowClick)
             .appendTo(je);
 
 
@@ -1095,6 +1095,22 @@ CSingleBeacon.prototype =
             this._map.clearTracks();
             this._map.invalidateSize();
         }
+    },
+
+    _setPhoneName: function(phone, moose) {
+        var text = [phone];
+        if (moose)
+            text.push('сейчас ' + moose);
+        this._phone.text(text.join(", "));
+    },
+
+    _getPhoneById: function() {
+        var phones = CApp.single().getPhones();
+        for (var i = 0; i < phones.length; i++)
+            if (phones[i].id == this._id)
+                return phones[i].phone;
+
+        return 'прибор без данных';
     },
 
     _getParam: function()
@@ -1143,7 +1159,7 @@ CSingleBeacon.prototype =
 
     _render: function(result)
     {
-        var head = '<thead><th>Получено</th><th>посл. точка</th><th>вн. id</th><th>V</th><th>T &deg;C</th><th>gps on, мин</th><th>gsm tries</th><th>животное</th></thead>';
+        var head = '<thead><tr><th>Получено</th><th>посл. точка</th><th>вн. id</th><th>V</th><th>T &deg;C</th><th>gps on, мин</th><th>gsm tries</th><th>животное</th></tr></thead>';
         var body = '';
         var line = '';
         var cls;
@@ -1158,10 +1174,7 @@ CSingleBeacon.prototype =
             var phd = result[i].data;
             var phdLen = phd.length;
 
-            var text = [result[i].phone];
-            if (result[i].moose)
-                text.push('сейчас ' + result[i].moose);
-            this._phone.text(text.join(", "));
+            this._setPhoneName(result[i].phone, result[i].moose);
 
             for(var j = 0; j < phdLen; j++)
             {
@@ -1186,7 +1199,13 @@ CSingleBeacon.prototype =
             }
         }
 
-        this._table.get(0).innerHTML = head + '<tbody>' + body + '</tbody>';
+        var isEmpty = body.length == 0;
+        var empty = '<tr><td colspan="8">нет данных</td></tr>';
+        this._table.get(0).innerHTML = head + '<tbody>' + (isEmpty ? empty : body) + '</tbody>';
+
+        if (isEmpty)
+            this._setPhoneName(this._getPhoneById(), null);
+
         this._table.removeClass('hidden');
     },
 
@@ -1206,18 +1225,12 @@ CSingleBeacon.prototype =
         return String.format('<td>{0}</td>', full ? date.toLocaleString() : date.toLocaleDateString());
     },
 
-    _rawClick: function(e)
+    _rowClick: function(e)
     {
-        if (!e || !e.target)
-            return;
-
-        var je = $(e.target).parents('tr:first');
-        if (je.length > 0)
-        {
-            this._mapHelper.drawRawSms(this._map, je.attr('data-id') || '');
-            this._table.find('tr').removeClass('success');
-            je.addClass('success');
-        }
+        var je = $(e.currentTarget);
+        this._mapHelper.drawRawSms(this._map, je.attr('data-id') || '');
+        this._table.find('tr').removeClass('success');
+        je.addClass('success');
     },
 
     setRights: function(rights)
