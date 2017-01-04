@@ -202,4 +202,56 @@ class CMooseTools
     }
 }
 
+// todo научиться "отпускать" ответ клиенту до запуска safeRun
+class CScheduler
+{
+    const TimestampFile = 'timestamp.log';
+    public static function safeRun(CMooseDb $db, CMooseAuth $auth)
+    {
+        try
+        {
+            Log::t($db, $auth, "scheduler", 'try launch!');
+
+            if (!self::canRun())
+                return;
+
+            self::payload($db, $auth);
+
+            self::markSuccess();
+            Log::t($db, $auth, "scheduler", 'successful launch!');
+        }
+        catch (Exception $e)
+        {
+            Log::e($db, $auth, "scheduler", $e->getMessage());
+        }
+    }
+
+    private static function payload($db, $auth)
+    {
+        $db->SimplifyGateLogs($auth);
+    }
+
+    private static function canRun()
+    {
+        $mtime = !empty(self::TimestampFile) ? filemtime(self::TimestampFile) : false;
+        if (empty(self::TimestampFile))
+            return false;
+        if ($mtime == false)
+            return true;
+
+        return (time() > $mtime + 100) ? true : false;		// при массовых проверках выполнится столько действий, сколько будет ошибок между этим if и отработкой первого markSuccess
+    }
+
+    private static function markSuccess()
+    {
+        $f = fopen(self::TimestampFile, "w");
+
+        if ($f != FALSE)
+        {
+            fwrite($f, ' ');
+            fclose($f);
+        }
+    }
+}
+
 ?>

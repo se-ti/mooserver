@@ -32,6 +32,7 @@ catch(Exception $e)
     Log::e($db, $auth, "gate", $e->getMessage());
 }
 
+CScheduler::safeRun($db, $auth);
 exit;
 // that's all!
 

@@ -771,6 +771,7 @@ class CMooseDb extends CTinyDb
 
 			 order by phone, pos.st desc";
 
+		//Log::t($this, $auth, 'beaconStat', $query);
 		$result = $this->Query($query);
 
 		$res = array();
@@ -1149,5 +1150,16 @@ class CMooseDb extends CTinyDb
 	{
 		return "'".gmdate('Y-m-d H:i:s', $stamp)."'";
 	}
+
+	/// зачищает записи об успешном логине для основного гейта
+	public function SimplifyGateLogs(CTinyAuth $auth)
+    {
+        $query = "delete l1 from logs l1 
+                    inner join logs l2 on l1.id + 1 = l2.id and l1.user_id = l2.user_id and l1.level = l2.level 
+                    where l1.user_id = 1007 and l1.operation = 'auth' and l2.operation = 'addSms' and l2.message not like '%error%'";
+
+        $this->Query($query);
+    }
 }
 ?>
+
