@@ -220,7 +220,7 @@ class CTinyAuth
         Log::t($db, $this, "auth", "logout successful");
 		$this->setAnonymous();
 		
-		return;
+		return true;
 	}
 
     function changePassword(CTinyDb $db, $old, $new)
