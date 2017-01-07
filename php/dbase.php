@@ -1162,4 +1162,3 @@ class CMooseDb extends CTinyDb
     }
 }
 ?>
-

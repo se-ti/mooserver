@@ -175,6 +175,8 @@ class CMooseTools
                 'options'   => ['min_range' => 1]]
         ];
 
+        $res = [];
+
         foreach ($stamps as $st)
         {
             $f = filter_var_array($st, $def);
@@ -210,8 +212,6 @@ class CScheduler
     {
         try
         {
-            Log::t($db, $auth, "scheduler", 'try launch!');
-
             if (!self::canRun())
                 return;
 
@@ -226,9 +226,10 @@ class CScheduler
         }
     }
 
-    private static function payload($db, $auth)
+    private static function payload(CMooseDb $db, $auth)
     {
         $db->SimplifyGateLogs($auth);
+  //      self::addSampleSms($db, $auth, 'sample.csv');
     }
 
     private static function canRun()
@@ -239,7 +240,8 @@ class CScheduler
         if ($mtime == false)
             return true;
 
-        return (time() > $mtime + 100) ? true : false;		// при массовых проверках выполнится столько действий, сколько будет ошибок между этим if и отработкой первого markSuccess
+        return (date('j') != date('j', $mtime)) ? true : false;
+//        return (time() > $mtime + 100) ? true : false;		// при массовых проверках выполнится столько действий, сколько будет ошибок между этим if и отработкой первого markSuccess
     }
 
     private static function markSuccess()
@@ -252,6 +254,63 @@ class CScheduler
             fclose($f);
         }
     }
+
+    private static function addSampleSms($db, $auth, $file)
+    {
+        $data = fopen($file, "r");
+
+        $format = "d m";
+        $today = date($format);
+        $curYear = date('Y');
+        $yearDiff = null;
+
+        for ($line = 1; $tokens = fgetcsv ($data, 300, ';'); $line++)
+        {
+            $phone = $tokens[0];
+            $tm = self::parseTime($tokens[1]);
+            $msg = $tokens[2];
+            $moose = $tokens[3] != '' ? $tokens[3] : null;
+
+            if ($yearDiff == null && $tm != false)
+                $yearDiff = $curYear - date('Y', $tm);
+
+            self::addSms($db, $auth, $phone, $tm, $moose, $msg, $today, $curYear, $yearDiff);
+        }
+
+        fclose($data);
+    }
+
+    private static function addSms(CMooseDb $db, CMooseAuth $auth, $phone, $time, $moose, $text, $today, $curYear, $yearDiff)
+    {
+        if ($time == false || date('d m', $time) != $today || $yearDiff != ($curYear - date('Y', $time)))
+            return false;
+
+        $sms = new CMooseSMS($text, $time);
+        if ($sms->IsValid())
+        {
+            Log::e($db, $auth, 'scheduler', "bad message: " + $sms->GetErrorMessage());
+            return false;
+        }
+
+        try
+        {
+            $db->AddData($auth, $phone, $sms, $moose);
+        }
+        catch(Exception $e)
+        {
+            Log::e($db, $auth, "scheduler", $e->getMessage());
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function parseTime($tm)
+    {
+        return strtotime(str_replace('.', '-', $tm)); // Change '.' to '-' to make strtotime think date is in american notation
+    }
+
+
 }
 
 ?>
