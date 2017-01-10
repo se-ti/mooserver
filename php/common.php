@@ -29,7 +29,6 @@ function getRights()
 	return $res;
 }
 
-
 // думать про версии кеша, подгрузку по данных (чуть-чуть + все остальное)
 function getData()
 {
@@ -204,12 +203,14 @@ class CMooseTools
     }
 }
 
-// todo научиться "отпускать" ответ клиенту до запуска safeRun
+
 class CScheduler
 {
     const TimestampFile = 'timestamp.log';
+
     public static function safeRun(CMooseDb $db, CMooseAuth $auth)
     {
+        // fastcgi_finish_request();                   // "отпускаем" ответ клиенту до запуска safeRun  // todo не работает на продакшене
         try
         {
             if (!self::canRun())
@@ -229,19 +230,25 @@ class CScheduler
     private static function payload(CMooseDb $db, $auth)
     {
         $db->SimplifyGateLogs($auth);
-  //      self::addSampleSms($db, $auth, 'sample.csv');
+        //self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
     }
 
     private static function canRun()
     {
-        $mtime = !empty(self::TimestampFile) ? filemtime(self::TimestampFile) : false;
         if (empty(self::TimestampFile))
             return false;
+
+        $mtime = filemtime(self::TimestampFile);
         if ($mtime == false)
             return true;
 
-        return (date('j') != date('j', $mtime)) ? true : false;
-//        return (time() > $mtime + 100) ? true : false;		// при массовых проверках выполнится столько действий, сколько будет ошибок между этим if и отработкой первого markSuccess
+        $work = true;
+        if ($work)
+            $flag = date('j') != date('j', $mtime); // не сегодня
+        else
+            $flag = time() > $mtime + 30; //
+
+        return $flag ? true : false; // при массовых проверках выполнится столько действий, сколько будет запросов между этим if и отработкой первого markSuccess
     }
 
     private static function markSuccess()
@@ -255,48 +262,85 @@ class CScheduler
         }
     }
 
+    // todo: работает, но плохо:
+    // -- не попадает в месяц, т.е. будут проблемы с переходом года и вообще некрасиво
+    // -- сложно добавить все записи до тек. момента
+    // -- не съел первую запись
+    // -- не из-под рута не сработает
     private static function addSampleSms($db, $auth, $file)
     {
         $data = fopen($file, "r");
+        if ($data == false)
+            throw new Exception("error opening file '$file'");
 
-        $format = "d m";
-        $today = date($format);
-        $curYear = date('Y');
-        $yearDiff = null;
-
-        for ($line = 1; $tokens = fgetcsv ($data, 300, ';'); $line++)
+        $ref = null;
+        for ($line = 1; $tokens = fgetcsv($data, 300, ';'); $line++)
         {
-            $phone = $tokens[0];
-            $tm = self::parseTime($tokens[1]);
-            $msg = $tokens[2];
-            $moose = $tokens[3] != '' ? $tokens[3] : null;
+            $cn = count($tokens);
+            if ($cn < 8 && $ref != null)
+                continue;
 
-            if ($yearDiff == null && $tm != false)
-                $yearDiff = $curYear - date('Y', $tm);
+            if ($ref == null)
+            {
+                if ($cn >= 5 && $tokens[0] == 'name-phone-ref-start')   // not a comment
+                    $ref = self::getRef($tokens);
+                continue;
+            }
 
-            self::addSms($db, $auth, $phone, $tm, $moose, $msg, $today, $curYear, $yearDiff);
+            $phone = $ref['phone'] != '' ? $ref['phone'] : $tokens[2];
+            $fMoose = $tokens[3] != '' ? $tokens[3] : $ref['moose']; // ???
+            $tm = self::parseTime($tokens[5]);
+            $msg = $tokens[7];
+
+            if ($tm == false)
+                continue;
+
+            // есть задержка -- дельта между получением и добавлением смс
+            // нужно добавить все смс у которых задержка больше, чем дельта, и меньше, чем была в прошлый синк
+
+            $tm += $ref['delay'];       // hack, чтобы смс казалась современной
+            if ($tm < time() && $tm >= $ref['prevSync'])
+                self::addSms($db, $auth, $phone, $tm, $fMoose, $msg);
         }
 
         fclose($data);
+        if ($ref == null)
+            throw new Exception('addSms: no init string');
     }
 
-    private static function addSms(CMooseDb $db, CMooseAuth $auth, $phone, $time, $moose, $text, $today, $curYear, $yearDiff)
+    //todo проверить взаимную корректность времен
+    private static function getRef($tokens)
     {
-        if ($time == false || date('d m', $time) != $today || $yearDiff != ($curYear - date('Y', $time)))
-            return false;
+        $r = [];
+        $r['moose'] = $tokens[1] != '' ? iconv('cp1251', 'utf8', $tokens[1]) : null;
+        $r['phone'] = iconv('cp1251', 'utf8', $tokens[2]);
+        $ref = self::parseTime($tokens[3]);
+        $st = self::parseTime($tokens[4]);
+        if ($ref == false || $st == false)
+            return null;
+        $r['delay'] = $st - $ref;
 
+        $last = filemtime(self::TimestampFile);
+        $r['prevSync'] = $last != false ? ($last - 5) : $st; // 5 c -- время выполнение скрипта, чтобы не терялись смс, пришедшие точно в зазор между запуском scheduler и markSuccess.
+
+        return $r;
+    }
+
+    private static function addSms(CMooseDb $db, CMooseAuth $auth, $phone, $time, $moose, $text)
+    {
         $sms = new CMooseSMS($text, $time);
-        if ($sms->IsValid())
+        if (!$sms->IsValid())
         {
-            Log::e($db, $auth, 'scheduler', "bad message: " + $sms->GetErrorMessage());
+            Log::e($db, $auth, 'scheduler', "bad message: '$text', err: " . $sms->GetErrorMessage());
             return false;
         }
 
         try
         {
-            $db->AddData($auth, $phone, $sms, $moose);
+            $res = $db->AddData($auth, $phone, $sms, $moose);
+            Log::t($db, $auth, "addSms", "via scheduler for '$phone' " . CMooseTools::addSmsMessage($res));
         }
-        catch(Exception $e)
+        catch (Exception $e)
         {
             Log::e($db, $auth, "scheduler", $e->getMessage());
             return false;
@@ -309,8 +353,5 @@ class CScheduler
     {
         return strtotime(str_replace('.', '-', $tm)); // Change '.' to '-' to make strtotime think date is in american notation
     }
-
-
 }
-
 ?>

@@ -933,7 +933,7 @@ class CMooseDb extends CTinyDb
 
 	function AddData(CMooseAuth $auth, $phone, CMooseSMS $msg, $moose = null)
 	{
-		if (!$auth->canFeed() || !$auth->isRoot() && $moose != null) // добавлять не текущему лосю может лишь рут
+		if (!$auth->canFeed() || !$auth->isSuper() && $moose != null) // добавлять не текущему лосю может лишь супер
 			$this->ErrRights();
 
 		$prop = $this->PhoneProp($auth, $phone);
