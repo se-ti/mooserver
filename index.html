@@ -1373,7 +1373,7 @@ CGate.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr data-id="{1}"><td>{0}</td><td>{1}<br/>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>{8}</tr>';
+        var tpl = '<tr data-id="{1}"><td>{0}</td><td>{1}</td><td>{3}<br/>{2}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>{8}</tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
@@ -1470,7 +1470,7 @@ CGate.prototype =
             return;
         var je = $(e.target);
         if (je.parents('thead').length > 0)
-                return;
+            return;
 
         this._body.find('tr').removeClass('success');
         var rows = je.parents('tr');
