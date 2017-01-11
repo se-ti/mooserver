@@ -1154,9 +1154,10 @@ class CMooseDb extends CTinyDb
 	/// зачищает записи об успешном логине для основного гейта
 	public function SimplifyGateLogs(CTinyAuth $auth)
     {
+        $gateId = 1007;
         $query = "delete l1 from logs l1 
                     inner join logs l2 on l1.id + 1 = l2.id and l1.user_id = l2.user_id and l1.level = l2.level 
-                    where l1.user_id = 1007 and l1.operation = 'auth' and l2.operation = 'addSms' and l2.message not like '%error%'";
+                    where l1.user_id = $gateId and l1.operation = 'auth' and l2.operation = 'addSms' and l2.message not like '%error%'";
 
         $this->Query($query);
     }

@@ -230,7 +230,7 @@ class CScheduler
     private static function payload(CMooseDb $db, $auth)
     {
         $db->SimplifyGateLogs($auth);
-        //self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
+        // self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
     }
 
     private static function canRun()
@@ -262,30 +262,31 @@ class CScheduler
         }
     }
 
-    // todo: работает, но плохо:
-    // -- не попадает в месяц, т.е. будут проблемы с переходом года и вообще некрасиво
-    // -- сложно добавить все записи до тек. момента
-    // -- не съел первую запись
-    // -- не из-под рута не сработает
-    private static function addSampleSms($db, $auth, $file)
+    // todo: работает, но есть вопросы:
+    // -- не из-под супера не сработает
+    // -- возможны проблемы с високосными годами
+    // -- не съел первую запись ???
+    private static function addSampleSms($db, CMooseAuth $auth, $file)
     {
+        if (!$auth->isSuper())
+            return;
+
         $data = fopen($file, "r");
         if ($data == false)
             throw new Exception("error opening file '$file'");
 
         $ref = null;
+        $addHead = null;
         for ($line = 1; $tokens = fgetcsv($data, 300, ';'); $line++)
         {
-            $cn = count($tokens);
-            if ($cn < 8 && $ref != null)
-                continue;
-
             if ($ref == null)
             {
-                if ($cn >= 5 && $tokens[0] == 'name-phone-ref-start')   // not a comment
-                    $ref = self::getRef($tokens);
+                $ref = self::tryGetRef($tokens);
                 continue;
             }
+
+            if (count($tokens) < 8)
+                continue;
 
             $phone = $ref['phone'] != '' ? $ref['phone'] : $tokens[2];
             $fMoose = $tokens[3] != '' ? $tokens[3] : $ref['moose']; // ???
@@ -295,38 +296,52 @@ class CScheduler
             if ($tm == false)
                 continue;
 
+            if ($addHead !== false && $tm < $ref['start'])
+            {
+                $addHead = $addHead or self::addSms($db, $auth, $phone, $tm + $ref['delay'], $fMoose, $msg, true);
+                continue;
+            }
+
             // есть задержка -- дельта между получением и добавлением смс
             // нужно добавить все смс у которых задержка больше, чем дельта, и меньше, чем была в прошлый синк
 
             $tm += $ref['delay'];       // hack, чтобы смс казалась современной
             if ($tm < time() && $tm >= $ref['prevSync'])
-                self::addSms($db, $auth, $phone, $tm, $fMoose, $msg);
+                self::addSms($db, $auth, $phone, $tm, $fMoose, $msg, false);
         }
 
         fclose($data);
+
         if ($ref == null)
-            throw new Exception('addSms: no init string');
+            throw new Exception('addSms: no correct init string');
     }
 
-    //todo проверить взаимную корректность времен
-    private static function getRef($tokens)
+    private static function tryGetRef($tokens)
     {
+        if (count($tokens) < 5 || $tokens[0] != 'name-phone-firstDate-targetYear')
+            return null;
+
         $r = [];
         $r['moose'] = $tokens[1] != '' ? iconv('cp1251', 'utf8', $tokens[1]) : null;
         $r['phone'] = iconv('cp1251', 'utf8', $tokens[2]);
         $ref = self::parseTime($tokens[3]);
-        $st = self::parseTime($tokens[4]);
-        if ($ref == false || $st == false)
+        if ($ref == false)
             return null;
+
+        $st = mktime(0,0,0, date('m', $ref), date('d', $ref), $tokens[4]);// а как с високосными годами?
+        if ($st == false || $st <  $ref)
+            return null;
+        $r['start'] = $ref;
         $r['delay'] = $st - $ref;
 
         $last = filemtime(self::TimestampFile);
-        $r['prevSync'] = $last != false ? ($last - 5) : $st; // 5 c -- время выполнение скрипта, чтобы не терялись смс, пришедшие точно в зазор между запуском scheduler и markSuccess.
+        //$last = strtotime('2017-01-10 10:32');    // test
+        $r['prevSync'] = $last != false ? ($last - 5) : $st; // 5 c -- зазор на выполнение скрипта, чтобы не терялись смс, пришедшие точно между запуском scheduler и markSuccess.
 
         return $r;
     }
 
-    private static function addSms(CMooseDb $db, CMooseAuth $auth, $phone, $time, $moose, $text)
+    private static function addSms(CMooseDb $db, CMooseAuth $auth, $phone, $time, $moose, $text, $tryHead)
     {
         $sms = new CMooseSMS($text, $time);
         if (!$sms->IsValid())
@@ -342,7 +357,9 @@ class CScheduler
         }
         catch (Exception $e)
         {
-            Log::e($db, $auth, "scheduler", $e->getMessage());
+            $mess = $e->getMessage();
+            if (!$tryHead || strpos($mess, CMooseDb::ErrDupSms) != 0)
+                Log::e($db, $auth, "scheduler", $mess);
             return false;
         }
 
