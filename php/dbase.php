@@ -742,6 +742,10 @@ class CMooseDb extends CTinyDb
         return $res;
     }
 
+    /// вернуть список всех доступных приборов кроме б.м. неактивных ($all)
+    /// данные возвращать из диапазона $start - $end
+    /// суперам вернуть еще и текст смс
+    /// todo сложные варианты: прибор сейчас -- демо, а давнее животное -- нет, или давнее животное -- демо, а нынешнее -- нет
 	function GetBeaconStat(CTinyAuth $auth, $ids, $start, $end, $all, $export)
 	{
         $ids = filter_var($ids, FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY);
@@ -754,24 +758,28 @@ class CMooseDb extends CTinyDb
 		if ($cond != '')
 			$cond = "and p.id in ($cond) and sms_id is not null";
 
+        $t1 = microtime(true);
+
 		$timeCond = $this->TimeCondition('position.stamp', $start, $end);
-        $access = $this->CanSeeCond($auth, 'p');
+        $pAccess = $this->CanSeeCond($auth, 'p', false, 'phone');
+        $nameAccess = $this->CanSeeCond($auth, 'm', false, 'moose');
+        $mAccess = str_replace('m.id', 'sms.moose', $nameAccess['cond']); // hack c проверкой прав
 
         $active = $all === true ? '' : ' and p.active = 1';
         $expCond = $export ? "rs.phone_id is not null and pos.sms_id is not null" : "true";
 
 		$query = "select p.id as pId, phone, canonical, active, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, DATE_FORMAT(pos.st,'%Y-%m-%dT%TZ') as pos_time, m.name as mName, sms.moose as smsMid
 				from phone p
-                {$access['join']}
+                
 				left join raw_sms rs on rs.phone_id = p.id
 				left join sms on sms.raw_sms_id = rs.id
 				left join (select sms_id, max(stamp) as st from position where true $timeCond group by sms_id) pos on pos.sms_id = sms.id
-				left join moose m on m.phone_id = p.id
-				where $expCond $cond $active and {$access['cond']} 
+				left join moose m on m.phone_id = p.id and {$nameAccess['cond']}
+				where $expCond $cond $active and {$pAccess['cond']} and (sms.moose is null or $mAccess) 
 
 			 order by phone, pos.st desc";
 
-		//Log::t($this, $auth, 'beaconStat', $query);
+		Log::t($this, $auth, 'beaconStat', $query);
 		$result = $this->Query($query);
 
 		$res = array();
@@ -791,6 +799,9 @@ class CMooseDb extends CTinyDb
 		$retVal = array();
 		foreach($res as $data)
 			$retVal[] = $data;
+
+        $t2 = microtime(true) - $t1;
+		Log::t($this, $auth, "times",  sprintf("beacon stat: %4.0f", $t2 * 1000));
 
 		return $retVal;
 	}
