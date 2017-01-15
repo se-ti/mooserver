@@ -711,7 +711,7 @@ class CTinyDb
         {
             $search = $this->ValidateTrimQuote($search);
             $search = substr($search, 1, strlen($search)-2);    // отрезаем кавычки с краев -- т.к. добавим свои
-            $searchCond = "(message like '%$search%' or login like '%$search%')" ;
+            $searchCond = "(message like '%$search%' or u.login like '%$search%')" ;
         }
 
         $limit = $limit === null ? '' : " limit " . $this->ValidateId($limit, "Недопустимое значение limit", 1);
