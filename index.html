@@ -1070,13 +1070,14 @@ CSingleBeacon.prototype =
             .appendTo(je);
 
 
-        this._periodChooser = new CChooser(this._rm)
+        this._periodChooser = new CPeriodChooser(this._rm) //CChooser(this._rm)
             .on_periodChange($cd(this, this.reRead));
 
         this._exportBtn = this.stdExport('beacons', 'Export')
             .appendTo(this._rm)
             .find('button')
-            .click($cd(this, this._export));
+            .click($cd(this, this._export))
+            .css('margin-top', '1.5ex');
 
         var holder = $('<div class="map-panel moo-affix" data-spy="-affix"></div>')
                 .appendTo(this._rm);
