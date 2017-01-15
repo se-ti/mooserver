@@ -1089,6 +1089,8 @@ CSingleBeacon.prototype =
     activate: function(s)
     {
         CPage.callBaseMethod(this, 'activate', [s]);
+        if (this._table)
+            this._table.addClass('hidden');
         this.reRead();
         if (this._map)
         {
@@ -1228,9 +1230,13 @@ CSingleBeacon.prototype =
     _rowClick: function(e)
     {
         var je = $(e.currentTarget);
-        this._mapHelper.drawRawSms(this._map, je.attr('data-id') || '');
+        var rawSmsId = je.attr('data-id') || '';
+        if (rawSmsId != '')
+            this._mapHelper.drawRawSms(this._map, rawSmsId);
+
         this._table.find('tr').removeClass('success');
-        je.addClass('success');
+        if (rawSmsId != '')
+            je.addClass('success');
     },
 
     setRights: function(rights)
