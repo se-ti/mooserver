@@ -1116,6 +1116,7 @@ class CMooseDb extends CTinyDb
         }
 
         $access = $this->CanSeeCond($auth, 'p');
+        $mAccess = $this->CanSeeCond($auth, 'm', false, 'moose');
 
         $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, rs.ip, rs.xfw_ip, p.phone, s.id as 'sid', us.login, us.name as 'uname', m.name as 'mname'
             from raw_sms rs
@@ -1127,7 +1128,7 @@ class CMooseDb extends CTinyDb
             left join sms s on s.raw_sms_id = rs.id
             left join moose m on m.id = s.moose
 
-            where true and {$access['cond']} and $justErr and $phones
+            where true and {$access['cond']} and $justErr and $phones and (s.moose is null or {$mAccess['cond']})
             order by id desc limit $limit";
 
         $result = $this->Query($query);
