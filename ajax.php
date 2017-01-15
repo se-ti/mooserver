@@ -223,7 +223,7 @@ function changePwd()
     if (!is_string($new))
         dieError('Не задан новый пароль');
 
-    $res = $auth->сhangePassword($db, $old, $new);
+    $res = $auth->changePassword($db, $old, $new);
     if ($res !== true)
         dieError($res);
 
