@@ -213,7 +213,7 @@ class CScheduler
         // fastcgi_finish_request();                   // "отпускаем" ответ клиенту до запуска safeRun  // todo не работает на продакшене
         try
         {
-            if (!self::canRun())
+            if (!self::canRun($auth))
                 return;
 
             self::payload($db, $auth);
@@ -233,12 +233,13 @@ class CScheduler
         // self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
     }
 
-    private static function canRun()
+    private static function canRun(CMooseAuth $auth)
     {
-        if (empty(self::TimestampFile))
+        global $mooSett;
+        if (empty($mooSett['timestamp']) || !$auth->isSuper())
             return false;
 
-        $mtime = filemtime(self::TimestampFile);
+        $mtime = filemtime($mooSett['timestamp']);
         if ($mtime == false)
             return true;
 
@@ -253,7 +254,8 @@ class CScheduler
 
     private static function markSuccess()
     {
-        $f = fopen(self::TimestampFile, "w");
+        global $mooSett;
+        $f = fopen($mooSett['timestamp'], "w");
 
         if ($f != FALSE)
         {
@@ -263,9 +265,8 @@ class CScheduler
     }
 
     // todo: работает, но есть вопросы:
-    // -- не из-под супера не сработает
+    // -- не из-под супера не сработает -- ну и пусть
     // -- возможны проблемы с високосными годами
-    // -- не съел первую запись ???
     private static function addSampleSms($db, CMooseAuth $auth, $file)
     {
         if (!$auth->isSuper())
@@ -318,6 +319,7 @@ class CScheduler
 
     private static function tryGetRef($tokens)
     {
+        global $mooSett;
         if (count($tokens) < 5 || $tokens[0] != 'name-phone-firstDate-targetYear')
             return null;
 
@@ -334,7 +336,7 @@ class CScheduler
         $r['start'] = $ref;
         $r['delay'] = $st - $ref;
 
-        $last = filemtime(self::TimestampFile);
+        $last = filemtime($mooSett['timestamp']);
         //$last = strtotime('2017-01-10 10:32');    // test
         $r['prevSync'] = $last != false ? ($last - 5) : $st; // 5 c -- зазор на выполнение скрипта, чтобы не терялись смс, пришедшие точно между запуском scheduler и markSuccess.
 
