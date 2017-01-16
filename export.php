@@ -102,7 +102,7 @@ function exportBeacons()
 
 	$header = "Экспорт маяков\n";
 	$header .= csvTimeHeader();
-	$header .="\nМаяк;Получено;последняя точка;вн. id;V;T C;GPS on мин;GSM tries;rawSms id";
+	$header .="\nМаяк;Получено;последняя точка;вн. id;V;T C;GPS on мин;GSM tries;rawSms id;;id животного";
 
     $fname = count($phones) == 1 ? preg_replace('/[^\dx]/', '', $phones[0]) : 'beacons';
 	

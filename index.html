@@ -1070,7 +1070,7 @@ CSingleBeacon.prototype =
             .appendTo(je);
 
 
-        this._periodChooser = new CPeriodChooser(this._rm) //CChooser(this._rm)
+        this._periodChooser = new CPeriodChooser(this._rm) // CChooser(this._rm)
             .on_periodChange($cd(this, this.reRead));
 
         this._exportBtn = this.stdExport('beacons', 'Export')
@@ -1139,10 +1139,8 @@ CSingleBeacon.prototype =
         var param = this._getParam();
 
         frm['ids'].value = param.ids;
-        if (param.start)
-            frm['start'].value = param.start;
-        if (param.end)
-            frm['end'].value = param.end;
+        frm['start'].value = param.start || "";
+        frm['end'].value = param.end || "";
 
         return true;
     },
