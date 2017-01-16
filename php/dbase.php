@@ -742,12 +742,139 @@ class CMooseDb extends CTinyDb
         return $res;
     }
 
+    private function GetBeacons(CTinyAuth $auth, $ids, $all)
+    {
+        $ids = filter_var($ids, FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY);
+        if ($ids === false)
+            return null;
+
+        $ids = implode($ids, ", ");
+        $cond = ($ids != '')? "p.id in ($ids)" : 'true';
+        $mcond = ($ids != '')? "rs.phone_id in ($ids)" : 'true';
+
+        $pAccess = $this->CanSeeCond($auth, 'p', false, 'phone');
+        $mAccess = $this->CanSeeCond($auth, 'm', false, 'moose');
+        $mooseAccess = str_replace('m.id', 's.moose', $mAccess['cond']);  // hack c проверкой прав.
+
+        $query = "select id, 1 as 'flag' 
+              from phone p
+            where $cond and {$pAccess['cond']}
+            
+            union 
+            
+            select distinct rs.phone_id as 'id', 0 as 'flag'
+              from raw_sms rs 
+              inner join sms s on s.raw_sms_id = rs.id
+            where $mooseAccess and $mcond";
+
+        $res = $this->Query($query);
+
+        $outIds = [];
+        $filtIds = [];
+        foreach($res as $data) {
+            $id = $data['id'];
+            $outIds[] = $id;
+            if ($data['flag'] == 1)
+                $filtIds[] = $id;
+        }
+        $res->closeCursor();
+
+        if (count($outIds) == 0)
+            return null;
+
+        $active = $all === true ? 'true' : 'p.active = 1';
+        $cond = implode($outIds, ', ');
+        $query = "select p.id as 'pId', phone, canonical, active, m.name as 'mName'
+                    from phone p
+                    left join moose m on m.phone_id = p.id and {$mAccess['cond']}
+                    where p.id in ($cond) and $active
+                    order by phone";
+
+        $res = $this->Query($query);
+
+        $bIds = [];
+        $beacons = [];
+        foreach($res as $row)
+        {
+            $id = $row['pId'];
+            $bIds[] = $id;
+            $beacons[$id] = ['id' => $id, 'phone' => self::Obfuscate($auth, $row['phone']), 'canonical' => self::Obfuscate($auth, $row['canonical']), 'moose' => $row['mName'], 'active' => $row['active'] == 1, 'data' => []];
+        }
+        $res->closeCursor();
+
+        return ['beacons' => $beacons,
+                'ids' => $bIds,
+                'directIds' => $filtIds,
+                'mAccess' => $mAccess['cond']];
+    }
+
+    /* returns:
+    -- список приборов, содержащих доступные пользователю смс ($all - все или только активные)
+    -- список доступных смс, которые привязаны к этому прибору из диапазона $start - $end
+    -- на экспорт -- только приборы с данными*/
+    function GetBeaconStat(CTinyAuth $auth, $ids, $start, $end, $all, $export)
+    {
+        $t1 = microtime(true);
+
+        $beacons = $this->GetBeacons($auth, $ids, $all);
+        if ($beacons == null || count($beacons['ids']) == 0)   // нет приборов
+            return null;
+
+        $t2 = microtime(true);
+
+        $addText = $auth->isSuper() && $export != true;
+
+        $cond = implode($beacons['ids'], ", ");
+        $direct = 'false';
+        if (count($beacons['directIds']) > 0)
+            $direct = 'rs.phone_id in (' . implode($beacons['directIds'], ', ') . ')';
+        $timeCond = $this->TimeCondition('position.stamp', $start, $end);
+        $mAccess = str_replace('m.id', 'sms.moose', $beacons['mAccess']); // hack c проверкой прав
+
+        $query = "select rs.phone_id as pId, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, DATE_FORMAT(pos.st,'%Y-%m-%dT%TZ') as pos_time, sms.moose as smsMid
+				from raw_sms rs
+				inner join sms on sms.raw_sms_id = rs.id
+				left join (select sms_id, max(stamp) as st from position where true $timeCond group by sms_id) pos on pos.sms_id = sms.id
+				
+				where rs.phone_id in ($cond) and (sms.moose is null and $direct or $mAccess)
+				 order by pos.st desc
+				  ";// в принципе те маяки и (доступное животное или непривязанное смс с ныне доступного маяка)
+
+
+        //Log::t($this, $auth, 'beaconStat', $query);
+        $result = $this->Query($query);
+
+        $t3 = microtime(true);
+
+        $hash = $beacons['beacons'];
+        foreach ($result as $row)
+        {
+            $ph = $row['pId'];
+            if (!isset($hash[$ph]))
+                Log::e($this, $auth, 'beaconStat', "no phone with id '$ph'");
+
+            if ($row['pos_time'] != null)
+                $hash[$ph]['data'][] = [$row['tm'], $row['pos_time'], $row['int_id'], $row['volt'], $row['temp'], $row['gps_on'], $row['gsm_tries'], $row['rsId'], $addText ? $row['text'] : null, $row['smsMid']];
+        }
+        $result->closeCursor();
+
+        $retVal = [];
+        foreach($hash as $data)
+            if ($export != true || count($data['data']) > 0)       // на экспорт только маяки с данными
+                $retVal[] = $data;
+
+        $t4 = microtime(true);
+        //Log::t($this, $auth, "times",  sprintf("beacon stat: %4.0f,  query: %4.0f, proc: %4.0f", ($t4 - $t1) * 1000,  ($t3 - $t2) * 1000, ($t4 - $t3) * 1000));
+
+        return $retVal;
+    }
+
     /// вернуть список всех доступных приборов кроме б.м. неактивных ($all)
     /// данные возвращать из диапазона $start - $end
     /// суперам вернуть еще и текст смс
     /// todo сложные варианты: прибор сейчас -- демо, а давнее животное -- нет, или давнее животное -- демо, а нынешнее -- нет
-	function GetBeaconStat(CTinyAuth $auth, $ids, $start, $end, $all, $export)
-	{
+    function GetBeaconStatOld(CTinyAuth $auth, $ids, $start, $end, $all, $export)
+    {
         $ids = filter_var($ids, FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY);
         if ($ids === false)
             return null;
@@ -804,7 +931,7 @@ class CMooseDb extends CTinyDb
 		Log::t($this, $auth, "times",  sprintf("beacon stat: %4.0f", $t2 * 1000));
 
 		return $retVal;
-	}
+    }
 
     public static function CanonicalPhone($phone)
     {
