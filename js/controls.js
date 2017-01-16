@@ -944,7 +944,7 @@ CPeriodChooser.prototype =
         var je = $(tpl).appendTo(elem);
 
         var c = this.c;
-        c.opts = je.find('.btn-group input').change(this._d_optClick);
+        c.opts = je.find('.btn-group input').change(this._d_optClick).attr('name', 'options-' + (new Date() - 1));
         c.all = this.c.opts[3];
         c.exact = this.c.opts[4];
 
