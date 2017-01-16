@@ -1021,6 +1021,7 @@ CSingleBeacon = function(after)
     this._mapHelper = null;
 
     this._c_rowClick = $cd(this, this._rowClick);
+    this._c_onReRead = $cd(this, this._onReRead);
     this._init(after);
 }
 
@@ -1130,7 +1131,7 @@ CSingleBeacon.prototype =
 
     reRead: function()
     {
-        $ajax('getBeaconData', this._getParam(), $cd(this, this._onReRead));
+        $ajax('getBeaconData', this._getParam(), this._c_onReRead);
     },
 
     _export: function()
@@ -1204,7 +1205,7 @@ CSingleBeacon.prototype =
         var empty = '<tr><td colspan="8">нет данных</td></tr>';
         this._table.get(0).innerHTML = head + '<tbody>' + (isEmpty ? empty : body) + '</tbody>';
 
-        if (isEmpty)
+        if (result.length == 0)
             this._setPhoneName(this._getPhoneById(), null);
 
         this._table.removeClass('hidden');
