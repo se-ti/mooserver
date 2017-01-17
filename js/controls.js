@@ -922,6 +922,14 @@ CPeriodChooser = function(elem)
     this._buildIn(elem);
 }
 
+CPeriodChooser._uid = function()
+{
+    if (CPeriodChooser.__uid == null)
+        CPeriodChooser.__uid = 0;
+
+    return ++CPeriodChooser.__uid;
+};
+
 CPeriodChooser.prototype =
 {
     _buildIn: function(elem)
@@ -944,7 +952,7 @@ CPeriodChooser.prototype =
         var je = $(tpl).appendTo(elem);
 
         var c = this.c;
-        c.opts = je.find('.btn-group input').change(this._d_optClick).attr('name', 'options-' + (new Date() - 1));
+        c.opts = je.find('.btn-group input').change(this._d_optClick).attr('name', 'options-' + CPeriodChooser._uid());
         c.all = this.c.opts[3];
         c.exact = this.c.opts[4];
 
