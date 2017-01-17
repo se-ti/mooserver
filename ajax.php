@@ -477,7 +477,7 @@ function togglePoint()
         dieError('недопустимое значение активности');
     $time = varNotEmpty('time', true, 'не указана точка');
 
-    return $mooseId !== null ? $db->TogglePoint($auth, $mooseId, $time, $valid) : $db->TogglePoint2($auth, $rawSms, $time, $valid);
+    return $mooseId !== null ? $db->ToggleMoosePoint($auth, $mooseId, $time, $valid) : $db->ToggleSmsPoint($auth, $rawSms, $time, $valid);
 }
 
 function getGateData()

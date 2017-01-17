@@ -1093,6 +1093,7 @@ CSingleBeacon.prototype =
         CPage.callBaseMethod(this, 'activate', [s]);
         if (this._table)
             this._table.addClass('hidden');
+        this._setPhoneName(this._getPhoneById());
         this.reRead();
         if (this._map)
         {

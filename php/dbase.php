@@ -140,10 +140,11 @@ class CMooseDb extends CTinyDb
     }
 
 
-    /// $name -- table alias in query
-    /// $simple -- true -- return query parts, false -- return query results
-    /// $table -- real table name. Used only when $simple == false
-    private function CanSeeCond(CTinyAuth $auth, $name, $simple = true, $table = null)
+    /// @returns complex condition with join or query result
+    /// $alias -- table alias in query
+    /// $table -- real table name. Not null means you need query results
+    /// $externAlias -- field name in extern query. Used only if $table != null
+    private function CanSeeCond(CTinyAuth $auth, $alias, $table = null, $extAlias = null)
     {
         if ($auth->isSuper())
             return array('join' => '', 'cond' => 'true');
@@ -152,15 +153,15 @@ class CMooseDb extends CTinyDb
         $demo = CMooseAuth::Demo;
 
         $res = array(
-            'join' => "inner join usergroups ug on ug.group_id = $name.group_id or ug.group_id = $demo and $name.demo = 1
+            'join' => "inner join usergroups ug on ug.group_id = $alias.group_id or ug.group_id = $demo and $alias.demo = 1
 		            inner join users u on u.id = ug.group_id",
 
             'cond' => "(ug.user_id = $id and u.removeDate is null)");
 
-        if ($simple)
+        if ($table == null)
             return $res;
 
-        $query = "select $name.id from $table $name
+        $query = "select $alias.id from $table $alias
             {$res['join']}
             where {$res['cond']}";
 
@@ -170,10 +171,13 @@ class CMooseDb extends CTinyDb
             $ids[] = $r['id'];
 
         $res['join'] = '';
+        if ($extAlias == null)
+            $extAlias = "$alias.id";
+
         if (count($ids) == 0)
-            $res['cond'] = "$name.id is null";
+            $res['cond'] = "$extAlias is null";
         else
-            $res['cond'] = "$name.id in (" . join(', ', $ids) . ") ";
+            $res['cond'] = "$extAlias in (" . join(', ', $ids) . ") ";
 
         return $res;
     }
@@ -587,7 +591,7 @@ class CMooseDb extends CTinyDb
             return null;
 
         $cond = implode($ids, ", ");
-        $access = $this->CanSeeCond($auth, 'm', false, 'moose');
+        $access = $this->CanSeeCond($auth, 'm', 'moose');
 
         $query = "select id, DATE_FORMAT(upd_stamp, '%Y-%m-%dT%TZ') as stamp  
                 from moose m
@@ -614,7 +618,7 @@ class CMooseDb extends CTinyDb
 		$cond = implode($ids, ", ");
 
 		$timeCond = $this->TimeCondition('position.stamp', $start, $end);
-        $access = $this->CanSeeCond($auth, 'm', false, 'moose');
+        $access = $this->CanSeeCond($auth, 'm', 'moose');
 		
 		$query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid, sms.moose as moose from position
                 inner join sms on position.sms_id = sms.id
@@ -658,12 +662,11 @@ class CMooseDb extends CTinyDb
 		$cond = implode($ids, ", ");
 
 		$timeCond = $this->TimeCondition('activity.stamp', $start, $end);
-        $access = $this->CanSeeCond($auth, 'm', false, 'moose');
+        $access = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
 		$query = "select DATE_FORMAT(activity.stamp,'%Y-%m-%dT%TZ') as stamp, max(active) as active, valid, sms.moose as moose
 				from activity				
 				inner join sms on activity.sms_id = sms.id
-				inner join moose m on m.id = sms.moose
 				{$access['join']}
 				where  sms.moose in ($cond) $timeCond and {$access['cond']}
 				 group by activity.stamp, valid, sms.moose
@@ -697,15 +700,15 @@ class CMooseDb extends CTinyDb
     function GetSmsTrack(CTinyAuth $auth, $rawSmsId)
     {
         $rawSmsId = $this->ValidateId($rawSmsId, "Недопустимый id sms", 1);
-        $access = $this->CanSeeCond($auth, 'p');
+
+        $pAccess = $this->CanSeeCond($auth, 'p', 'phone', 'rs.phone_id');
+        $mAccess = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
         $query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid
                 from position
                 inner join sms on position.sms_id = sms.id
                 inner join raw_sms rs on rs.id = sms.raw_sms_id
-                inner join phone p on p.id = rs.phone_id
-                {$access['join']}
-				where sms.raw_sms_id = $rawSmsId and {$access['cond']}
+				where sms.raw_sms_id = $rawSmsId and (sms.moose is null and {$pAccess['cond']} or {$mAccess['cond']})
 				order by position.stamp asc ";
 
         $result = $this->Query($query);
@@ -721,15 +724,14 @@ class CMooseDb extends CTinyDb
     function GetSmsActivity(CTinyAuth $auth, $rawSmsId)
     {
         $rawSmsId = $this->ValidateId($rawSmsId, "Недопустимый id sms", 1);
-        $access = $this->CanSeeCond($auth, 'p');
+        $pAccess = $this->CanSeeCond($auth, 'p', 'phone', 'rs.phone_id');
+        $mAccess = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
         $query = "select DATE_FORMAT(activity.stamp,'%Y-%m-%dT%TZ') as stamp, activity.active, valid
 				from activity
 				inner join sms on activity.sms_id = sms.id
 				inner join raw_sms rs on rs.id = sms.raw_sms_id
-                inner join phone p on p.id = rs.phone_id
-				{$access['join']}
-				where sms.raw_sms_id = $rawSmsId and {$access['cond']}
+				where sms.raw_sms_id = $rawSmsId and (sms.moose is null and {$pAccess['cond']} or {$mAccess['cond']})
 				order by activity.stamp asc";
 
         $result = $this->Query($query);
@@ -752,9 +754,9 @@ class CMooseDb extends CTinyDb
         $cond = ($ids != '')? "p.id in ($ids)" : 'true';
         $mcond = ($ids != '')? "rs.phone_id in ($ids)" : 'true';
 
-        $pAccess = $this->CanSeeCond($auth, 'p', false, 'phone');
-        $mAccess = $this->CanSeeCond($auth, 'm', false, 'moose');
-        $mooseAccess = str_replace('m.id', 's.moose', $mAccess['cond']);  // hack c проверкой прав.
+        $pAccess = $this->CanSeeCond($auth, 'p', 'phone');
+        $mAccess = $this->CanSeeCond($auth, 'm', 'moose');
+        $mooseAccess = str_replace('m.id', 'sms.moose', $mAccess['cond']);  // hack c проверкой прав.
 
         $query = "select id, 1 as 'flag' 
               from phone p
@@ -764,7 +766,7 @@ class CMooseDb extends CTinyDb
             
             select distinct rs.phone_id as 'id', 0 as 'flag'
               from raw_sms rs 
-              inner join sms s on s.raw_sms_id = rs.id
+              inner join sms on raw_sms_id = rs.id
             where $mooseAccess and $mcond";
 
         $res = $this->Query($query);
@@ -805,7 +807,7 @@ class CMooseDb extends CTinyDb
         return ['beacons' => $beacons,
                 'ids' => $bIds,
                 'directIds' => $filtIds,
-                'mAccess' => $mAccess['cond']];
+                'mAccess' => $mooseAccess];
     }
 
     /* returns:
@@ -829,14 +831,13 @@ class CMooseDb extends CTinyDb
         if (count($beacons['directIds']) > 0)
             $direct = 'rs.phone_id in (' . implode($beacons['directIds'], ', ') . ')';
         $timeCond = $this->TimeCondition('position.stamp', $start, $end);
-        $mAccess = str_replace('m.id', 'sms.moose', $beacons['mAccess']); // hack c проверкой прав
 
         $query = "select rs.phone_id as pId, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, DATE_FORMAT(pos.st,'%Y-%m-%dT%TZ') as pos_time, sms.moose as smsMid
 				from raw_sms rs
 				inner join sms on sms.raw_sms_id = rs.id
 				left join (select sms_id, max(stamp) as st from position where true $timeCond group by sms_id) pos on pos.sms_id = sms.id
 				
-				where rs.phone_id in ($cond) and (sms.moose is null and $direct or $mAccess)
+				where rs.phone_id in ($cond) and (sms.moose is null and $direct or {$beacons['mAccess']})
 				 order by pos.st desc
 				  ";// в принципе те маяки и (доступное животное или непривязанное смс с ныне доступного маяка)
 
@@ -919,7 +920,7 @@ class CMooseDb extends CTinyDb
         return array('res' => true, 'rc' => $result->rowCount());
     }
 
-    function TogglePoint(CMooseAuth $auth, $mooseId, $time, $valid)
+    function ToggleMoosePoint(CMooseAuth $auth, $mooseId, $time, $valid)
     {
         $mooseId = $this->ValidateId($mooseId, self::ErrWrongMooseId, 1);
         if (!$this->CanModify($auth, $mooseId, true))
@@ -933,7 +934,7 @@ class CMooseDb extends CTinyDb
         return $res;
     }
 
-    function TogglePoint2(CMooseAuth $auth, $rawSmsId, $time, $valid)
+    function ToggleSmsPoint(CMooseAuth $auth, $rawSmsId, $time, $valid)
     {
         $rawSmsId = $this->ValidateId($rawSmsId, self::ErrWrongMooseId, 1);
         if (!$this->CanModifySms($auth, $rawSmsId))
@@ -1057,7 +1058,7 @@ class CMooseDb extends CTinyDb
 		return $res;
 	}
 
-    // а не проверить ли еще и доступность лосей? -- нет, они пока синхронны
+    // todo а не проверить ли еще и доступность лосей? -- нет, они пока синхронны
     protected function PhoneProp(CTinyAuth $auth, $phone)
     {
         $qPhone = $this->db->quote(self::CanonicalPhone($phone));
@@ -1179,7 +1180,7 @@ class CMooseDb extends CTinyDb
         }
 
         $access = $this->CanSeeCond($auth, 'p');
-        $mAccess = $this->CanSeeCond($auth, 'm', false, 'moose');
+        $mAccess = $this->CanSeeCond($auth, 'm', 'moose');
 
         $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, rs.ip, rs.xfw_ip, p.phone, s.id as 'sid', us.login, us.name as 'uname', m.name as 'mname'
             from raw_sms rs
