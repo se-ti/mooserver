@@ -230,7 +230,7 @@ class CScheduler
     private static function payload(CMooseDb $db, $auth)
     {
         $db->SimplifyGateLogs($auth);
-        self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
+        // self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
     }
 
     private static function canRun(CMooseAuth $auth)
@@ -243,7 +243,7 @@ class CScheduler
         if ($mtime == false)
             return true;
 
-        $work = false;
+        $work = true;
         if ($work)
             $flag = date('j') != date('j', $mtime); // не сегодня
         else
