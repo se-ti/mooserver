@@ -1209,7 +1209,8 @@ CSingleBeacon.prototype =
         if (result.length == 0)
             this._setPhoneName(this._getPhoneById(), null);
 
-        this._table.removeClass('hidden');
+        this._table.removeClass('hidden table-striped table-moo-striped')
+            .addClass(CApp.single().getRights().isSuper ? 'table-moo-striped' : 'table-striped' );
     },
 
     badValue: function(item, idx)
