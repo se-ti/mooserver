@@ -19,6 +19,7 @@ CLogin = function(menu)
 		name: null, 
 		err: null, 
 		feedback: null,
+        pwd: null,
 
         mailErr: null,
         mailFeedback: null,
