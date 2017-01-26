@@ -15,6 +15,7 @@ CLogin = function(menu)
 		pwd: null,
 		login: null,
 		logout: null,
+        submit: null,
 		name: null, 
 		err: null, 
 		feedback: null,
@@ -35,8 +36,6 @@ CLogin.prototype =
 
         '<button class="btn btn-success" type="button" id="activate">Войти</button> ' +
 
-		// '<button class="btn btn-success hidden" type="button" id="login">Войти</button> ' +
-
         '<div class="form-group has-feedback has-warning">' +
 			'<button class="btn btn-warning" type="button" style="display: none;" id="logout">Выход</button>' +
 		'</div> ' +
@@ -53,7 +52,7 @@ CLogin.prototype =
                         '<h4 class="modal-title" id="myModalLabel">Авторизация</h4>' +
                     '</div>' +
                     '<div class="modal-body">' +
-                        '<form class="form-signin" role="form">' +
+                        '<form class="form-signin" role="form" action="about:blank" target="loginTargetFrame" >' +
 
                             '<div class="form-group -has-error has-feedback"> ' +
                                 '<label class="control-label" for="mail" id="logmail"></label>' +
@@ -70,7 +69,7 @@ CLogin.prototype =
                                 //     '<div class="checkbox">' +
                             '<div class="form-group has-error has-feedback">'+
                                 '<label class="control-label" id="logError"></label>' +
-                                '<button class="btn btn-lg btn-primary btn-block" type="button">Войти</button>' +
+                                '<button class="btn btn-lg btn-primary btn-block" type="submit">Войти</button>' +
                             '</div>' +
 
                             '<div class="form-group has-error has-feedback">'+
@@ -79,6 +78,7 @@ CLogin.prototype =
                             '</div>' +
 
                         '</form>' +
+                        '<iframe class="hidden" id="loginTargetFrame"  name="loginTargetFrame" src="javascript:false;"></iframe>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -99,10 +99,10 @@ CLogin.prototype =
 
         c.dialog = dlg;
 
-        c.login = dlg.find('form button')
+        c.login = dlg.find('form button[type="submit"]')
             .click($cd(this, this.login));
 		c.mail = dlg.find('input[type="text"]')
-            .keydown($cd(this, this.onEnter));
+            .keydown($cd(this, this._onMailEnter));
 		c.pwd = dlg.find('input[type="password"]')
             .keydown($cd(this, this.onEnter));
 
@@ -227,12 +227,20 @@ CLogin.prototype =
 		$ajax('login', {logout: true}, $cd(this, this._onLogin));
 	},
 
+    _onMailEnter: function(e) {
+        if (e.which == 13)
+        {
+            var p = this.c.pwd;
+            window.setTimeout(function() {p.focus();}, 0);
+        }
+    },
+
 	onEnter: function(e)
 	{
 		if (e.which == 13)
 		{
 			e.preventDefault();
-			this.login();
+            this.c.login.click();   // make autocomplete remember fields
 		}
 	},
 
