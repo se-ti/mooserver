@@ -1,34 +1,32 @@
 /**
  * Created by Serge Titov for mooServer project
- * 2014 - 2015
+ * 2014 - 2017
  */
 
 CLogin = function(menu)
 {
-	CControl.call(this);
-	this.c = {
+    CControl.call(this);
+    this.c = {
         activate: null,
         forget: null,
         dialog: null,
 
-		mail: null,
-		pwd: null,
-		login: null,
-		logout: null,
-        submit: null,
-		name: null, 
-		err: null, 
-		feedback: null,
+        mail: null,
         pwd: null,
+        login: null,
+        logout: null,
+        name: null,
+        err: null,
+        feedback: null,
 
         mailErr: null,
         mailFeedback: null,
         loginErr : null
-	};
+    };
 
     this._forget = false;
 
-	this.attach(menu);
+    this.attach(menu);
 }
 
 CLogin.prototype = 	
