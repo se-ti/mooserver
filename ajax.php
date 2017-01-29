@@ -427,7 +427,7 @@ function addSeries()
 	else 
 		$time = strtotime($time);
 
-	$msg = new CMooseSMS($sms, $time);
+	$msg = CMooseSMS::CreateFromText($sms, $time);
 
 	$res = $db->AddData($auth, $phone, $msg);
     Log::t($db, $auth, "addSms", "via UI " . CMooseTools::addSmsMessage($res));

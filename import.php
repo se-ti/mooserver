@@ -86,7 +86,7 @@ function parseFile($name, $uploadName)
 			continue;
 			}
 
-		$msg = new CMooseSMS ( $StringArray[7], $SmsTime );
+		$msg = CMooseSMS::CreateFromText( $StringArray[7], $SmsTime );
 		if ( ! $msg->IsValid () )
 			{
 				$Log [ 'SMS Error: '.$msg->GetErrorMessage() ][] = $StringCounter;
