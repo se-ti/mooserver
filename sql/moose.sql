@@ -118,6 +118,8 @@ alter table sms add column mint datetime default 0;
 update sms s set maxt = (select max(stamp) from position p where p.sms_id = s.id);
 update sms s set mint = (select min(stamp) from position p where p.sms_id = s.id);
 
+alter table sms add column diagnose text(200);
+
 /*
 select m.id, m.name, count(s.id), min(s.mint), max(s.maxt) from sms s inner join moose m on m.id = s.moose  group by m.id, m.name;
 */

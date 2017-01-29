@@ -1031,9 +1031,11 @@ class CMooseDb extends CTinyDb
 			return $res;
 		}
 
-		$query = "insert into sms (moose, raw_sms_id, int_id, volt, temp, gsm_tries, gps_on) 
+		$qDiag = 'null'; // $msg->diag == null || trim($msg->diag) == '' ? 'null' : $this->ValidateTrimQuote($msg->diag);  todo диагностика в смс
+
+		$query = "insert into sms (moose, raw_sms_id, int_id, volt, temp, gsm_tries, gps_on, diagnose) 
 				values ( $qMooseId, $rawSmsId, {$msg->id}, 
-						{$msg->volt}, {$msg->temp}, {$msg->gsmTries}, {$msg->gpsOn})";
+						{$msg->volt}, {$msg->temp}, {$msg->gsmTries}, {$msg->gpsOn}, $qDiag)";
 		$this->Query($query);
 
 		$smsId = $this->db->lastInsertId();
@@ -1182,7 +1184,7 @@ class CMooseDb extends CTinyDb
         $access = $this->CanSeeCond($auth, 'p');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose');
 
-        $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, rs.ip, rs.xfw_ip, p.phone, s.id as 'sid', us.login, us.name as 'uname', m.name as 'mname'
+        $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, rs.ip, rs.xfw_ip, p.phone, s.id as 'sid', us.login, us.name as 'uname', m.name as 'mname', s.diagnose
             from raw_sms rs
             inner join users us on us.id = rs.user_id
             inner join phone p on p.id = rs.phone_id
@@ -1196,10 +1198,10 @@ class CMooseDb extends CTinyDb
             order by id desc limit $limit";
 
         $result = $this->Query($query);
-        $res = array();
+        $res = [];
         foreach($result as $r)
         {
-            $tmp = array('id' => $r['id'],
+            $tmp = ['id' => $r['id'],
                 'sid' => $r['sid'],
                 'stamp' => $r['sstamp'],
                 'text' => $r['text'],
@@ -1209,7 +1211,8 @@ class CMooseDb extends CTinyDb
                 'login' => $r['login'],
                 'name' => $r['uname'],
                 'moose' => $r['mname'],
-                'error' => '');
+                'diagnose' => $r['diagnose'],
+                'error' => ''];
 
             if ($tmp['sid'] == null)
             {
