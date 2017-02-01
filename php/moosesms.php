@@ -20,6 +20,8 @@ class CMooseSMS
 	var $points;		// массив троек ширина, долгота, время
 	var $activity;		// массив пар
 
+	var $diag;
+	
 	var $TestValue;
 	var $TestValue2;
 	
@@ -49,6 +51,7 @@ class CMooseSMS
 		
 		$this->points = array();
 		$this->activity = null;
+		$this->diag = null;
 		
 		$this->RotateHour = 17;
 		
@@ -56,7 +59,7 @@ class CMooseSMS
 		$this->TestValue2 = '';
 		//$this->TestValue = CMooseSMS::a64toi ("9");
 
-		$this->ProcessSMSText ();
+		//$this->ProcessSMSText ();
 		
 	}
 
@@ -87,6 +90,9 @@ class CMooseSMS
 		return $res;
 	}*/
 
+	protected function ProcessSMSText ()
+	{
+	}
 	
 	public static function a64toi ($aStr)
 	{
@@ -365,6 +371,14 @@ protected function ProcessSMSText ()
 			return;
 		}
 		
+		if ( $ActivityDay >= 32 ) //These values are reserved for special usage (tests etc.)
+		{
+			if ( $ActivityDay == 32 )
+				$this->ProcessReloadDiagnostic ();
+			return;
+		}
+
+		
 		if ( $this->points[0][2] != 0 )
 		{
 			$ActivityDate1 = gmmktime ( 0, 0, 0, gmdate ('n', $this->points[0][2]), $ActivityDay, gmdate ('Y', $this->points[0][2]) );
@@ -389,6 +403,12 @@ protected function ProcessSMSText ()
 				$this->activity[] = $CurrentActivity;
 				$this->TestValue2 .= $CurrentActivity[1];
 			}
+	}
+	
+	protected function ProcessReloadDiagnostic ()
+	{
+		$this->diag = "Reload";
+		//echo ("Reload!");
 	}
 }
 ?>
