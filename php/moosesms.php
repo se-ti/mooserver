@@ -20,8 +20,7 @@ class CMooseSMS
 	var $points;		// массив троек ширина, долгота, время
 	var $activity;		// массив пар
 
-	var $CompressionFactor;
-	var $CompressionType;
+	var $diag;
 	
 	var $TestValue;
 	var $TestValue2;
@@ -31,13 +30,10 @@ class CMooseSMS
 	
 	var $RotateHour;
 	
-	const TECH_HEADER_LENGTH = 6;
-	const ACTIVITY_LENGTH = 25;
-	const POINTS_HEADER_LENGTH = 12;
 	const PROPRIETARYBASE64_INDEX = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&#";
 
 	
-	function CMooseSMS($text, $time = null)
+		function CMooseSMS($text, $time = null)
 	{
 		$this->id = time();
 		
@@ -55,6 +51,7 @@ class CMooseSMS
 		
 		$this->points = array();
 		$this->activity = null;
+		$this->diag = null;
 		
 		$this->RotateHour = 17;
 		
@@ -62,10 +59,20 @@ class CMooseSMS
 		$this->TestValue2 = '';
 		//$this->TestValue = CMooseSMS::a64toi ("9");
 
-		$this->ProcessSMSText ();
+		//$this->ProcessSMSText ();
 		
 	}
 
+
+	public static function CreateFromText ($text, $time)
+	{
+		$res = new CMooseSMSv3 ( $text, $time );
+		
+		$res -> ProcessSMSText ();
+		
+		return $res;
+	}
+	/*
 	public static function fromBulk($time, $text, $id, $points, $activity)
 	{
 		$virtualtime = time();
@@ -81,9 +88,120 @@ class CMooseSMS
 		$res->IsOk = TRUE;
 
 		return $res;
-	}
+	}*/
 
 	protected function ProcessSMSText ()
+	{
+	}
+	
+	public static function a64toi ($aStr)
+	{
+		$Result=0;
+		$StringLength = strlen ( $aStr );
+		for ( $i=0 ; $i<$StringLength ; $i++ )
+		{
+			$Result*=64;
+			$NextCharDecoded=strrpos( self::PROPRIETARYBASE64_INDEX, $aStr{$i} );
+			if ( $NextCharDecoded === FALSE )
+				return FALSE;
+			$Result+= $NextCharDecoded;
+		}
+		return $Result;
+		
+	}
+	
+	public static function a64bitstoi ($aStr, $aStartBit, $aNBits) //aStartBit -- самый младший (т.е. биты считаются справа).
+	{
+		$Result=0;
+		$StringLength = strlen ( $aStr );
+
+		if ( (integer)floor(($aStartBit+$aNBits-1)/6)-1 > $StringLength )
+			return FALSE;
+
+		for ( $i=$StringLength-(integer)floor(($aStartBit+$aNBits-1)/6)-1 ; $i<$StringLength-(integer)floor($aStartBit/6) ; $i++ )
+		{
+			$Result*=64;
+			$NextCharDecoded=strrpos( self::PROPRIETARYBASE64_INDEX, $aStr{$i} );
+			if ( $NextCharDecoded === FALSE )
+				return FALSE;
+			$Result+= $NextCharDecoded;
+		}
+	
+		$Result >>= $aStartBit%6;
+		$Result &= (1<<($aNBits))-1;
+		
+		return $Result;
+	}
+	
+	public function GetTest ()
+	{
+	$Result = "";
+	//return $this->$TestValue1;
+	/*
+	
+	$Result .= CMooseSMS::a64toi ("A0");
+	$Result .= "=640, ";
+	$Result .= CMooseSMS::a64toi ("A00#");
+	$Result .= "=2621503, ";
+	$Result .= CMooseSMS::a64bitstoi("WUtyNu",30,6);
+	$Result .= "=32, ";
+	$Result .= CMooseSMS::a64bitstoi("WUtyNu",12,12);
+	$Result .= "=3580, ";
+	$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV0m",32,8);
+	$Result .= "=303, ";
+	$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV2m",0,11);
+	$Result .= "=176, ";*/
+	
+	
+	$this->TestValue = "Tech: ID=";
+	$this->TestValue .= $this->id;
+	$this->TestValue .= " gsmTryes=";
+	$this->TestValue .= $this->gsmTries;
+	$this->TestValue .= " gpsTime=";
+	$this->TestValue .= $this->gpsOn;
+	$this->TestValue .= " Voltage=";
+	$this->TestValue .= $this->volt;
+	$this->TestValue .= " Temperature=";
+	$this->TestValue .= $this->temp;
+	$this->TestValue .= " Lat=";
+	$this->TestValue .= $this->points[0][0];
+	$this->TestValue .= " Long=";
+	$this->TestValue .= $this->points[0][1];
+	$this->TestValue .= " Test=";
+	$this->TestValue .= $this->TestValue2;
+	$this->TestValue .= " Time=";
+	$this->TestValue .= $this->points[0][2];
+	return $this->TestValue;
+	}
+
+	function SetError ( $ErrorText )
+	{
+	$this->IsOk = FALSE;
+	$this->ErrorMessage = $ErrorText;
+	$this->TestValue2 = $ErrorText;
+	}
+	
+	public function IsValid ()
+	{
+	return $this->IsOk;
+	}
+	
+	public function GetErrorMessage ()
+	{
+	return $this->ErrorMessage;
+	}
+}
+
+class CMooseSMSv3 extends CMooseSMS
+{
+	var $CompressionFactor;
+	var $CompressionType;
+	
+	const TECH_HEADER_LENGTH = 6;
+	const ACTIVITY_LENGTH = 25;
+	const POINTS_HEADER_LENGTH = 12;
+
+protected function ProcessSMSText ()
 	{
 	$this->TestValue = "Process";
 		if ( strlen ( $this->text ) < self::TECH_HEADER_LENGTH + self::ACTIVITY_LENGTH + self::POINTS_HEADER_LENGTH )
@@ -253,6 +371,14 @@ class CMooseSMS
 			return;
 		}
 		
+		if ( $ActivityDay >= 32 ) //These values are reserved for special usage (tests etc.)
+		{
+			if ( $ActivityDay == 32 )
+				$this->ProcessReloadDiagnostic ();
+			return;
+		}
+
+		
 		if ( $this->points[0][2] != 0 )
 		{
 			$ActivityDate1 = gmmktime ( 0, 0, 0, gmdate ('n', $this->points[0][2]), $ActivityDay, gmdate ('Y', $this->points[0][2]) );
@@ -279,101 +405,10 @@ class CMooseSMS
 			}
 	}
 	
-	public static function a64toi ($aStr)
+	protected function ProcessReloadDiagnostic ()
 	{
-		$Result=0;
-		$StringLength = strlen ( $aStr );
-		for ( $i=0 ; $i<$StringLength ; $i++ )
-		{
-			$Result*=64;
-			$NextCharDecoded=strrpos( self::PROPRIETARYBASE64_INDEX, $aStr{$i} );
-			if ( $NextCharDecoded === FALSE )
-				return FALSE;
-			$Result+= $NextCharDecoded;
-		}
-		return $Result;
-		
-	}
-	
-	public static function a64bitstoi ($aStr, $aStartBit, $aNBits) //aStartBit -- самый младший (т.е. биты считаются справа).
-	{
-		$Result=0;
-		$StringLength = strlen ( $aStr );
-
-		if ( (integer)floor(($aStartBit+$aNBits-1)/6)-1 > $StringLength )
-			return FALSE;
-
-		for ( $i=$StringLength-(integer)floor(($aStartBit+$aNBits-1)/6)-1 ; $i<$StringLength-(integer)floor($aStartBit/6) ; $i++ )
-		{
-			$Result*=64;
-			$NextCharDecoded=strrpos( self::PROPRIETARYBASE64_INDEX, $aStr{$i} );
-			if ( $NextCharDecoded === FALSE )
-				return FALSE;
-			$Result+= $NextCharDecoded;
-		}
-	
-		$Result >>= $aStartBit%6;
-		$Result &= (1<<($aNBits))-1;
-		
-		return $Result;
-	}
-	
-	public function GetTest ()
-	{
-	$Result = "";
-	//return $this->$TestValue1;
-	/*
-	
-	$Result .= CMooseSMS::a64toi ("A0");
-	$Result .= "=640, ";
-	$Result .= CMooseSMS::a64toi ("A00#");
-	$Result .= "=2621503, ";
-	$Result .= CMooseSMS::a64bitstoi("WUtyNu",30,6);
-	$Result .= "=32, ";
-	$Result .= CMooseSMS::a64bitstoi("WUtyNu",12,12);
-	$Result .= "=3580, ";
-	$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV0m",32,8);
-	$Result .= "=303, ";
-	$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV2m",0,11);
-	$Result .= "=176, ";*/
-	
-	
-	$this->TestValue = "Tech: ID=";
-	$this->TestValue .= $this->id;
-	$this->TestValue .= " gsmTryes=";
-	$this->TestValue .= $this->gsmTries;
-	$this->TestValue .= " gpsTime=";
-	$this->TestValue .= $this->gpsOn;
-	$this->TestValue .= " Voltage=";
-	$this->TestValue .= $this->volt;
-	$this->TestValue .= " Temperature=";
-	$this->TestValue .= $this->temp;
-	$this->TestValue .= " Lat=";
-	$this->TestValue .= $this->points[0][0];
-	$this->TestValue .= " Long=";
-	$this->TestValue .= $this->points[0][1];
-	$this->TestValue .= " Test=";
-	$this->TestValue .= $this->TestValue2;
-	$this->TestValue .= " Time=";
-	$this->TestValue .= $this->points[0][2];
-	return $this->TestValue;
-	}
-
-	function SetError ( $ErrorText )
-	{
-	$this->IsOk = FALSE;
-	$this->ErrorMessage = $ErrorText;
-	$this->TestValue2 = $ErrorText;
-	}
-	
-	public function IsValid ()
-	{
-	return $this->IsOk;
-	}
-	
-	public function GetErrorMessage ()
-	{
-	return $this->ErrorMessage;
+		$this->diag = "Reload";
+		//echo ("Reload!");
 	}
 }
 ?>

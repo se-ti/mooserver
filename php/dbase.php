@@ -1031,7 +1031,7 @@ class CMooseDb extends CTinyDb
 			return $res;
 		}
 
-		$qDiag = 'null'; // $qDiag = ($msg->diag == null || trim($msg->diag) == '') ? 'null' : $this->ValidateTrimQuote($msg->diag);  todo диагностика в смс
+		$qDiag = ($msg->diag == null || trim($msg->diag) == '') ? 'null' : $this->ValidateTrimQuote($msg->diag);
 
 		$query = "insert into sms (moose, raw_sms_id, int_id, volt, temp, gsm_tries, gps_on, diagnose) 
 				values ( $qMooseId, $rawSmsId, {$msg->id}, 
@@ -1216,7 +1216,7 @@ class CMooseDb extends CTinyDb
 
             if ($tmp['sid'] == null)
             {
-                $msg = new CMooseSMS($tmp['text'], strtotime($tmp['stamp']));
+                $msg = CMooseSMS::CreateFromText ($tmp['text'], strtotime($tmp['stamp']));
                 $tmp['error'] = $msg->GetErrorMessage();
             }
             $res[] = $tmp;

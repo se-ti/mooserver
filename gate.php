@@ -108,7 +108,7 @@ function sms()  // todo add filtering
     if ($res !== true)
 		throw new Exception("Login as '$device_id' error: '$res'\n");
 
-	$msg = new CMooseSMS($body, $time);	
+	$msg = CMooseSMS::CreateFromText($body, $time);	
 		
     $res = $db->AddData($auth, $from, $msg);
 	
