@@ -345,7 +345,7 @@ class CScheduler
 
     private static function addSms(CMooseDb $db, CMooseAuth $auth, $phone, $time, $moose, $text, $tryHead)
     {
-        $sms = new CMooseSMS($text, $time);
+	$sms = CMooseSMS::CreateFromText($test, $time);	
         if (!$sms->IsValid())
         {
             Log::e($db, $auth, 'scheduler', "bad message: '$text', err: " . $sms->GetErrorMessage());

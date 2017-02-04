@@ -1216,7 +1216,7 @@ class CMooseDb extends CTinyDb
 
             if ($tmp['sid'] == null)
             {
-                $msg = new CMooseSMS($tmp['text'], strtotime($tmp['stamp']));
+                $msg = CMooseSMS::CreateFromText ($tmp['text'], strtotime($tmp['stamp']));
                 $tmp['error'] = $msg->GetErrorMessage();
             }
             $res[] = $tmp;
