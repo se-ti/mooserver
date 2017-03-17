@@ -134,68 +134,9 @@ td.smsSmallText2 {font-size:9px}
       </div>
     </div> <!-- menu end -->
 
-    <div class="container" id='description' style="display: none">
-        <div class="row">
-            <div class="col-xs-12 col-sm-9">
-                <h3 -class="hidden-lg hidden-md hidden-sm">О системе</h3>
-                <p>Система отслеживания животных состоит из маяков, надеваемых на животных, станции сопряжения и <a href="http://moose-farm.ru/tracking/">сайта</a>. Раз в 10 минут маяки замеряют активность животного,
-                    каждый час — его координаты при помощи GPS/GLONASS, и раз в сутки через сотовую сеть GSM отправляют смс с данными.
-                    Сайт обеспечивает визуальное представление данных и позволяет выгрузить данные в форматах GPX и CSV (Excel).</p>
-
-                <p>На данный момент накоплен 10-летний опыт эксплуатации системы на лосиных фермах, в заповедниках, заказниках и коневодческих хозяйствах.</p>
-
-                <h3>Маяк</h3>
-                <p>Помимо GPS и GSM модулей, в маяке есть УКВ-передатчик для ближнего поиска животного портативным пеленгатором.
-                    Маяк закреплен на синтетическом ошейнике, контакт металлических частей с шерстью и шкурой животного отсутствует.<br />
-                <dl class="dl-horizontal">
-                    <dt>Вес маяка</dt> <dd>350 г</dd>
-                    <dt>Вес c ошейником</dt> <dd>от 500 г (волк) до 700 г (лось, зубр, лошадь) и 1 кг ( медведь)</dd>
-                    <dt>Ширина ошейника</dt> <dd>60 мм</dd>
-                    <dt>Срок работы батареи</dt> <dd>6-18 месяцев, в зависимости от качества покртыия GSM</dd>
-                    <dt>Cпецификация</dt> <dd><mark>Ссылка на спеку</mark></dd>
-                </dl>
-                <!-- mark>Когда и как определяются номера гейта и номер, с которого прибор шлет смс</mark -->
-
-                <h3>Стоимость</h3>
-                <p>Стоимость маяка 600 $ по курсу ЦБ<br/>
-                <p>Маяки предназначены для использования в природоохраной деятельности, научных исследованиях.
-                Аппаратура <b>не поставляется</b> для обеспечения охоты и причинения другого вреда животным.  Мы оставляем за
-                собой право отказать в обслуживании маяка в подобном случае.</p>
-
-                <h3>Стоимость эксплуатации</h3>
-                <p>За год работы один маяк отправляет около 400 смс, как правило в роуминге, оплачиваемых владельцем по тарифу, привязанному к сим-карте маяка.</p>
-
-                <h3>Сервисное обслуживание</h3>
-                Приборы рассчитаны на длительную эксплуатацию. При отсутствии повреждений замена батарей производится изготовителем.
-                <dl class="dl-horizontal">
-                    <dt>Сроки</dt> <dd>2 недели + пересылка</dd>
-                    <dt>Стоимость</dt> <dd>2500 р + пересылка</dd>
-                </dl>
-
-                <h3>Условия поставки</h3>
-                <p>Заказы в 1-2 штуки при наличии в запасе могут быть поставлены в течение 2 недель, более крупные партии изготавливаются под заказ,
-                что занимает 4-6 недель, в зависимости от объёма заказа.</p>
-
-                Точный срок поставки оговаривается <a href="#contacts">при заказе</a>.
-            </div>
-        </div>
-    </div>
-
-    <div class="container" id='contacts' style="display: none">
-        <div class="row" itemscope="">
-            <div class="col-xs-12 col-sm-9" style="position: absolute; top: 25%;">
-                <h3>Продажа маяков и поддержка</h3>
-                <dl class="dl-horizontal"><dt>Александр Минаев</dt> <dd><a href="mailto:trackers.sale@gmail.com?subject=заказ маяков" itemprop="email">trackers.sale@gmail.com</a></dd></dl>
-
-                <h3 style="margin-top: 6em;">О нас</h3>
-                <dl class="dl-horizontal">
-                    <dt>Идея</dt><dd>Александр Минаев</dd>
-                    <dt>Изготовление маяков</dt><dd>Александр Минаев, <a href="https://github.com/a-vp/">Александр Пуриков</a></dd>
-                    <dt>Сайт</dt><dd><a href="https://github.com/se-ti/">Сергей Титов</a>, <a href="https://github.com/av-p/">Александр Пуриков</a></dd>
-                </dl>
-            </div>
-        </div>
-    </div>
+    <div class="container" id='description' style="display: none"></div>
+    <div class="container" id='contacts' style="display: none"></div>
+    <div class="container" id='beaconspec' style="display: none"></div>
 
     <div class="container-fluid" >
         <div class="row" id="main">
@@ -390,6 +331,7 @@ CController.prototype = {
             new CLogs(menu),
             new CDescription(menu, $('#description')),
             new CContacts(menu, $('#contacts')),
+            new CBeaconSpec(menu, $('#beaconspec')),
             new CProfile(menu),
             new CConfirm(menu)
         ]);
@@ -1826,9 +1768,11 @@ CConfirm.inheritFrom(CPage);
 CContacts = function(after, body)
 {
     CPage.call(this, 'contacts', 'Контакты', body);
+    $(body).load('html/contacts.html .row');
 }
 
 CContacts.prototype = {
+
     setRights: function(rights)
     {
         this._isSuper = rights.isSuper;
@@ -1846,6 +1790,7 @@ CContacts.inheritFrom(CPage);
 CDescription = function(after, body)
 {
     CPage.call(this, 'description', 'О системе', body);
+    $(body).load('html/description.html .row');
 }
 
 CDescription.prototype = {
@@ -1862,6 +1807,27 @@ CDescription.prototype = {
     }
 }
 CDescription.inheritFrom(CPage);
+
+CBeaconSpec = function(after, body)
+{
+    CPage.call(this, 'beaconspec', null, body);
+    $(body).load('html/beaconspec.html .row');
+}
+
+CBeaconSpec.prototype = {
+    setRights: function(rights)
+    {
+        this._isSuper = rights.isSuper;
+        this._isAvailable = true;
+
+        if (this._menu)
+            this._menu.toggleClass('hidden', !this._isAvailable);
+
+        if (!this._isAvailable && this._isActive)
+            window.location.hash = '';
+    }
+}
+CBeaconSpec.inheritFrom(CPage);
 
 var cont = new CController($get('main'));
 $(document).ready($cd(cont, cont.appInit));
