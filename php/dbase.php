@@ -672,8 +672,10 @@ class CMooseDb extends CTinyDb
 				 group by activity.stamp, valid, sms.moose
 				order by sms.moose asc, activity.stamp asc ";
 
+        $old = $this->db->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY);
+        $this->db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
         $t1 = microtime(true);
-		$result = $this->Query($query);
+        $result = $this->Query($query);
         $t2 = microtime(true);
 
         $res = array();
@@ -681,11 +683,14 @@ class CMooseDb extends CTinyDb
         {
             $moose = $row['moose'];
             if (!isset($res[$moose]))
-                $res[$moose] = array();
+                $res[$moose] = [];
 
-            $res[$moose][] = array($row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0);
+            $res[$moose][] = [$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
         }
         $result->closeCursor();
+
+        $this->db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $old);
+//        Log::d($this, $auth, "times", sprintf("activity rows: %d", $rowCount));
 
         $retVal = array();
         foreach($res as $id => $data)
