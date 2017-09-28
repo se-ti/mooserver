@@ -1,9 +1,11 @@
 <?
 /**
  * Created by Serge Titov for mooServer project
- * 2014 - 2015
+ * 2014 - 2017
  */
 define('IN_MOOSE', true);
+
+$t0 = microtime(true);
 
 require_once "config.php";
 require_once "php/auth.php";
@@ -73,6 +75,9 @@ try {
     
     if ($needComp)
         ob_end_flush();
+
+   $t1 = microtime(true);
+//   Log::t($db, $auth, "times", sprintf("%s in %.4f sec, memory %dK, max: %dK", $mName, $t1-$t0, memory_get_usage(true)/1024, memory_get_peak_usage(true)/1024));
 }
 catch (Exception $e)
 {
