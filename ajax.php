@@ -1,4 +1,4 @@
-<?
+<?php
 /**
  * Created by Serge Titov for mooServer project
  * 2014 - 2017
@@ -597,4 +597,4 @@ function dieError($msg)
 {
     die(makeError($msg));
 }
-?>
+

@@ -1,4 +1,4 @@
-<?
+<?php
 /**
  * Created by Alexander Purikov for mooServer project
  * 2014 - 2015
