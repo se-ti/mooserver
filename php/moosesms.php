@@ -31,9 +31,10 @@ class CMooseSMS
 	var $RotateHour;
 	
 	const PROPRIETARYBASE64_INDEX = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&#";
+	const Artificial = "ArtificialSmsPrefix ";
 
 	
-		function CMooseSMS($text, $time = null)
+	function CMooseSMS($text, $time = null)
 	{
 		$this->id = time();
 		
@@ -66,12 +67,28 @@ class CMooseSMS
 
 	public static function CreateFromText ($text, $time)
 	{
+		if (strpos($text, self::Artificial) === 0 )
+			return self::artificialSms($time);
+
 		$res = new CMooseSMSv3 ( $text, $time );
 		
 		$res -> ProcessSMSText ();
 		
 		return $res;
 	}
+
+	public static function artificialSms($time)
+	{
+		$res = new CMooseSMS(sprintf("%s %d %s", self::Artificial, $time, microtime()), $time);
+
+		$res->temp = 0;
+		$res->volt = 5;
+		$res->gpsOn = 0;
+		$res->gsmTries = 0;
+
+		return $res;
+	}
+
 	/*
 	public static function fromBulk($time, $text, $id, $points, $activity)
 	{
@@ -201,7 +218,12 @@ class CMooseSMSv3 extends CMooseSMS
 	const ACTIVITY_LENGTH = 25;
 	const POINTS_HEADER_LENGTH = 12;
 
-protected function ProcessSMSText ()
+	var $TechHeaderText;
+	var $ActivityText;
+	var $PointsHeaderText;
+	var $PointsArrayText;
+
+	protected function ProcessSMSText ()
 	{
 	$this->TestValue = "Process";
 		if ( strlen ( $this->text ) < self::TECH_HEADER_LENGTH + self::ACTIVITY_LENGTH + self::POINTS_HEADER_LENGTH )
