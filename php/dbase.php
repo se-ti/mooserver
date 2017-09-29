@@ -983,7 +983,7 @@ class CMooseDb extends CTinyDb
 
     function DeleteRawSms(CMooseAuth $auth, $rawSmsId)
     {
-        if (!$auth->isRoot())
+        if (!$auth->isSuper())
             $this->ErrRights();
 
         $this->ValidateId($rawSmsId, "Incorrect raw sms id", 1);  // todo разрешить не только root, проверка на права

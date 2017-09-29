@@ -443,7 +443,7 @@ function deleteSms()
 {
     global $auth, $db;
 
-    if (!$auth->isRoot())
+    if (!$auth->isSuper())
         dieError(CTinyDb::ErrCRights);
 
     $smsId = checkId(@$_POST['rawSmsId'], 'Недопустимый id sms', false);
