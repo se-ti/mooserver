@@ -1467,7 +1467,9 @@ CManageUsersControl.prototype = {
         c.lineEditor = new CLineEditor(c.content, this._sett.cols, this._sett.onToggle == null)
             .on_queryEndEdit($cd(this, this._onEndEdit));
 
-        c.content.click($cd(this, this._edit));
+        // c.content.click($cd(this, this._edit));
+        c.content.on('click', '.lineEdit', $cd(this, this._edit))
+            .on('click', '.lineDel', $cd(this, this._delete));
     },
 
     toggle: function(enable)
@@ -1498,15 +1500,21 @@ CManageUsersControl.prototype = {
         this._c.lineEditor.activate(null, null, true, this._makeLEData());
     },
 
-    _delete: function(e)
+    _getRowItem: function(elem)
     {
-        var tgt = $(e.target);
-        if (!tgt.hasClass('lineDel'))
-            return;
-
-        var row = tgt.parents('tr:first').get(0);
+        var row = $(elem).parents('tr:first').get(0);
         var idx = row.getAttribute('data-id');
         var item = this._data[idx];
+
+        if (!item)
+            throw Error("нет объекта в строке " + idx);
+
+        return item;
+    },
+
+    _delete: function(e)
+    {
+        var item = this._getRowItem(e.target);
 
         if (!item)
             throw Error("нет объекта в строке " + idx);
@@ -1532,18 +1540,11 @@ CManageUsersControl.prototype = {
         if (!this._c.lineEditor)
             return;
 
-        var tgt = $(e.target);
-        if (tgt.hasClass('lineDel'))
-            return this._delete(e);
-
-        if (!tgt.hasClass('lineEdit'))
-            return;
-
-        var row = tgt.parents('tr:first').get(0);
-        var idx = row.getAttribute('data-id');
+        var row = $(e.target).parents('tr:first').get(0);
+        var item = this._getRowItem(e.target);
 
         this._toggleControls(false);
-        this._c.lineEditor.activate(row, this._data[idx], false, this._makeLEData());
+        this._c.lineEditor.activate(row, item, false, this._makeLEData());
     },
 
     _onEndEdit: function(param)
@@ -1618,7 +1619,7 @@ CManageUsersControl.prototype = {
 
         var noInactive = this._sett.onToggle == null;
         var showInactive = noInactive || c.inactive.get(0).checked;
-        var search = c.search.val().toLocaleLowerCase();
+        var search = this._prepareSearch(c.search.val());
 
         var i;
         var head = '';
@@ -1661,18 +1662,32 @@ CManageUsersControl.prototype = {
         c.content.html('<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody>');
     },
 
+    _prepareSearch: function(str)
+    {
+        var s;
+        var res = [];
+        var arr = str.toLocaleLowerCase().split(' ');
+        for (var i = arr.length - 1; i >= 0; i--)
+            if ((s = arr[i].trim()) != '')
+                res.push(s);
+
+        return res.length > 0 ? res : null;
+    },
+
     _show: function(item, showInactive, search)
     {
         var show = showInactive || item.active;
-        if (search == '' || !show)
+        if (search == null || search.length == 0 || !show)
             return show;
 
-        var ctx = this._sett.proxy.getContext(item); //this._searchContext(item);
-        for (var i = 0; i < ctx.length; i++)
-            if (ctx[i].indexOf(search) >= 0)
-                return true;
+        var i;
+        var j;
+        var ctx = this._sett.proxy.getContext(item);
+        for (j = 0, show = true; show && j < search.length; j++)
+            for (i = ctx.length - 1, show = false; show == false && i >=0; i--)
+                show = show || ctx[i].indexOf(search[j]) >= 0;
 
-        return false;
+        return show;
     },
 
     on_dataChanged: function(h)
