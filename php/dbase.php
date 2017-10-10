@@ -1189,7 +1189,7 @@ class CMooseDb extends CTinyDb
         $access = $this->CanSeeCond($auth, 'p');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose');
 
-        $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, rs.ip, rs.xfw_ip, p.phone, s.id as 'sid', us.login, us.name as 'uname', m.name as 'mname', s.diagnose
+        $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, rs.ip, rs.xfw_ip, rs.phone_id, p.phone, s.id as 'sid', us.login, us.name as 'uname', m.name as 'mname', s.diagnose
             from raw_sms rs
             inner join users us on us.id = rs.user_id
             inner join phone p on p.id = rs.phone_id
@@ -1212,6 +1212,7 @@ class CMooseDb extends CTinyDb
                 'text' => $r['text'],
                 'ip' => $r['ip'],
                 'xfwIp' => $r['xfw_ip'],
+                'phoneId' => $r['phone_id'],
                 'phone' => $r['phone'],
                 'login' => $r['login'],
                 'name' => $r['uname'],
