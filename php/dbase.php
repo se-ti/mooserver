@@ -685,6 +685,7 @@ class CMooseDb extends CTinyDb
             if (!isset($res[$moose]))
                 $res[$moose] = [];
 
+            //$res[$moose][] = new CActivity($row);
             $res[$moose][] = [$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
         }
         $result->closeCursor();
