@@ -67,6 +67,8 @@ if ($method == null)
 
 $needComp = $mName == 'getData' || $mName == 'getBeaconData' || $mName == 'getGateData';
 
+ini_set("memory_limit","192M");
+
 try {
     if ($needComp)
         ob_start('ob_gzhandler');
