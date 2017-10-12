@@ -1381,6 +1381,8 @@ CManageUsersControl = function(elem, options)
     this._orgs = null;
     this._alt = null;
 
+    this._lastSearch = '';
+
     this._cbRender = $cd(this, this._render);
     this._cbOnSave = $cd(this, this._onSave);
     this._cbOnToggle = $cd(this, this._onToggle);
@@ -1449,10 +1451,11 @@ CManageUsersControl.prototype = {
             .appendTo(c.root)
             .click($cd(this, this._add));
 
+        var t = this;
         c.search = $('<div class="checkbox"><input type="text"/> </div>')
             .appendTo(c.root)
             .find('input')
-            .change(this._cbRender)
+            .change(function() {if (t._lastSearch != $(this).val()) t._render();}) //this._cbRender
             .keyup(this._cbRender);
 
         if (this._sett.onToggle)
@@ -1619,7 +1622,8 @@ CManageUsersControl.prototype = {
 
         var noInactive = this._sett.onToggle == null;
         var showInactive = noInactive || c.inactive.get(0).checked;
-        var search = this._prepareSearch(c.search.val());
+        this._lastSearch = c.search.val();
+        var search = this._prepareSearch(this._lastSearch);
 
         var i;
         var head = '';
