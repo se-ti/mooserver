@@ -409,7 +409,7 @@ CMoosePhoneEdit.prototype =
             {
                 var d = this._normalize(this._data[i]);
                 if (d.ref == item.id)
-                    return this._phones? String.format('<a href="#beacon/{0}">{1}</a>', d.id, String.toHTML(d.title)) : String.toHTML(d.title);
+                    return this._phones? CSingleBeacon.beaconHref(d.id, d.title) : String.toHTML(d.title);
             }
 
         return '&lt;нет&gt;';
@@ -562,7 +562,7 @@ CPhoneEdit.prototype =
 {
     cellHtml: function(item)
     {
-        return String.format('<a href="#beacon/{0}">{1}</a>', item.id, String.toHTML(item.phone || ''));
+        return CSingleBeacon.beaconHref(item.id, item.phone || '');
     },
 
     edit: function(cell, item)

@@ -991,6 +991,11 @@ CSingleBeacon.activityText = function(sms)
     return sms.substr(headerLen + 1, activityLen - 1);  // первый символ -- день в активности see: CMooseSMS::ProcessActivity
 };
 
+CSingleBeacon.beaconHref = function(id, text)
+{
+    return String.format('<a href="#beacon/{0}">{1}</a>', id, String.toHTML(text));
+}
+
 CSingleBeacon.prototype =
 {
     cold: -11.5,
@@ -1334,7 +1339,7 @@ CGate.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr data-id="{1}"><td>{0}</td><td>{1}</td><td>{3}<br/>{2}</td><td>{4}</td><td><a href="#beacon/{5}">{6}</a></td><td>{7}</td><td>{8}</td>{9}</tr>';
+        var tpl = '<tr data-id="{1}"><td>{0}</td><td>{1}</td><td>{3}<br/>{2}</td><td>{4}</td><td>{5}</a></td><td>{6}</td><td>{7}</td>{8}</tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
@@ -1343,7 +1348,7 @@ CGate.prototype =
             d.setTime(Date.parse(it.stamp));
             var stat = this._itemStatus(it);
             var diagnose = it.diagnose ? ('<br/>' + String.makeBreakable(it.diagnose)): '';
-            body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), it.phoneId, String.toHTML(it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
+            body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), CSingleBeacon.beaconHref(it.phoneId, it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
                     + String.format('<tr data-id="{0}"><td colspan="8" class="smsText {2}"><small><small class="text-danger">{1}{3}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText', diagnose); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
         }
 
