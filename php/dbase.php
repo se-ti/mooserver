@@ -922,7 +922,7 @@ class CMooseDb extends CTinyDb
 
         $this->commit();
 
-        Log::t($this, $auth, 'reassignSms', "перевешиваем на животное '$moose', rawSmsIds: '$ids'");
+        Log::t($this, $auth, 'reassignSms', "перевешиваем на животное '$moose', rawSmsIds: '".implode(", ", $ids) ."'");
         return array('res' => true, 'rc' => $result->rowCount());
     }
 
