@@ -1190,7 +1190,7 @@ CSingleBeacon.prototype =
 
         this._table.find('tr').removeClass('success');
         if (rawSmsId != '')
-            je.addClass('success');
+            this._table.find('tr[data-id="' + rawSmsId + '"]').addClass('success');
     },
 
     setRights: function(rights)
@@ -1230,7 +1230,9 @@ CGate = function(after)
 
     this._c_reRead = $cd(this, this.reRead);
     this._c_onReRead = $cd(this, this._onReRead);
+    this._c_rowClick = $cd(this, this._rowClick);
     this._c_delClick = $cd(this, this._delClick);
+    this._c_chmooseClick = $cd(this, this._chmooseClick);
     this._c_onDeleteSms = $cd(this, this._onDeleteSms);
     this._c_clearFilters = $cd(this, this._clearFilters);
     this._init(after);
@@ -1268,12 +1270,11 @@ CGate.prototype =
                 .change(this._c_reRead);
 
         this._table = $('<table class="hidden table table-moo-striped"><thead></thead><tbody></tbody></table>')
-                .click(this._c_delClick)
                 .appendTo(je);
-        this._body = this._table.find('tbody');
-
-        //$('<p>Gates and messages stat! for feeders & root & admin</p><p>manage gates for root & admin</p>')
-//                .appendTo(je);
+        this._body = this._table.find('tbody')
+            .on('click', 'button.del', this._c_delClick)
+            .on('click', 'button.chmoose', this._c_chmooseClick)
+            .on('click', 'tr', this._c_rowClick);
 
         var map = $('<div class="moo-affix col-xs-12 col-sm-3"></div>')
                 .appendTo(this._rm);
@@ -1392,7 +1393,7 @@ CGate.prototype =
         if (!stat.needText && (item.moose || '') != '')
             return '<td></td>';
 
-        return String.format('<td><div class="note"><button class="btn btn-default del" data-id="{0}"><span class="glyphicon glyphicon-trash"></span></button></div></td>', item.id);
+        return String.format('<td><div class="note"><button class="btn btn-default del"><span class="glyphicon glyphicon-trash"></span></button></div></td>');
     },
 
     _renderUser: function(item)
@@ -1425,38 +1426,41 @@ CGate.prototype =
         return rv;
     },
 
-    _delClick: function(e)
+    _selectRow: function(e)
     {
         if (!e || !e.target)
             return;
-        var je = $(e.target);
-        if (je.parents('thead').length > 0)
-            return;
 
         this._body.find('tr').removeClass('success');
-        var rows = je.parents('tr');
+        var id = this._getSmsId(e);
+        if ((id || '') != '')
+            this._body.find('tr[data-id="' + id + '"]').addClass('success');
+    },
+
+    _rowClick: function(e)
+    {
+        this._selectRow(e);
+
+        var rows = $(e.target).parents('tr');
         if (rows.length > 0)
-            $(rows[0]).addClass('success');
+            this._mapHelper.drawRawSms(this._map, this._getSmsId(e));
+    },
 
+    _chmooseClick: function(e)
+    {
+        this._rowClick(e);
 
-        if (!je.hasClass('del') && !je.hasClass('chmoose'))
-        {
-            if (rows.length > 0)
-                this._mapHelper.drawRawSms(this._map, this._getSmsId(e));
+        this._startChangeMoose(e);
+    },
 
-            return;
-        }
+    _delClick: function(e)
+    {
+        this._rowClick(e);
 
         e.preventDefault();
         e.stopPropagation();
 
-        if (je.hasClass('chmoose'))
-        {
-            this._startChangeMoose(e);
-            return;
-        }
-
-        var id = je.attr('data-id');
+        var id = this._getSmsId(e);
         if ((id || '') == '' || !confirm(String.format("Вы действительно хотите удалить sms id='{0}'?\nДействие невозможно отменить.", id )))
             return;
 
