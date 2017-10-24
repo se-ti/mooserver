@@ -2463,7 +2463,8 @@ CColumnFilter = function(root, key, options)
         list: null,
         okBtn: null,
         cancelBtn: null,
-        resetBtn: null
+        resetBtn: null, 
+        selAll: null
     };
 
     this._key = key;
@@ -2475,7 +2476,7 @@ CColumnFilter = function(root, key, options)
 
     this._all = false;
 
-    this._options = $.extend({search: true, reset: true, empty: false, emptyMeansAll: true}, options);
+    this._options = $.extend({search: true, reset: true, empty: false, emptyMeansAll: true, selectAll: false}, options);
 
     this._d_onActivate = $cd(this, this._onActivate);
     this._d_onOk = $cd(this, this._onOk);
@@ -2484,6 +2485,7 @@ CColumnFilter = function(root, key, options)
     this._d_onSearch = $cd(this, this._onSearch);
     this._d_onClickOutside = $cd(this, this._onClickOutside);
     this._d_onChange = $cd(this, this._onChange);
+    this._d_onSelectAll = $cd(this, this._onSelectAll);
     this._buildIn(root);
 }
 
@@ -2493,6 +2495,7 @@ CColumnFilter.prototype =
             '<div class="panel-body">' +
                 '<button class="btn btn-default btn-sm" style="margin-bottom: .7em;">Очистить</button>' +
                 '<div><input type="text" class="form-control"/></div>' +
+                '<div><label class="checkbox-inline"><input type="checkbox" /> Все</label></div>' +
                 '<ul></ul>' +
                 '<div class="filter-buttons"><button class="btn btn-default btn-sm pull-right">Отменить</button><button class="btn btn-primary btn-sm">OK</button></div>' +
             '</div>' +
@@ -2518,10 +2521,13 @@ CColumnFilter.prototype =
             .toggle(this._options.reset);
         c.list = c.holder.find('ul')
             .change(this._d_onChange);
-        c.search = c.holder.find('input')
+        c.search = c.holder.find('input[type="text"]')
             .change(this._d_onSearch)
             .keyup(this._d_onSearch)
             .toggle(this._options.search);
+        c.selAll = c.holder.find('input[type="checkbox"]')
+            .change(this._d_onSelectAll);
+        c.selAll.parents('div:first').toggle(this._options.selectAll);
 
         $(root).css('white-space', 'nowrap');
     },
@@ -2662,12 +2668,33 @@ CColumnFilter.prototype =
         if (!e || !e.target)
             return;
 
-        var tgt = e.target;
-        if ($(tgt).attr('data-empty') == 'true')
-            this._curEmpty = tgt.checked;
-        else
-            this._curChecked[tgt.value] = tgt.checked;
+        this._toggleCb(e.target, e.target.checked);
         this._renderCaption();
+    },
+
+    _onSelectAll: function(e) 
+    {
+        if (!e || !e.target)
+            return;
+
+        var sel = $(e.target)[0].checked;
+
+        var items = this._c.list.find('input');
+        for (var i = 0; i < items.length; i++)
+        {
+            items[i].checked = sel;
+            this._toggleCb(items[i], sel);
+        }
+
+        this._renderCaption();
+    },
+
+    _toggleCb: function(elem, value)
+    {
+        if ($(elem).attr('data-empty') == 'true')
+            this._curEmpty = value;
+        else
+            this._curChecked[elem.value] = value;
     },
 
     _renderCaption: function()
@@ -2687,6 +2714,7 @@ CColumnFilter.prototype =
 
         this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')));
         this._c.resetBtn.get(0).disabled = st.empty == false && st.count == 0;
+        this._c.selAll[0].checked = st.count == this._c.list.find('input').length;
     },
 
     _stat: function()
@@ -2737,6 +2765,7 @@ CColumnFilter.prototype =
     }
 }
 CColumnFilter.inheritFrom(CControl);
+
 
 CTipControl = function(root, tips)
 {
