@@ -2714,7 +2714,7 @@ CColumnFilter.prototype =
 
         this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')));
         this._c.resetBtn.get(0).disabled = st.empty == false && st.count == 0;
-        this._c.selAll[0].checked = st.count == this._c.list.find('input').length;
+        this._c.selAll[0].checked = st.visible == this._c.list.find('input').length;
     },
 
     _stat: function()
@@ -2724,6 +2724,7 @@ CColumnFilter.prototype =
         var res = {
             len: 0,
             count: 0,
+            visible: 0,
             empty: op.empty && this._curEmpty,
             all: true
         };
@@ -2731,9 +2732,14 @@ CColumnFilter.prototype =
         if (this._items)
         {
             res.len = this._items.length;
+            var checked = this._c.list.find(':checked');
             for (var i = 0; i < res.len; i++)
                 if (this._curChecked[this._items[i].value])
+                {
                     res.count++;
+                    if (checked.filter('[value="' + this._items[i].value + '"]').length > 0)
+                        res.visible++;
+                }
         }
 
         this._all = res.count == res.len && (!op.empty || res.empty) ||
