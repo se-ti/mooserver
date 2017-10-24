@@ -269,7 +269,7 @@ CLogs.prototype =
             {caption: 'togglePoint', value: 'togglePoint'},
             {caption: 'webClient', value: 'webClient'}];
         
-        this._filter2 = new CColumnFilter(this._table.find('th').get(7), 'ops', {search: true, reset: false})
+        this._filter2 = new CColumnFilter(this._table.find('th').get(7), 'ops', {search: true, reset: false, selectAll: true})
             .on_dataChanged(this._d_reRead);
         this._filter2.setItems(items2);
     },
