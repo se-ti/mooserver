@@ -29,8 +29,8 @@ function getRights()
 	return $res;
 }
 
-// думать про версии кеша, подгрузку по данных (чуть-чуть + все остальное)
-function getData()
+// думать про версии кеша
+function getData($forceLoadAll = false)
 {
     global $db, $auth;
 
@@ -45,6 +45,9 @@ function getData()
     $clientStamps = CMooseTools::safeStamps(@$_POST['stamps']);
     $stamps = $db->GetMooseTimestamps($auth, $ids);
 
+    if ($forceLoadAll == false && @$_POST['forceLoadAll'] == 'true')
+        $forceLoadAll = true;
+
     $retrieveIds = [];
     $useCache = [];
     foreach ($ids as $id)
@@ -58,12 +61,10 @@ function getData()
     $t2 = microtime(true);
     $mData = $db->GetMooseTracks($auth, $retrieveIds, $start, $end);
     $t3 = microtime(true);
-    $aData = $db->GetMooseActivity($auth, $retrieveIds, $start, $end);
-    $t4 = microtime(true);
-
 
     $i = 0;
     $idx = [];
+    $activityIds = [];
     if ($mData != null)
         foreach ($mData as &$moose)
         {
@@ -71,8 +72,15 @@ function getData()
             $idx[$mId] = $i++;
             if ($stamps != null && isset($stamps[$mId]))
                 $moose['stamp'] =  $stamps[$mId];
+
+            if ($forceLoadAll || count($moose['track']) < 2000) // ~ 80 days // можно придумать хитрую логику на случай, когда много мелких треков дают много активности
+                $activityIds[] = $mId;
+            else
+                $moose['delayLoad'] = true;
         }
 
+    $t4 = microtime(true);
+    $aData = $db->GetMooseActivity($auth, $activityIds, $start, $end);
     $t5 = microtime(true);
 
     // add activity to data
@@ -98,9 +106,24 @@ function getData()
     foreach ($useCache as $res)
         $mData[] = $res;
 
-    //Log::d($db, $auth, 'times', sprintf("data total: %4.0f tracks: %4.0f act %4.0f ms", ($t6-$t1) * 1000, ($t3-$t2) * 1000, ($t4-$t3) * 1000));
+    //Log::d($db, $auth, 'times', sprintf("data total: %4.0f tracks: %4.0f act %4.0f ms", ($t6-$t1) * 1000, ($t3-$t2) * 1000, ($t5-$t4) * 1000));
 
     return $mData;
+}
+
+function delayedActivity()
+{
+    global $db, $auth;
+
+    $t1 = microtime(true);
+    $activityIds = CMooseTools::safeIds();
+    if ($activityIds == null)
+        return [];
+
+    $start = CMooseTools::safeTime('start');
+    $end = CMooseTools::safeTime('end');
+
+    return $db->GetMooseActivity($auth, $activityIds, $start, $end);
 }
 
 function getSms()

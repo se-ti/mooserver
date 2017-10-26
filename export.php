@@ -152,7 +152,7 @@ function exportTracks()
 	$moo = $db->GetMooses($auth, false);
 	
 	prepareIds();
-	$data = getData();
+	$data = getData(true);
 	if ($data == null)
 		die('no data');
 

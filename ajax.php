@@ -37,6 +37,7 @@ $methods = array('sendSMS' => 'addSeries', // ajaxName => functionName
 
     'getSms' => 'getSms',               // see common
     'getData' => 'getData',             // see common
+    'delayedActivity' => 'delayedActivity', // see common
     'getBeaconData' => 'getBeaconData', // see common
     'getGateData' => 'getGateData',
     'getLogs' => 'getLogs',
