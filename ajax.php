@@ -66,7 +66,7 @@ $method = @$methods[$mName];
 if ($method == null)
     dieError("Method '$mName' not supported");
 
-$needComp = array_search($mName, ['getData', 'delayedActivity', 'getBeaconData', 'getGateData']) !== false; 
+$needComp = array_search($mName, ['getData', 'delayedActivity', 'getBeaconData', 'getGateData']) !== false;
 
 ini_set("memory_limit","192M");
 

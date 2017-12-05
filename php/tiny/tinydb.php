@@ -554,9 +554,27 @@ class CTinyDb
         $baseStr = 'abcdefghijklmopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $max = strlen($baseStr) - 1;
         for ($i = 0; $i < $len; $i++)
-            $token .= $baseStr[rand(0, $max)];
+            $token .= $baseStr[intval(self::devurandom_rand(0, $max))];
 
         return $token;
+    }
+
+    // equiv to rand, mt_rand
+    // returns int in *closed* interval [$min,$max]
+    public static function devurandom_rand($min = 0, $max = 0x7FFFFFFF)     // todo migrate to http://php.net/random_int on php 7
+    {
+        $diff = $max - $min;
+        if ($diff < 0 || $diff > 0x7FFFFFFF)
+            throw new RuntimeException("Bad range");
+
+        $bytes = mcrypt_create_iv(4, MCRYPT_DEV_URANDOM);
+        if ($bytes === false || strlen($bytes) != 4)
+            throw new RuntimeException("Unable to get 4 bytes");
+
+        $ary = unpack("Nint", $bytes);
+        $val = $ary['int'] & 0x7FFFFFFF;   // 32-bit safe
+        $fp = (float) $val / 2147483647.0; // convert to [0,1]
+        return round($fp * $diff) + $min;
     }
 
     function SetUserToken(CTinyAuth $auth, $userId, $type)
