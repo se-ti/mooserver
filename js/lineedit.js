@@ -3,11 +3,12 @@
  * 2014 - 2015
  */
 
-CEdit = function(head)
+CEdit = function(head, options)
 {
     this._head = head || '';
     this._c = {err: null};
     this._data = null;
+    this._options = options || {};
 }
 
 CEdit.prototype = {
@@ -64,6 +65,11 @@ CEdit.prototype = {
         if (this._c.err)
             this._c.err.text(mess || '')
                 .toggleClass('hidden', hide);
+    },
+
+    isReadOnly: function()
+    {
+        return this._options.readOnly;
     }
 }
 
@@ -594,10 +600,13 @@ CLineEditor = function(content, columns, noToggle)
 
     this._item = null;
     this._row = null;
-    this._cols = columns || [];
+    this.setColumns(columns);
     this._noToggle = noToggle || false;
 
     this._newRow = false;
+
+    this._d_save = $cd(this, this._save);
+    this._d_cancel = $cd(this, this._cancel);
 }
 
 CLineEditor.prototype =
@@ -610,6 +619,11 @@ CLineEditor.prototype =
         var _del = '<span class="glyphicon glyphicon-trash"></span>'; // 'Удалить'
         var del = this._noToggle ? '' :  ('<button class="btn btn-default lineDel">' + (item.active ? _del : 'Восстановить') + '</button>');
         return '<div class="note"><button class="btn btn-default lineEdit">Редактировать</button>' + del + '</div>';
+    },
+
+    setColumns: function(columns)
+    {
+        this._cols = columns || [];
     },
 
     activate: function(row, item, addNew, data)
@@ -629,16 +643,17 @@ CLineEditor.prototype =
         for (var i = 0; i < this._cols.length; i++)
         {
             this._cols[i].setData(data);
-            this._cols[i].edit(this._row.cells[i], item);
+            if (!this._cols[i].isReadOnly())
+                this._cols[i].edit(this._row.cells[i], item);
         }
 
         var last = this._row.cells[this._row.cells.length -1];
         last.innerHTML = '';
         $(this._saveTpl).appendTo(last)
-            .click($cd(this, this._save));
+            .click(this._d_save);
 
         $(this._cancelTpl).appendTo(last)
-            .click($cd(this, this._cancel));
+            .click(this._d_cancel);
 
         this._err = $('<div class="alert alert-danger hidden"></div>')
             .appendTo(last);
@@ -724,6 +739,8 @@ CLineEditor.prototype =
         var valid = true;
         for (var i = 0; i < this._cols.length; i++)
         {
+            if (this._cols[i].isReadOnly())
+                continue;
             valid = this._cols[i].validate() && valid;
             res = this._cols[i].getValue(res);
         }
