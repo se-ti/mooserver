@@ -1840,6 +1840,12 @@ CContacts = function(after, body)
 
 CContacts.prototype = {
 
+    activate: function(s)
+    {
+        CPage.callBaseMethod(this, 'activate', [s]);
+        trace('activate contacts');
+    },
+
     setRights: function(rights)
     {
         this._isSuper = rights.isSuper;
@@ -1861,6 +1867,13 @@ CDescription = function(after, body)
 }
 
 CDescription.prototype = {
+
+    activate: function()
+    {
+        CPage.callBaseMethod(this, 'activate', []);
+        trace('activate CDescription');
+    },
+
     setRights: function(rights)
     {
         this._isSuper = rights.isSuper;
@@ -1882,6 +1895,13 @@ CBeaconSpec = function(after, body)
 }
 
 CBeaconSpec.prototype = {
+
+    activate: function()
+    {
+        CPage.callBaseMethod(this, 'activate', []);
+        trace('activate beaconSpec');
+    },
+
     setRights: function(rights)
     {
         this._isSuper = rights.isSuper;

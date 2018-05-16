@@ -172,9 +172,17 @@ function $ajax(method, param, success, fail)
 function log(msg)
 {
     CApp.single().error(String.toHTML(msg));
-    if (console)
+    trace(msg, true);
+}
+
+function trace(msg, error)
+{
+    error = error || false;
+
+    if (error && console)
         console.log(msg);
-    $ajax('log', {level: 3, message: msg}, function(){}, function(){}); // чтобы не зацикливался при глобальных проблемах с сетью, сервером и т.п.
+
+    $ajax('log', {level: error ? 3 : 1, message: msg}, function(){}, function(){}); // чтобы не зацикливался при глобальных проблемах с сетью, сервером и т.п.
 }
 
 CControl = function()
