@@ -1290,6 +1290,7 @@ CGate = function(after)
     this._mooseSel = null;
 
     this._phoneFilter = null;
+    this._mooseFilter = null;
 
     this._c_reRead = $cd(this, this.reRead);
     this._c_onReRead = $cd(this, this._onReRead);
@@ -1361,11 +1362,14 @@ CGate.prototype =
         var param = {limit: this._rowLimit.val(),
             errors: this._justErr.get(0).checked
         };
+
+        if (this._mooseFilter)
+            param.mooseIds = this._mooseFilter.getValues();
+
         if (this._phoneFilter)
-        {
             param.phoneIds = this._phoneFilter.getValues();
-            this._clearFltrs.get(0).disabled = !this._phoneFilter.isActive();
-        }
+
+        this._clearFltrs.get(0).disabled = (!this._phoneFilter || !this._phoneFilter.isActive()) && (!this._mooseFilter || !this._mooseFilter.isActive());
 
         $ajax('getGateData', param, this._c_onReRead);
     },
@@ -1421,23 +1425,38 @@ CGate.prototype =
                 .html('<tr><th>#</th><th>id</th><th>stamp</th><th>гейт</th><th>прибор</th><th>животное</th><th>статус</th>' + (this._isSuper ? '<th></th>' : '') + '</tr>');
 
         var phones = CApp.single().getPhones();
-        if (!phones || this._phoneFilter)
-            return;
+        if (phones && !this._phoneFilter)
+        {
+            var it = [];
+            for (var i = 0; i < phones.length; i++)
+                it.push({caption: phones[i].phone, value: phones[i].id});
 
-        var it = [];
-        for (var i = 0; i < phones.length; i++)
-            it.push({caption: phones[i].phone, value: phones[i].id});
-
-        this._phoneFilter = new CColumnFilter(this._head.find('th').get(4), 'phone')
+            this._phoneFilter = new CColumnFilter(this._head.find('th').get(4), 'phone', {selectAll: true})
                 .on_dataChanged(this._c_reRead);
-        this._phoneFilter.setItems(it);
+            this._phoneFilter.setItems(it);
+        }
+
+        var mooses = CApp.single().getMoose();
+        if (mooses && ! this._mooseFilter)
+        {
+            var it = [];
+            for (var i = 0; i < mooses.length; i++)
+                it.push({caption: mooses[i].name, value: mooses[i].id});
+
+            this._mooseFilter = new CColumnFilter(this._head.find('th').get(5), 'moose', {selectAll: true})
+                .on_dataChanged(this._c_reRead);
+            this._mooseFilter.setItems(it);
+        }
     },
 
     _clearFilters: function()
     {
-        if (!this._phoneFilter)
+        if (!this._phoneFilter && !this._mooseFilter)
             return;
-        this._phoneFilter.clear();
+        if (this._phoneFilter)
+            this._phoneFilter.clear();
+        if (this._mooseFilter)
+            this._mooseFilter.clear();
         this.reRead();
     },
 

@@ -497,8 +497,9 @@ function getGateData()
     $limit = checkId(@$_POST['limit'], 'Недопустимое значение предела', true);
     $justErr =  @$_POST['errors'] === 'true';
     $phoneIds = validateIdArray(@$_POST['phoneIds'], false, -1, "Недопустимый список приборов");
+    $mooseIds = validateIdArray(@$_POST['mooseIds'], false, -1, "Недопустимый список животных");
 
-    return $db->GetGateData($auth, $limit, $justErr, $phoneIds);
+    return $db->GetGateData($auth, $limit, $justErr, $phoneIds, $mooseIds);
 }
 
 function getLogs()
