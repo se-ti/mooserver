@@ -310,7 +310,7 @@ class CScheduler
                 continue;
             }
 
-            //self::addTextSms($db, $auth, $phone, $tm, $fMoose, $msg, false);
+            self::addTextSms($db, $auth, $phone, $tm, $fMoose, $msg, false);
         }
 
         fclose($data);
