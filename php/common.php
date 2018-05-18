@@ -279,13 +279,7 @@ class CScheduler
     private static function markSuccess()
     {
         global $mooSett;
-        $f = fopen($mooSett['timestamp'], "w");
-
-        if ($f != FALSE)
-        {
-            fwrite($f, ' ');
-            fclose($f);
-        }
+        touch($mooSett['timestamp']);
     }
 
     // todo: работает, но есть вопросы:
