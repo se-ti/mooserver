@@ -282,6 +282,40 @@ class CScheduler
         touch($mooSett['timestamp']);
     }
 
+    public static function importFile(CMooseDb $db, CMooseAuth $auth, $file, $delim = ';')
+    {
+        if (!$auth->isSuper())
+            return;
+
+        $data = fopen($file, "r");
+        if ($data == false)
+            throw new Exception("error opening file '$file'");
+
+        for ($line = 1; $tokens = fgetcsv($data, 300, $delim); $line++)
+        {
+            if (count($tokens) < 8)
+            {
+                Log::t($db, $auth, 'importFile', "short line: $line");
+                continue;
+            }
+
+            $phone = $tokens[2];
+            $fMoose = iconv('cp1251', 'utf8', $tokens[3]);
+            $tm = self::parseTime($tokens[5]);
+            $msg = $tokens[7];
+
+            if ($tm == false)
+            {
+                Log::e($db, $auth, 'importFile', "can't parse time '{$tokens[5]}' at line: $line");
+                continue;
+            }
+
+            //self::addTextSms($db, $auth, $phone, $tm, $fMoose, $msg, false);
+        }
+
+        fclose($data);
+    }
+
     // todo: работает, но есть вопросы:
     // -- не из-под супера не сработает -- ну и пусть
     // -- возможны проблемы с високосными годами
