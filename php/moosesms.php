@@ -27,6 +27,7 @@ class CMooseSMS
 	
 	var $IsOk;
 	var $ErrorMessage;
+	var $WarningMessage;
 	
 	var $RotateHour;
 	
@@ -70,9 +71,10 @@ class CMooseSMS
 		if (strpos($text, self::Artificial) === 0 )
 			return self::artificialSms($time);
 
-		$res = new CMooseSMSv3 ( $text, $time );
+
+		$res = new CMooseSMSv3 ($text, $time);
 		
-		$res -> ProcessSMSText ();
+		$res->ProcessSMSText();
 		
 		return $res;
 	}
@@ -115,6 +117,7 @@ class CMooseSMS
 	{
 		$Result=0;
 		$StringLength = strlen ( $aStr );
+		//echo "--$StringLength--";
 		for ( $i=0 ; $i<$StringLength ; $i++ )
 		{
 			$Result*=64;
@@ -149,64 +152,102 @@ class CMooseSMS
 		
 		return $Result;
 	}
+
+	protected function GetEpochYear($dayOfYear)
+	{
+        $epochYear = gmdate("Y", $this->time);
+
+        if ($dayOfYear > 365 - 14 && date("m", $this->time) < 2)
+            $epochYear--; 	// The message does not carry a year, which it's generated in.
+        // If the message is received in the beginning of an year, but was sent
+        // in the end of an year, mostly probably it was the previous year.
+
+		return $epochYear;
+	}
 	
 	public function GetTest ()
 	{
-	$Result = "";
-	//return $this->$TestValue1;
-	/*
-	
-	$Result .= CMooseSMS::a64toi ("A0");
-	$Result .= "=640, ";
-	$Result .= CMooseSMS::a64toi ("A00#");
-	$Result .= "=2621503, ";
-	$Result .= CMooseSMS::a64bitstoi("WUtyNu",30,6);
-	$Result .= "=32, ";
-	$Result .= CMooseSMS::a64bitstoi("WUtyNu",12,12);
-	$Result .= "=3580, ";
-	$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV0m",32,8);
-	$Result .= "=303, ";
-	$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV2m",0,11);
-	$Result .= "=176, ";*/
-	
-	
-	$this->TestValue = "Tech: ID=";
-	$this->TestValue .= $this->id;
-	$this->TestValue .= " gsmTryes=";
-	$this->TestValue .= $this->gsmTries;
-	$this->TestValue .= " gpsTime=";
-	$this->TestValue .= $this->gpsOn;
-	$this->TestValue .= " Voltage=";
-	$this->TestValue .= $this->volt;
-	$this->TestValue .= " Temperature=";
-	$this->TestValue .= $this->temp;
-	$this->TestValue .= " Lat=";
-	$this->TestValue .= $this->points[0][0];
-	$this->TestValue .= " Long=";
-	$this->TestValue .= $this->points[0][1];
-	$this->TestValue .= " Test=";
-	$this->TestValue .= $this->TestValue2;
-	$this->TestValue .= " Time=";
-	$this->TestValue .= $this->points[0][2];
-	return $this->TestValue;
+		$Result = "";
+		//return $this->$TestValue1;
+		/*
+
+		$Result .= CMooseSMS::a64toi ("A0");
+		$Result .= "=640, ";
+		$Result .= CMooseSMS::a64toi ("A00#");
+		$Result .= "=2621503, ";
+		$Result .= CMooseSMS::a64bitstoi("WUtyNu",30,6);
+		$Result .= "=32, ";
+		$Result .= CMooseSMS::a64bitstoi("WUtyNu",12,12);
+		$Result .= "=3580, ";
+		$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV0m",32,8);
+		$Result .= "=303, ";
+		$Result .= CMooseSMS::a64bitstoi("rRwWMIycqV2m",0,11);
+		$Result .= "=176, ";*/
+
+
+		$this->TestValue = "Tech: ID=";
+		$this->TestValue .= $this->id;
+		$this->TestValue .= " gsmTryes=";
+		$this->TestValue .= $this->gsmTries;
+		$this->TestValue .= " gpsTime=";
+		$this->TestValue .= $this->gpsOn;
+		$this->TestValue .= " Voltage=";
+		$this->TestValue .= $this->volt;
+		$this->TestValue .= " Temperature=";
+		$this->TestValue .= $this->temp;
+		$this->TestValue .= " Lat=";
+		$this->TestValue .= $this->points[0][0];
+		$this->TestValue .= " Long=";
+		$this->TestValue .= $this->points[0][1];
+		$this->TestValue .= " Test=";
+		$this->TestValue .= $this->TestValue2;
+		$this->TestValue .= " Time=";
+		$this->TestValue .= $this->points[0][2];
+		return $this->TestValue;
 	}
 
 	function SetError ( $ErrorText )
 	{
-	$this->IsOk = FALSE;
-	$this->ErrorMessage = $ErrorText;
-	$this->TestValue2 = $ErrorText;
+		$this->IsOk = FALSE;
+		$this->ErrorMessage = $ErrorText;
+		$this->TestValue2 = $ErrorText;
 	}
 	
 	public function IsValid ()
 	{
-	return $this->IsOk;
+		return $this->IsOk;
 	}
 	
 	public function GetErrorMessage ()
 	{
-	return $this->ErrorMessage;
+		return $this->ErrorMessage;
 	}
+
+    public function GetWarningMessage ()
+    {
+        return $this->WarningMessage;
+    }
+
+    public static function GetActivityBaseDate($refDate, $activityDay)
+    {
+        $r = gmmktime ( 0, 0, 0, gmdate('n', $refDate), $activityDay, gmdate('Y', $refDate)); // todo а что там с краями месяца / года?
+        //echo date('c', $refDate) ." ad: $activityDay m: " . gmdate('n', $refDate) . ' ' .  date('c', $r). '<br/>';
+        return $r;
+    }
+
+    protected function CheckDate($refdate, $test, $tag = "")
+    {
+        if ($test > $refdate && $this->WarningMessage == null) 
+        {
+            $gate = gmdate("c",  $this->time);
+            $ref =  gmdate("c",  $refdate);
+            $test = gmdate("c",  $test);
+
+            $this->WarningMessage = "$tag: parsed time in future: \nref: $ref \ntest: $test \ngate: $gate, sms: $this->text";
+        }
+
+        return $test;
+    }
 }
 
 class CMooseSMSv3 extends CMooseSMS
@@ -225,7 +266,7 @@ class CMooseSMSv3 extends CMooseSMS
 
 	protected function ProcessSMSText ()
 	{
-	$this->TestValue = "Process";
+		$this->TestValue = "Process";
 		if ( strlen ( $this->text ) < self::TECH_HEADER_LENGTH + self::ACTIVITY_LENGTH + self::POINTS_HEADER_LENGTH )
 		{
 			$this->SetError ( 'Message is too short!' );
@@ -249,7 +290,7 @@ class CMooseSMSv3 extends CMooseSMS
 		if ( $this->IsOk )
 			$this->ProcessPointsArray ();
 		if ( $this->IsOk )
-		$this->ProcessActivity ();
+			$this->ProcessActivity ();
 	}
 	
 	protected function ProcessTechHeader ()
@@ -275,8 +316,6 @@ class CMooseSMSv3 extends CMooseSMS
 	
 	protected function ProcessPointsHeader ()
 	{
-		$EpochYear = date("Y", $this->time);
-		
 		$LatDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 59, 7 );
 		$LatPartsOfDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 43, 16 );
 		$LongDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 35, 8 );
@@ -296,11 +335,6 @@ class CMooseSMSv3 extends CMooseSMS
 			return;
 		}
 		
-		if ( $DayOfYear > 365 - 14 && date("m", $this->time) < 2) 
-			$EpochYear--; 	// The message does not carry a year, which it's generated in.
-							// If the message is received in the beginning of an year, but was sent
-							// in the end of an year, mostly probably it was the previous year.
-		
 		if ( $LatDegree == 0 && $LatPartsOfDegree==0 && $LongDegree==0 && $LongPartsOfDegree==0 &&
 		      $DayOfYear==0 && $TimeOfDayIn10MinIntervals==0 ) // This is a 'null point'
 			  {
@@ -310,7 +344,7 @@ class CMooseSMSv3 extends CMooseSMS
 		
 		$NewPoint[0] = $LatDegree + $LatPartsOfDegree/65536;
 		$NewPoint[1] = $LongDegree + $LongPartsOfDegree/32768;				
-		$NewPoint[2] =	gmmktime ( 0, 0, 0, 1, 1, $EpochYear ) + 
+		$NewPoint[2] =	gmmktime ( 0, 0, 0, 1, 1, $this->GetEpochYear($DayOfYear)) +
 						($DayOfYear-1) * 24 * 60 * 60 +
 						 $TimeOfDayIn10MinIntervals * 60 * 10;
 		//$this->TestValue2 = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 35, 8 );
@@ -345,6 +379,8 @@ class CMooseSMSv3 extends CMooseSMS
 		$YFieldCapacity=1<<$YFieldLength;
 		
 		//$this->TestValue2 .= " Kfactor=$Kfactor, XFieldCapacity=$XFieldCapacity, YFieldCapacity=$YFieldCapacity";
+
+		$refTime = time();
 		
 		for ( $i = 0 ; $i+$PointLength <= strlen ( $this->PointsArrayText ) ; $i+=$PointLength )
 		{
@@ -374,6 +410,7 @@ class CMooseSMSv3 extends CMooseSMS
 				$Point[0]=$this->points[0][0] + $dLat;
 				$Point[1]=$this->points[0][1] + $dLong;
 				$Point[2]=$this->points[0][2] + $dTime*$dTimeTick;
+				$this->CheckDate($refTime, $Point[2]);
 			
 				$this->points[] = $Point;
 			}
@@ -400,17 +437,17 @@ class CMooseSMSv3 extends CMooseSMS
 			return;
 		}
 
-		
-		if ( $this->points[0][2] != 0 )
+		$firstPointTime = $this->points[0][2];
+		if ($firstPointTime == null || $firstPointTime == 0)
 		{
-			$ActivityDate1 = gmmktime ( 0, 0, 0, gmdate ('n', $this->points[0][2]), $ActivityDay, gmdate ('Y', $this->points[0][2]) );
-			$ActivityDate2 =  $ActivityDate1 + 24 * 60 * 60;
-		}
-		else
-		{
-			$this->SetError ( "Message has no valid date" );
-			return;
-		}
+            $this->SetError ( "Message has no valid date" );
+            return;
+        }
+
+        $refTime = time();
+        $ActivityDate1 = self::GetActivityBaseDate($firstPointTime, $ActivityDay);
+        $ActivityDate2 =  $ActivityDate1 + 24 * 60 * 60;
+
 		
 		for ( $i=0 ; $i<24 ; $i++ )
 			for ( $j=0 ; $j<6 ; $j++ )
@@ -424,6 +461,7 @@ class CMooseSMSv3 extends CMooseSMS
 				}
 				$this->activity[] = $CurrentActivity;
 				$this->TestValue2 .= $CurrentActivity[1];
+				$this->CheckDate($refTime, $CurrentActivity[0]);
 			}
 	}
 	
