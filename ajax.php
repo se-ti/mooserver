@@ -26,10 +26,11 @@ if (!isset($_GET['m']))
 
 $mName = $_GET['m'];
 
-$methods = array('sendSMS' => 'addSeries', // ajaxName => functionName
+$methods = ['sendSMS' => 'addSeries', // ajaxName => functionName
     'deleteSms' => 'deleteSms',
     'reassignSms' => 'reassignSms',
     'togglePoint' => 'togglePoint',
+    'commentPoint' => 'commentPoint',
 
     'getProfile' => 'getProfile',
     'changePwd' => 'changePwd',
@@ -60,7 +61,7 @@ $methods = array('sendSMS' => 'addSeries', // ajaxName => functionName
     'login' => 'login',
 
     //'test' => 'CTest::ok'
-    );
+    ];
 
 $method = @$methods[$mName];
 if ($method == null)
@@ -116,7 +117,8 @@ function getMooses()
 	return [
 		'mooses' => $m,
 		'phones' => $db->GetPhones($auth, false),
-		'rights' => getRights()];
+		'rights' => getRights(),
+        'users' => $db->GetVisibleUsers($auth)];
 }
 
 
@@ -486,6 +488,24 @@ function togglePoint()
     $time = varNotEmpty('time', true, 'не указана точка');
 
     return $mooseId !== null ? $db->ToggleMoosePoint($auth, $mooseId, $time, $valid) : $db->ToggleSmsPoint($auth, $rawSms, $time, $valid);
+}
+
+function commentPoint()
+{
+    global $auth, $db;
+
+    if (!$auth->canAdmin())
+        dieError(CTinyDb::ErrCRights);
+
+    $mooseId = checkId(@$_POST['mooseId'], 'Недопустимый id животного', true);
+    $rawSms = checkId(@$_POST['rawSmsId'], 'Недопустимый id sms', true);
+    if ($mooseId === null && $rawSms === null)
+        dieError('Недопустимый id животного');
+
+    $comment = varNotEmpty('comment', false, 'комментарий не строка');
+    $time = varNotEmpty('time', true, 'не указана точка');
+
+    return $mooseId !== null ? $db->CommentMoosePoint($auth, $mooseId, $time, $comment) : $db->CommentSmsPoint($auth, $rawSms, $time, $comment);
 }
 
 function getGateData()

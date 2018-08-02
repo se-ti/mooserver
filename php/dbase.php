@@ -548,12 +548,12 @@ class CMooseDb extends CTinyDb
 
         $result = $this->Query($query);
 
-        $res = array('users' => array(), 'org' => array(), 'gates' => array());
+        $res = ['users' => [], 'org' => [], 'gates' => []];
 
         foreach ($result as $row)
         {
             $id = $row['id'];
-            $r = array('id' => $id, 'login' => $row['login'], 'name' => $row['name'], 'active' => $row['removeDate'] == null);
+            $r = ['id' => $id, 'login' => $row['login'], 'name' => $row['name'], 'active' => $row['removeDate'] == null];
             if ($row['is_group'] == 1)
                 $res['org'][] = $r;
             else
@@ -570,7 +570,40 @@ class CMooseDb extends CTinyDb
         return $res;
     }
 
-    // call on update: +new sms, + reassign sms, + toggle is point valid , import === new sms, + DeleteRawSms
+    function GetVisibleUsers(CMooseAuth $auth)
+    {
+        $min = CMooseAuth::Demo;
+        $demo = CMooseAuth::Demo;
+
+        if ($auth-> isSuper())
+        {
+            $join = '';
+            $cond = 'true';
+        }
+        else
+        {
+            $me = $auth->id();
+            $join = "inner join usergroups ug on ug.user_id = u.id
+                     inner join users gr on ug.group_id = gr.id
+                     inner join usergroups my on my.group_id = gr.id";
+            $cond = "ug.group_id <> $demo and gr.removeDate is null and gr.is_group = 1 and my.user_id = $me";
+        }
+
+        $query = "select u.id, u.login, u.name 
+            from users u
+            $join
+            where u.is_group = 0 and u.is_gate = 0 and u.id >= $min and  $cond";
+
+        $result = $this->Query($query);
+
+        $res = [];
+        foreach ($result as $row)
+            $res[] = ['id' => $row['id'],
+                'name' => $row['name'] != null || trim($row['name']) != ''? trim($row['name']) : $row['login']];
+        return $res;
+    }
+
+    // call on update: +new sms, + reassign sms, + toggle is point valid, comment point , import === new sms, + DeleteRawSms
     protected function SetMooseTimestamp(CTinyAuth $auth, $ids)
     {
         $ids = filter_var($ids, FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY);
@@ -620,7 +653,8 @@ class CMooseDb extends CTinyDb
 		$timeCond = $this->TimeCondition('position.stamp', $start, $end);
         $access = $this->CanSeeCond($auth, 'm', 'moose');
 		
-		$query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid, sms.moose as moose from position
+		$query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid, position.comment, author_id, DATE_FORMAT(comment_stamp,'%Y-%m-%dT%TZ') as cstamp, sms.moose as moose 
+                from position
                 inner join sms on position.sms_id = sms.id
                 inner join moose m on m.id = sms.moose
                 {$access['join']}
@@ -631,20 +665,28 @@ class CMooseDb extends CTinyDb
 		$result = $this->Query($query);
         $t2 = microtime(true);
 
-        $res = array();
+        $res = [];
+        $rec = null;
         foreach ($result as $row)
         {
             $moose = $row['moose'];
             if (!isset($res[$moose]))
-                $res[$moose] = array();
+                $res[$moose] = [];
 
-            $res[$moose][] = array($row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0);
+            $rec = [$row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0];
+            if ($row['comment'] != null)
+            {
+                $rec[] = $row['comment'];
+                $rec[] = $row['author_id'];
+                $rec[] = $row['cstamp'];
+            }
+            $res[$moose][] = $rec;
         }
         $result->closeCursor();
 
-        $retVal = array();
+        $retVal = [];
         foreach($res as $id => $data)
-            $retVal[] = array('id' => $id, 'track' => $data);
+            $retVal[] = ['id' => $id, 'track' => $data];
 
 
         $t3 = microtime(true);
@@ -710,7 +752,7 @@ class CMooseDb extends CTinyDb
         $pAccess = $this->CanSeeCond($auth, 'p', 'phone', 'rs.phone_id');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
-        $query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid
+        $query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid, comment, author_id, DATE_FORMAT(comment_stamp,'%Y-%m-%dT%TZ') as cstamp
                 from position
                 inner join sms on position.sms_id = sms.id
                 inner join raw_sms rs on rs.id = sms.raw_sms_id
@@ -718,9 +760,19 @@ class CMooseDb extends CTinyDb
 				order by position.stamp asc ";
 
         $result = $this->Query($query);
-        $res = array();
+        $res = [];
+        $rec = null;
         foreach ($result as $row)
-            $res[] = array($row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0);
+        {
+            $rec =  [$row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0];
+            if ($row['comment'] != null)
+            {
+                $rec[] = $row['comment'];
+                $rec[] = $row['author_id'];
+                $rec[] = $row['cstamp'];
+            }
+            $res[] = $rec;
+        }
 
         $result->closeCursor();
 
@@ -979,7 +1031,70 @@ class CMooseDb extends CTinyDb
 
         Log::t($this, $auth, "togglePoint", "condition '$condition', time: '$time', valid: '$fValid'");
 
-        return array('res' => true, 'rc' => $result->rowCount());
+        return ['res' => true, 'rc' => $result->rowCount()];
+    }
+
+    function CommentMoosePoint(CMooseAuth $auth, $mooseId, $time, $comment)
+    {
+        $mooseId = $this->ValidateId($mooseId, self::ErrWrongMooseId, 1);
+        if (!$this->CanModify($auth, $mooseId, true))
+            $this->ErrRights();
+
+        $this->beginTran();
+        $res = $this->CoreCommentPoint($auth, $time, $comment, "moose = $mooseId");
+        $this->SetMooseTimestamp($auth, [$mooseId]);
+        $this->commit();
+
+        return $res;
+    }
+
+    function CommentSmsPoint(CMooseAuth $auth, $rawSmsId, $time, $comment)
+    {
+        $rawSmsId = $this->ValidateId($rawSmsId, self::ErrWrongMooseId, 1);
+        if (!$this->CanModifySms($auth, $rawSmsId))
+            $this->ErrRights();
+
+        $this->beginTran();
+        $res = $this->CoreCommentPoint($auth, $time, $comment, "raw_sms_id = $rawSmsId");
+        $this->SetMooseTimestamp($auth, $this->GetRawSmsMooses($auth, [$rawSmsId]));
+        $this->commit();
+
+        return $res;
+    }
+
+    private function CoreCommentPoint(CMooseAuth $auth, $time, $comment, $condition)
+    {
+        if ($comment === null || !is_string($comment) || trim($comment) == '')
+        {
+            $qComment = 'null';
+            $author = 'null';
+            $cstamp = 'null';
+            $log = 'clear comment';
+        }
+        else
+        {
+            $qComment = $this->ValidateTrimQuote($comment);
+            $author = $auth->id();
+            $cstamp = 'UTC_TIMESTAMP';
+            $log = "comment: $qComment";
+        }
+
+        $stamp = strtotime($time);
+        if ($stamp === false)
+            $this->Err("Некорректное время: '$time'");
+        $sqlTime = $this->ToSqlTime($stamp);
+
+        $query = "update position
+            set comment = $qComment, author_id = $author, comment_stamp = $cstamp
+            where sms_id in (select id from sms where $condition) and stamp = $sqlTime";
+
+        $result = $this->Query($query);
+        $t = time();
+        $result->closeCursor();
+
+        Log::t($this, $auth, "comment", "condition '$condition', time: '$time', $log");
+
+        return ['res' => true, 'rc' => $result->rowCount(), 'authorId' => $auth->id(), 'cstamp' => gmdate('Y-m-d', $t) .'T'. gmdate('h:i:s', $t). 'Z'];
     }
 
     function DeleteRawSms(CMooseAuth $auth, $rawSmsId)
@@ -1028,7 +1143,7 @@ class CMooseDb extends CTinyDb
 
         $this->ValidateId($msg->id, 'Incorrect internal number', 0);
 
-		$res = array('rawSms' => $rawSmsId, 'moose' => $prop['mooseId']);
+		$res = ['rawSms' => $rawSmsId, 'moose' => $prop['mooseId']];
 
 		if (!$msg->IsValid()) // не смогли разобрать SMS
 		{

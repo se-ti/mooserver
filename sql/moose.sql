@@ -85,7 +85,11 @@ create table position
 	lat decimal(9,6),
 	lon decimal(9,6),
   valid bit default 1,
-	foreign key (sms_id) references sms (id)
+  comment text,
+  author_id int,
+  comment_stamp datetime DEFAULT CURRENT_TIMESTAMP,
+	foreign key (sms_id) references sms (id),
+	foreign key (author_id) references users (id)
 );
 
 insert into users (id, login, name, pwd, is_group, validated)
@@ -119,6 +123,12 @@ update sms s set maxt = (select max(stamp) from position p where p.sms_id = s.id
 update sms s set mint = (select min(stamp) from position p where p.sms_id = s.id);
 
 alter table sms add column diagnose text(200);
+
+alter table position add column comment text;
+
+alter table position add column author_id int;
+alter table position add foreign key(author_id) references users (id);
+alter table position add column comment_stamp datetime;
 
 /*
 select m.id, m.name, count(s.id), min(s.mint), max(s.maxt) from sms s inner join moose m on m.id = s.moose  group by m.id, m.name;
