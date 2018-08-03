@@ -1094,7 +1094,14 @@ class CMooseDb extends CTinyDb
 
         Log::t($this, $auth, "comment", "condition '$condition', time: '$time', $log");
 
-        return ['res' => true, 'rc' => $result->rowCount(), 'authorId' => $auth->id(), 'cstamp' => gmdate('Y-m-d', $t) .'T'. gmdate('h:i:s', $t). 'Z'];
+        $name = $auth->name();
+        if ($name == null || trim($name) == '')
+            $name = trim($auth->login());
+
+        return ['res' => true,
+            'rc' => $result->rowCount(),
+            'author' => $name,
+            'cstamp' => gmdate('Y-m-d', $t) .'T'. gmdate('h:i:s', $t). 'Z'];
     }
 
     function DeleteRawSms(CMooseAuth $auth, $rawSmsId)

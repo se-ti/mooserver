@@ -1824,15 +1824,17 @@ CMooseMap = function(root, id, root2)
 
     this._showInvalid = false;
     this._canToggle = false;
+    this._canComment = false;
     this._forPrint = false;
 
-    this._inflate = (root2 == null) ? this._inflateSett : { threshold: 300, large: 0.002, small: 0.008}; // на большом экране надо больше увеличивтаь зону просмотра
+    this._inflate = (root2 == null) ? this._inflateSett : { threshold: 300, large: 0.002, small: 0.008}; // на большом экране надо больше увеличивать зону просмотра
 
     this._d_render = $cd(this, this._render);
     this._d_onMove = $cd(this, this._onMove);
     this._d_onKeyDown = $cd(this, this._onKeyDown);
     this._d_onShowMarker = $cd(this, this._onShowMarker);
     this._d_onToggleValid = $cd(this, this._onToggleValid);
+    this._d_onCommentPoint = $cd(this, this._onCommentPoint);
     this._d_onContextMenu = $cd(this, this._onContextMenu);
     this._d_onToggleOverlay = $cd(this, this._onToggleOverlay);
 
@@ -1844,6 +1846,7 @@ CMooseMap.prototype = {
     _markerColor: "#00f",
     _activeMarker: '#0c0',
     _invalidMarker: '#f00',
+    _commentMarker: '#0cf',
 
     _inflateSett : { threshold: 100, large: 0.0008, small: 0.003},
 
@@ -1928,6 +1931,7 @@ CMooseMap.prototype = {
         {
             //this._showInvalid = opt.showInvalid || false;
             this._canToggle = opt.canToggle || false;
+            this._canComment = opt.canComment || false;
         }
 
         if (this.map)
@@ -2028,6 +2032,9 @@ CMooseMap.prototype = {
                 pt._cnt = src[j].cnt;
                 pt._sum = src[j].sum;
                 pt._str = src[j].str;
+                pt._comment = src[j][4];
+                pt._author = src[j][5];
+                pt._commentTime = src[j][6];
                 pt._idx = idx++;
                 ll.push(pt);
 
@@ -2035,7 +2042,9 @@ CMooseMap.prototype = {
                     this.heatMap.pushData(src[j][0], src[j][1], this._heatLevel(heatSett, src[j]));
 
                 if (!valid)
-                    this.invalidLayer.addLayer(L.circleMarker(pt, {color: this._invalidMarker, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1}));
+                    this.invalidLayer.addLayer(this._createMarker(pt, this._invalidMarker));
+                if (src[j][4] != null)
+                    this.invalidLayer.addLayer(this._createMarker(pt, this._commentMarker));
             }
             series.setLatLngs(ll);
             series.__kTree = new CKTreeItem(ll);
@@ -2045,7 +2054,7 @@ CMooseMap.prototype = {
         if (showHeat)
             this.map.addLayer(this.heatMap);
 
-        if (this._showInvalid)
+        //if (this._showInvalid)
             this.map.addLayer(this.invalidLayer);
     },
 
@@ -2149,6 +2158,45 @@ CMooseMap.prototype = {
         this.update();
     },
 
+    // works in own context
+    _editComment: function()
+    {
+        var ll = this.latlng;
+        this.ctx.map.closePopup();
+
+        var cmt = (prompt('Введите комментарий', ll._comment || '') || '').trim();
+        if (cmt == '')
+            cmt = null;
+
+        var param = { time: ll._time, comment: cmt };
+        param[(ll.key || 'mooseId')] = ll.mId;
+        var jq = $ajax('commentPoint', param, this.ctx._d_onCommentPoint);
+        jq._latlng = ll;
+        jq._comment = param.comment;
+    },
+
+    _onCommentPoint: function(result, text, jqXHR)
+    {
+        if (result.error)
+        {
+            log('Ошибка Ajax: ' + result.error);
+            return;
+        }
+
+        var ll = jqXHR._latlng;
+        var data = this.source;
+        for (var i = 0; i < data.length; i++)
+            if (data[i].id == ll.mId)
+            {
+                data[i].data[ll._midx][4] = jqXHR._comment;
+                data[i].data[ll._midx][5] = result.author;
+                data[i].data[ll._midx][6] = result.cstamp;
+                break;
+            }
+
+        this.update();
+    },
+
     _onContextMenu: function(e)
     {
         var ll;
@@ -2164,7 +2212,7 @@ CMooseMap.prototype = {
             return;
         }
 
-        if (!this._canToggle)
+        if (!this._canToggle && !this._canComment)
             return;
 
         ll = this._marker.getLatLng();
@@ -2177,8 +2225,20 @@ CMooseMap.prototype = {
         if (!this._contextMenu)
             this._initContextMenu(ll);
 
-        var content = $(String.format('<span style="text-decoration:underline; color: dodgerblue; cursor:pointer;">{0}</span>', ll._valid ? 'Пометить невалидной': 'Восстановить'))
-            .click($cd({ctx: this, latlng:ll}, this._toggleValid));
+        var content = $('<div></div>');
+
+        if (this._canToggle)
+            $(String.format('<span style="text-decoration:underline; color: dodgerblue; cursor:pointer;">{0}</span>', ll._valid ? 'Пометить невалидной': 'Восстановить'))
+                .appendTo(content)
+                .click($cd({ctx: this, latlng:ll}, this._toggleValid));
+        if (this._canComment)
+        {
+            if (this._canToggle)
+                content.append('<br/>');
+            $('<span style="text-decoration:underline; color: dodgerblue; cursor:pointer;">Комментировать</span>')
+                .appendTo(content)
+                .click($cd({ctx: this, latlng:ll}, this._editComment));
+        }
 
         this._contextMenu.options.offset = L.point(ll._valid ? 93 : 67, 30);
         this._contextMenu.setLatLng(ll)
@@ -2203,6 +2263,12 @@ CMooseMap.prototype = {
             var c = String.format("{0}<br/>{1} N, {2} E", d.toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
             if (ll._cnt != null)
                 c += String.format('<br/>Активность: {2} ({0} / {1})', ll._sum || 0, ll._cnt || 0, ll._str || '');
+
+            if (ll._comment != null)
+            {
+                d.setTime(Date.parse(ll._commentTime));
+                c+= String.format('<br/><br/>{0}<br/><small>{1}, {2}</small>', String.toHTML(ll._comment), String.toHTML(ll._author), d.toLocaleString());
+            }
             p.setContent(c);
 
             if (!p._isOpen)                         // HACK 2 !!!
@@ -2212,12 +2278,17 @@ CMooseMap.prototype = {
 
     _initMarker: function(pt)
     {
-        this._marker = L.circleMarker(pt, {color: this._markerColor, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1});
+        this._marker = this._createMarker(pt, this._markerColor);
 
         this._marker.bindPopup('', {closeButton: false, offset: L.point(0, -3)});
         this._marker.on('mouseover', this._d_onShowMarker)
             .on('contextmenu', this._d_onContextMenu)
             .on('click', this._d_onContextMenu);
+    },
+
+    _createMarker: function(pt, color)
+    {
+        return  L.circleMarker(pt, {color: color, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1});
     },
 
     _onMove: function(e)
@@ -2226,7 +2297,7 @@ CMooseMap.prototype = {
             return;
 
         var lim = this.map.getZoom() > 13 ? 20 : 50;
-        var nearest = this._nearestPt(e.latlng, lim); // тормозит на большом кол-ве точек
+        var nearest = this._nearestPt(e.latlng, lim);
         var dist = nearest ? e.latlng.distanceTo(nearest) : 10000;
 
         if (!this._marker)
@@ -2282,29 +2353,7 @@ CMooseMap.prototype = {
         point.mId = track.__id;
         point.key = track.__key;  // признак, откуда точка -- из лося, или rawSms
         return point;
-    }/*,
-
-    _nearest: function(pt, points)
-    {
-        if (!pt || !points || points.length == 0)
-            return null;
-
-        var cur;
-        var len = points.length;
-        var min = pt.distanceTo(points[0]);
-        var idx = 0;
-        for (var i = 1; i < len; i++)
-        {
-            cur = pt.distanceTo(points[i]);
-            if (cur > min)
-                continue;
-            min = cur;
-            idx = i;
-        }
-
-        points[idx].idx = idx;
-        return points[idx];
-    }*/
+    }
 }
 CMooseMap.inheritFrom(CControl);
 
@@ -2313,7 +2362,15 @@ CMooseMapHelper = function()
     this._d_onSuccess = $cd(this, this._onSuccess);
 }
 
-CMooseMapHelper.glueTrackData = function(result)
+CMooseMapHelper.makeUserHash = function()
+{
+    var res = {};
+    var u = CApp.single().getUsers();
+    u.forEach(function(u) { res[u.id] = u.name; });
+    return res;
+}
+
+CMooseMapHelper.glueTrackData = function(result, userHash)
 {
     if (!result)
         return null;
@@ -2354,6 +2411,9 @@ CMooseMapHelper.glueTrackData = function(result)
         tPt.sum = 0;
         tPt.cnt = 0;
         tPt.str = '';
+        if (tPt.length > 5)
+            tPt[5] = userHash[tPt[5]] || 'Аноним';
+
         if (idx >= 0 && t - act[idx].tm < delta)
             for (j = idx; j < aLen && act[j].tm - t < delta; j++)
             {
@@ -2443,7 +2503,7 @@ CMooseMapHelper.prototype =
         if (result.track.length == 1)
             result.track.push(result.track[0]);
 
-        jqXHR.__mapControl.render([{data:CMooseMapHelper.glueTrackData(result), id: jqXHR.__rawId, key: 'rawSmsId'}], true);
+        jqXHR.__mapControl.render([{data:CMooseMapHelper.glueTrackData(result, CMooseMapHelper.makeUserHash()), id: jqXHR.__rawId, key: 'rawSmsId'}], true);
     }
 }
 

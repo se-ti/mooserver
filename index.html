@@ -199,7 +199,8 @@ CApp.prototype = {
             profile: null,
             rights: null,
             moose: null,
-            phones: null
+            phones: null,
+            users: null
         };
 
         this._mooseCache = {};
@@ -243,6 +244,16 @@ CApp.prototype = {
     setPhones: function(value)
     {
         this._global.phones = value || [];
+    },
+
+    setUsers: function(value)
+    {
+        this._global.users = value || [];
+    },
+
+    getUsers: function ()
+    {
+        return this._global.users;
     },
 
     _setMessage: function(html, isErr, timeout)
@@ -374,6 +385,7 @@ CController.prototype = {
         app.setRights(appData.rights);
         app.setMoose(appData.mooses);
         app.setPhones(appData.phones);
+        app.setUsers(appData.users);
 
         //console.log('orc: ' + rights.isRoot);
 
@@ -502,7 +514,7 @@ CMoose.prototype =
 			this.send.toggle(rights.canFeed || false);
         this._canAdmin  = rights.canAdmin;
 
-        this.map.update({canToggle: this._canAdmin});
+        this.map.update({canToggle: this._canAdmin, canComment: rights.isLogged});
         this.setData(CApp.single().getData());
 	},
 
@@ -541,6 +553,7 @@ CMoose.prototype =
         var app = CApp.single();
         app.setMoose(result.mooses);
         app.setPhones(result.phones);
+        app.setUsers(result.users);
     },
 
 	_getMoosePhones: function()
@@ -651,6 +664,7 @@ CMoose.prototype =
 
         var delayLoad = [];
 
+        var uHash = CMooseMapHelper.makeUserHash();
         for (var i = 0; i < result.length; i++)
         {
             if (result[i].useCache)
@@ -660,7 +674,7 @@ CMoose.prototype =
             }
             else
             {
-                gtd = CMooseMapHelper.glueTrackData(result[i]);
+                gtd = CMooseMapHelper.glueTrackData(result[i], uHash);
                 CApp.single().addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, result[i].stamp, gtd);
 
                 if (result[i].delayLoad)
@@ -708,6 +722,7 @@ CMoose.prototype =
         var data;
         var stamp;
         var cache = CApp.single();
+        var uHash = CMooseMapHelper.makeUserHash();
         for (var i = 0; i < result.length; i++)
         {
             data = {
@@ -715,7 +730,7 @@ CMoose.prototype =
                 activity: result[i].activity
             };
 
-            gtd = CMooseMapHelper.glueTrackData(data);
+            gtd = CMooseMapHelper.glueTrackData(data, uHash);
             stamp = cache.getMooseStamp(result[i].id, jqXHR.param.start, jqXHR.param.end);
             cache.addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, stamp, gtd);
 
@@ -844,7 +859,7 @@ CBeacon.prototype = {
         }
 
         if (this._map)
-            this._map.update({canToggle: rights.canAdmin});
+            this._map.update({canToggle: rights.canAdmin, canComment: rights.isLogged});
 	},
 
 	_phoneSelect: function(phone)
@@ -1265,7 +1280,7 @@ CSingleBeacon.prototype =
             this.reRead();
 
         if (this._map)
-            this._map.update({canToggle: rights.canAdmin});
+            this._map.update({canToggle: rights.canAdmin, canComment: rights.isLogged});
     }
 }
 CSingleBeacon.inheritFrom(CPage);
@@ -1345,8 +1360,8 @@ CGate.prototype =
         this._rm.css('height', '500px');
 
         this._map = new CMooseMap(map, 'map2', null);
-        this._map.update({canToggle: true});
         this._mapHelper = new CMooseMapHelper();
+        this._map.update({canToggle: true, canComment: true});
     },
 
     activate: function(s)
