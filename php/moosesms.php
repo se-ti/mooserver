@@ -235,7 +235,7 @@ class CMooseSMS
     public static function GetActivityBaseDate($refDate, $activityDay)
     {
        $r = gmmktime ( 0, 0, 0, gmdate('n', $refDate), $activityDay, gmdate('Y', $refDate)); // todo а что там с краями месяца / года?
-		echo date('c', $refDate) ." ad: $activityDay refdate day: ". gmdate('j', $refDate) ." m: " . gmdate('n', $refDate) . ' ' .  date('c', $r). '<br/>';
+	//	echo date('c', $refDate) ." ad: $activityDay refdate day: ". gmdate('j', $refDate) ." m: " . gmdate('n', $refDate) . ' ' .  date('c', $r). '<br/>';
 		return $r;
     }
 
