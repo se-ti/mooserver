@@ -1,6 +1,6 @@
 /**
  * Created by Serge Titov for mooServer project
- * 2014 - 2017
+ * 2014 - 2018
  */
 
 CLogin = function(menu)
@@ -108,6 +108,7 @@ CLogin.prototype =
         c.forget = dlg.find('a')
             .click($cd(this, this._startForget));
 
+        c.dialog.on('shown.bs.modal', function() {c.mail.trigger('focus');});
 
         c.mailFeedback = c.mail.parent();
         c.mailErr = c.mailFeedback.find('label.control-label');
@@ -127,8 +128,6 @@ CLogin.prototype =
         this._setupDialog();
 
         dlg.modal();
-
-        window.setTimeout(function(){c.mail.focus();}, 500); // magic constant
     },
 
     _startForget: function(e)
@@ -1814,10 +1813,11 @@ CMooseMap = function(root, id, root2)
     this._marker = null;
     this._heatSett = null;
     this._contextMenu = null;
+    this._modalEdit = null;
 
     this.data = [];	  // слои на карте
     this.source = null; // исходные точки
-    this.invalidLayer = null;
+    this._topLayer = null; // невалидные точки, точки с комментариями и т.п.
 
     this._idx = null;
     this._blockMarker = false;
@@ -1837,6 +1837,7 @@ CMooseMap = function(root, id, root2)
     this._d_onCommentPoint = $cd(this, this._onCommentPoint);
     this._d_onContextMenu = $cd(this, this._onContextMenu);
     this._d_onToggleOverlay = $cd(this, this._onToggleOverlay);
+    this._d_onCommentEdited = $cd(this, this._onCommentEdited);
 
     this._buildIn(root, id, root2);
 }
@@ -1882,6 +1883,8 @@ CMooseMap.prototype = {
 
             param = {"heatmap" : this.heatMap};
         }
+
+        this._modalEdit = new CModalEdit().on_onClose(this._d_onCommentEdited);
 
         L.control.scale({imperial:false}).addTo(this.map);
         var ctrl = L.control.layers(layers, param).addTo(this.map);
@@ -1981,8 +1984,8 @@ CMooseMap.prototype = {
         for (var i = 0; i < this.data.length; i++)
             this.map.removeLayer(this.data[i]);
 
-        if (this.invalidLayer)
-            this.invalidLayer.clearLayers();
+        if (this._topLayer)
+            this._topLayer.clearLayers();
 
         if (this._marker)
             this.map.removeLayer(this._marker);
@@ -2006,10 +2009,10 @@ CMooseMap.prototype = {
             this.heatMap.setOptions(heatSett);
         }
 
-        if (!this.invalidLayer)
-            this.invalidLayer = L.layerGroup();
+        if (!this._topLayer)
+            this._topLayer = L.layerGroup();
         else
-            this.map.removeLayer(this.invalidLayer);
+            this.map.removeLayer(this._topLayer);
 
         for (var i = 0; i < data.length; i++)
         {
@@ -2042,9 +2045,9 @@ CMooseMap.prototype = {
                     this.heatMap.pushData(src[j][0], src[j][1], this._heatLevel(heatSett, src[j]));
 
                 if (!valid)
-                    this.invalidLayer.addLayer(this._createMarker(pt, this._invalidMarker));
+                    this._topLayer.addLayer(this._createMarker(pt, this._invalidMarker));
                 if (src[j][4] != null)
-                    this.invalidLayer.addLayer(this._createMarker(pt, this._commentMarker));
+                    this._topLayer.addLayer(this._createMarker(pt, this._commentMarker));
             }
             series.setLatLngs(ll);
             series.__kTree = new CKTreeItem(ll);
@@ -2055,7 +2058,7 @@ CMooseMap.prototype = {
             this.map.addLayer(this.heatMap);
 
         //if (this._showInvalid)
-            this.map.addLayer(this.invalidLayer);
+            this.map.addLayer(this._topLayer);
     },
 
     _newPoly: function(idx, id, key)
@@ -2164,13 +2167,23 @@ CMooseMap.prototype = {
         var ll = this.latlng;
         this.ctx.map.closePopup();
 
-        var cmt = (prompt('Введите комментарий', ll._comment || '') || '').trim();
+        this.ctx._modalEdit.show(ll._comment || '', ll);
+    },
+
+    _onCommentEdited: function(res)
+    {
+        if (res.cancel || !res.context)
+            return;
+
+        var ll = res.context;
+
+        var cmt = (res.text || '').trim();
         if (cmt == '')
             cmt = null;
 
         var param = { time: ll._time, comment: cmt };
         param[(ll.key || 'mooseId')] = ll.mId;
-        var jq = $ajax('commentPoint', param, this.ctx._d_onCommentPoint);
+        var jq = $ajax('commentPoint', param, this._d_onCommentPoint);
         jq._latlng = ll;
         jq._comment = param.comment;
     },
@@ -2228,14 +2241,14 @@ CMooseMap.prototype = {
         var content = $('<div></div>');
 
         if (this._canToggle)
-            $(String.format('<span style="text-decoration:underline; color: dodgerblue; cursor:pointer;">{0}</span>', ll._valid ? 'Пометить невалидной': 'Восстановить'))
+            $(String.format('<span class="spanLink">{0}</span>', ll._valid ? 'Пометить невалидной': 'Восстановить'))
                 .appendTo(content)
                 .click($cd({ctx: this, latlng:ll}, this._toggleValid));
         if (this._canComment)
         {
             if (this._canToggle)
                 content.append('<br/>');
-            $('<span style="text-decoration:underline; color: dodgerblue; cursor:pointer;">Комментировать</span>')
+            $(String.format('<span class="spanLink">{0}</span>', (ll._comment || '') == '' ? 'Комментировать' : 'Изменить комментарий'))
                 .appendTo(content)
                 .click($cd({ctx: this, latlng:ll}, this._editComment));
         }
@@ -2267,7 +2280,7 @@ CMooseMap.prototype = {
             if (ll._comment != null)
             {
                 d.setTime(Date.parse(ll._commentTime));
-                c+= String.format('<br/><br/>{0}<br/><small>{1}, {2}</small>', String.toHTML(ll._comment), String.toHTML(ll._author), d.toLocaleString());
+                c+= String.format('<br/><br/>{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), d.toLocaleString());
             }
             p.setContent(c);
 
@@ -2958,3 +2971,128 @@ CTipControl.prototype =
         return this;
     }
 }
+
+CModalEdit = function(opt)
+{
+    CControl.call(this);
+
+    this._c = {
+        root: null,
+        title: null,
+        textLabel: null,
+        text: null,
+        clear: null,
+        cancel: null,
+        save: null
+    };
+
+
+    this._text = '';
+    this._ctx = null;
+    this._opt = opt || {};
+
+    this._d_onHide = $cd(this, this._onHide);
+
+    this._buildIn();
+}
+
+CModalEdit.prototype = {
+
+    _tpl: '<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="CModalEdit-ModalCenterTitle" aria-hidden="true"> ' +
+    '  <div class="modal-dialog modal-dialog-centered" role="document">' +
+    '    <div class="modal-content">' +
+    '      <div class="modal-header">' +
+
+    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+    '          <span aria-hidden="true">&times;</span>' +
+    '        </button>' +
+    '        <h5 class="modal-title" id="CModalEdit-ModalCenterTitle">Ввести комментарий</h5>' +
+    '      </div>' +
+    '      <div class="modal-body">' +
+    '  <div class="form-group">' +
+    '    <label for="CModalEdit-Textarea">Example textarea</label>' +
+    '    <textarea class="form-control" id="CModalEdit-Textarea" rows="3" style="resize:vertical;" placeholder="комментарий"></textarea>' +
+    '  </div>' +
+
+    '      </div>' +
+    '      <div class="modal-footer">' +
+    '        <button type="button" class="btn btn-secondary">Удалить комментарий</button>' +
+    '        <button type="button" class="btn btn-secondary" data-dismiss="modal">Отменить</button>' +
+    '        <button type="button" class="btn btn-primary">Сохранить</button>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>',
+
+
+    _buildIn: function()
+    {
+        var c = this._c;
+        c.root = $(this._tpl).appendTo('body');
+        c.title = c.root.find('h5.modal-title');
+        c.textLabel = c.root.find('.modal-body label');
+        c.text = c.root.find('.modal-body textarea');
+
+        c.root.on('shown.bs.modal', function() {c.text.trigger('focus');})
+            .on('hide.bs.modal', this._d_onHide);
+
+        var that = this;
+        var btns = c.root.find('div.modal-footer button');
+
+        c.clear = btns.filter(':first').click(function() {that._save('');});
+        c.cancel = btns.filter('.btn-secondary:last').click(function() {that._save(that._text);});
+        c.save = btns.filter(':last').click(function() {that._save(c.text.val());});
+
+        this.setOptions(this._opt);
+    },
+
+    setOptions: function(opt)
+    {
+        var deflt = {titleHtml: 'Ввести комментарий', removeHtml: 'Удалить комментарий', placeholder: 'комментарий', labelHtml: ''};
+        this._opt = $.extend({}, deflt, opt);
+        var o = this._opt;
+        var c = this._c;
+        c.title.html(o.titleHtml);
+        c.clear.html(o.removeHtml).toggleClass('hidden', o.removeHtml == '');
+        c.textLabel.html(o.labelHtml).toggleClass('hidden', (o.labelHtml || '') == '');
+        c.text.attr('placeholder', o.placeholder);
+    },
+
+    show: function(text, ctx)
+    {
+        this._text = (text || '');
+        this._ctx = ctx;
+
+        this._c.text.val(this._text);
+        this._c.root.modal({backdrop: false});
+    },
+
+    _save: function(val)
+    {
+        this._c.text.val(val);
+        this._c.root.modal('hide');
+    },
+
+    _onHide: function(e)
+    {
+        this._raise_onClose(this._c.text.val());
+        return true;
+    },
+
+    on_onClose: function(h)
+    {
+        return this.on("onClose", h);
+    },
+
+    remove_onClose: function(h)
+    {
+        return this.remove("onClose", h);
+    },
+
+    _raise_onClose: function(value)
+    {
+        this.raise("onClose", {cancel: value == this._text, text: value, context: this._ctx});
+    }
+}
+CModalEdit.inheritFrom(CControl);
+

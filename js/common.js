@@ -200,7 +200,7 @@ CControl.prototype =
 
 	on: function(name, handler)
 	{
-	        this._checkType(name, handler);
+        this._checkType(name, handler);
 		if ((name||'') == '' || !handler)
 			return this;
 
@@ -241,9 +241,8 @@ CControl.prototype =
 
 	_checkType: function(name, handler)
 	{
-		name = name || '';
 		if (! (handler instanceof Function))
-			throw "Handler should be a function";
+			throw String.format("CControl: Handler for '{0} 'should be a function", name || '');
 	}
 }
 
