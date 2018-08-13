@@ -68,11 +68,13 @@ function $saveCancel(root, saveCb, cancelCb)
 Function.prototype.inheritFrom = function(parent)
 {
     if (!parent || !parent instanceof Function)
-        return;
+        return this;
     var child = this;
     for (var i in parent.prototype)
         if (i != null && !child.hasOwnProperty(i) && child.prototype[i] == null)
             child.prototype[i] = parent.prototype[i];
+
+    return this;
 }
 
 Function.prototype.callBaseMethod = function(ctx, method, params)
@@ -82,6 +84,29 @@ Function.prototype.callBaseMethod = function(ctx, method, params)
 		return f.apply(ctx, params);
 
     return undefined;
+}
+
+Function.prototype.addEvent = function(eventName)
+{
+    var that = this;
+
+    if ((eventName || '') == '')
+        throw Error("Function.addEvent: event name can't be empty");
+
+    ['on', 'remove', 'raise', '_raise_'+eventName].forEach(function(prop) {
+        if (!(that.prototype[prop] instanceof Function))
+            throw Error(String.format("Function.addEvent: class '{0}' does't have method '{1}'", that.name, prop));
+    });
+
+    ['on_' + eventName, 'remove' + eventName].forEach(function(prop) {
+        if (that.prototype[prop] != null)
+            throw Error(String.format("Function.addEvent: class '{0}' has '{1}' {2} already", that.name, prop, that.prototype[prop] instanceof Function ? 'method' : 'property'));
+    });
+
+    this.prototype['on_'+eventName] = function(h) { return this.on(eventName, h); };
+    this.prototype['remove_'+eventName] = function(h) { return this.remove(eventName, h); };
+
+    return this;
 }
 
 String.format = function()

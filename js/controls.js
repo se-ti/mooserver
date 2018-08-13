@@ -2996,7 +2996,8 @@ CModalEdit = function(opt)
     this._buildIn();
 }
 
-CModalEdit.prototype = {
+CModalEdit.prototype =
+{
 
     _tpl: '<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="CModalEdit-ModalCenterTitle" aria-hidden="true"> ' +
     '  <div class="modal-dialog modal-dialog-centered" role="document">' +
@@ -3028,15 +3029,19 @@ CModalEdit.prototype = {
     _buildIn: function()
     {
         var c = this._c;
+        var that = this;
         c.root = $(this._tpl).appendTo('body');
         c.title = c.root.find('h5.modal-title');
         c.textLabel = c.root.find('.modal-body label');
-        c.text = c.root.find('.modal-body textarea');
+        c.text = c.root.find('.modal-body textarea')
+            .keydown(function(e) {
+                if (e.which == 13 && e.ctrlKey)
+                    c.save.click();
+            });
 
         c.root.on('shown.bs.modal', function() {c.text.trigger('focus');})
             .on('hide.bs.modal', this._d_onHide);
 
-        var that = this;
         var btns = c.root.find('div.modal-footer button');
 
         c.clear = btns.filter(':first').click(function() {that._save('');});
@@ -3079,20 +3084,10 @@ CModalEdit.prototype = {
         return true;
     },
 
-    on_onClose: function(h)
-    {
-        return this.on("onClose", h);
-    },
-
-    remove_onClose: function(h)
-    {
-        return this.remove("onClose", h);
-    },
-
     _raise_onClose: function(value)
     {
         this.raise("onClose", {cancel: value == this._text, text: value, context: this._ctx});
     }
 }
-CModalEdit.inheritFrom(CControl);
+CModalEdit.inheritFrom(CControl).addEvent('onClose');
 
