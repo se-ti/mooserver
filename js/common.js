@@ -18,6 +18,23 @@ function $cd(ctx, func)
 	};
 }
 
+function $namespace(name)
+{
+    if (!name)
+        return;
+    if (!name instanceof String)
+        throw Error("Namespace name should be a string");
+
+    if (window[name] == null)
+    {
+        window[name] = {__isNamespace: true};
+        return;
+    }
+
+    if (window[name].__isNamespace !== true)
+        throw Error("Object with name '" + name +  "' already exists");
+}
+
 // ['яблоко', 'яблока', 'яблок']
 function $decline(num, forms)
 {
