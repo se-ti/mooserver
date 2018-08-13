@@ -26,6 +26,8 @@ CLogin = function(menu)
 
     this._forget = false;
 
+    this._d_onLogin = $cd(this, this._onLogin);
+
     this.attach(menu);
 }
 
@@ -215,14 +217,14 @@ CLogin.prototype =
 			return this._loginErr('Не задан пароль', c.err, c.feedback);
 		}
 
-		$ajax('login', param, $cd(this, this._onLogin));
+		$ajax('login', param, this._d_onLogin);
 
 		return true;
 	},
 
 	logout: function()
 	{
-		$ajax('login', {logout: true}, $cd(this, this._onLogin));
+		$ajax('login', {logout: true}, his._d_onLogin);
 	},
 
     _onMailEnter: function(e) {
@@ -1133,143 +1135,6 @@ CPeriodChooser.prototype =
     }
 }
 CPeriodChooser.inheritFrom(CControl);
-
-CChooser = function(elem)
-{
-	CControl.call(this);
-	this._stMonth = null;
-	this._enMonth = null;
-	this._stYear = null;
-	this._enYear = null;
-	this._err = null;
-
-    this._canSetAuto = true;
-
-	this._buildIn(elem);
-}
-
-CChooser.prototype = 
-{
-	_buildIn: function(elem)
-	{
-		var tpl = '<div class="form-horizontal"><div class="row">' +
- 			     '<label class="control-label col-xs-2">с</label><div class="col-xs-10"><select class="form-control"></select></div><div class="col-xs-10 col-xs-push-2"><select class="form-control"></select></div></div><div class="row">' +
-			     '<label class="control-label col-xs-2">по</label><div class="col-xs-10"><select class="form-control"></select></div><div class="col-xs-10 col-xs-push-2"><select class="form-control"></select></div></div>' +
-                '</div>'+
-            '<div class="row alert alert-danger hidden" role="alert"></div>';
-
-		var je = $(tpl).appendTo(elem);
-		this._err = $(je[1]);
-
-		je = je.find('select')
-			.change($cd(this, this._dateChange));
-		this._stMonth = $(je.get(0));
-		this._stYear = $(je.get(1));
-		this._enMonth = $(je.get(2));
-		this._enYear = $(je.get(3));
-	
-
-		var d = new Date();
-
-		var i;
-		var month  = ['', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-		var month2 = ['', 'январь', 'февраль', 'март',  'апрель', 'май', 'июнь', 'июль', 'август',  'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-		for (i = 0; i < month.length; i++)
-		{
-			$selAdd(je.get(0), i, i-1, month[i]);
-			$selAdd(je.get(2), i, i-1, month2[i]);
-		}
-
-		$selAdd(je.get(1), 0, 0, '');
-		$selAdd(je.get(3), 0, 0, '');
-		var curYear = d.getFullYear();
-		for (i = curYear; i >= 2001; i--)
-		{		
-			$selAdd(je.get(1), 1 + curYear - i, i, i);
-			$selAdd(je.get(3), 1 + curYear - i, i, i);
-		}
-	},
-
-	_dateChange: function()
-	{
-		var times = this.getTimes();
-		if (times.start != null && times.end != null && times.end <= times.start)
-		{
-			this._err.html('Дата окончания раньше даты начала').removeClass('hidden');
-			return;
-		}
-		else
-			this._err.addClass('hidden');
-
-/*		console.log('from: ' + times.start.toUTCString());
-		console.log('to:   ' + times.end.toUTCString());*/
-
-        this._canSetAuto = /*this._canSetAuto ||*/ this._isDefault();
-		this._raise_periodChange(times);
-	},
-
-    _isDefault: function()
-    {
-        return this._stMonth.get(0).selectedIndex == 0 && this._stYear.get(0).selectedIndex == 0 &&
-               this._enMonth.get(0).selectedIndex == 0 && this._enYear.get(0).selectedIndex == 0;
-    },
-
-    setTimes: function(st, en, force)
-    {
-        if (force)
-            this._canSetAuto = true;
-        if (!this._canSetAuto || st == null || en == null)
-            return;
-
-        var d = new Date();
-        this._stMonth.get(0).selectedIndex = st.getMonth() + 1;
-        this._stYear.get(0).selectedIndex = d.getFullYear() - st.getFullYear() +1;
-        this._enMonth.get(0).selectedIndex = en.getMonth() + 1;
-        this._enYear.get(0).selectedIndex = d.getFullYear() - en.getFullYear() +1;
-
-        this._canSetAuto = true;
-    },
-
-    getTimes: function()
-    {
-        return {start: this._toDate(this._stMonth, this._stYear, false),
-            end:   this._toDate(this._enMonth, this._enYear, true)};
-    },
-
-	_toDate: function(mon, year, to)
-	{
-		var y = year.val();
-		var m = parseInt(mon.val());
-		if (y == 0 && m == -1 || this._canSetAuto)
-			return null;
-
-		var d = new Date();
-		if (y == 0)
-			y = d.getFullYear();
-		if (m == -1)
-			m = to ? 11 : 0;
-
-		d.setFullYear(y, (to ? 1 : 0) + m, 1);
-		d.setUTCHours(0, 0, 0, 0);
-		return d;
-	},
-
-	on_periodChange: function(h)
-	{
-		return this.on("periodChange", h);
-	},
-
-	remove_periodChange: function(h)
-	{
-		return this.remove("periodChange", h);
-	},
-
-	_raise_periodChange: function(period)
-	{
-		this.raise("periodChange", period);
-	}
-}
-CChooser.inheritFrom(CControl);
 
 CUserProxy = function()
 {

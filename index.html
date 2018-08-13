@@ -466,7 +466,7 @@ CMoose.prototype =
         var rm = $(this._tpl_right).appendTo(row); /*правое меню*/
 		var je = $(this._tpl_main).appendTo(row);
 
-        this.periodChooser = new CPeriodChooser(rm)//new CChooser(rm)
+        this.periodChooser = new CPeriodChooser(rm)
                 .on_periodChange($cd(this, this._periodChange));
 
         this.mooseChooser = new CMooseChooser(rm, true)
@@ -1103,7 +1103,7 @@ CSingleBeacon.prototype =
             .appendTo(je);
 
 
-        this._periodChooser = new CPeriodChooser(this._rm) // CChooser(this._rm)
+        this._periodChooser = new CPeriodChooser(this._rm)
             .on_periodChange($cd(this, this.reRead));
 
         this._exportBtn = this.stdExport('beacons', 'Export')
