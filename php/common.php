@@ -254,7 +254,7 @@ class CScheduler
     {
         $db->SimplifyGateLogs($auth);
         // self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
-        // self::uploadPlt($db, $auth, './data/yaminga20121017-20121029a.plt');
+        // self::uploadPlt($db, $auth, './data/yaminga20121017-20121029a.plt', '+7-916-212-85-06', 'Яминга');
     }
 
     private static function canRun(CMooseAuth $auth)
@@ -428,11 +428,8 @@ class CScheduler
         return strtotime(str_replace('.', '-', $tm)); // Change '.' to '-' to make strtotime think date is in american notation
     }
 
-    private static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $file)
+    private static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $file, $phone, $moose)
     {
-        $phone = '+7-916-212-85-06';
-        $moose = 'Яминга';
-
         if (!$auth->isSuper())
             return;
 
