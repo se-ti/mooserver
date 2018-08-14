@@ -22,7 +22,8 @@ function $namespace(name)
 {
     if (!name)
         return;
-    if (!name instanceof String)
+
+    if (typeof(name) !== 'string' && !(name instanceof String))
         throw Error("Namespace name should be a string");
 
     if (window[name] == null)
@@ -38,7 +39,7 @@ function $namespace(name)
 // ['яблоко', 'яблока', 'яблок']
 function $decline(num, forms)
 {
-    if (isNaN(num) ||  forms instanceof Array == false)
+    if (isNaN(num) || (forms instanceof Array) == false)
         return "";
     if (forms.length < 3)
         return forms[0];
@@ -84,8 +85,9 @@ function $saveCancel(root, saveCb, cancelCb)
 
 Function.prototype.inheritFrom = function(parent)
 {
-    if (!parent || !parent instanceof Function)
+    if (!parent || !(parent instanceof Function))
         return this;
+
     var child = this;
     for (var i in parent.prototype)
         if (i != null && !child.hasOwnProperty(i) && child.prototype[i] == null)
@@ -109,6 +111,9 @@ Function.prototype.addEvent = function(eventName)
 
     if ((eventName || '') == '')
         throw Error("Function.addEvent: event name can't be empty");
+
+    if (typeof(eventName) !== 'string' && !(eventName instanceof String))
+        throw Error("Function.addEvent: event name should be a string");
 
     ['on', 'remove', 'raise', '_raise_'+eventName].forEach(function(prop) {
         if (!(that.prototype[prop] instanceof Function))
@@ -146,8 +151,14 @@ String._htmlSubstitutes = [{r:/&/gi, t:'&amp;'},
 
 String.toHTML = function(str)
 {
-    if (!str || ! str instanceof String)
+    if (!str)
         return '';
+
+    if (typeof(str) !== 'string' && !(str instanceof String))
+        throw Error("Can't toHTML not a string");
+
+    if (!str.replace)
+        throw Error("String object desn't have replace method");
     
     var res = str;
     var arr = String._htmlSubstitutes;
@@ -213,7 +224,8 @@ function $ajax(method, param, success, fail)
 
 function log(msg)
 {
-    CApp.single().error(String.toHTML(msg));
+    if (window.CApp)
+        CApp.single().error(String.toHTML(msg));
     trace(msg, true);
 }
 
@@ -243,7 +255,7 @@ CControl.prototype =
 	on: function(name, handler)
 	{
         this._checkType(name, handler);
-		if ((name||'') == '' || !handler)
+		if ((name || '') == '' || !handler)
 			return this;
 
 		if (this._events[name] == null)
@@ -255,8 +267,8 @@ CControl.prototype =
 
 	remove: function(name, handler)
 	{
-	        this._checkType(name, handler);
-		if ((name||'') == '' || ! handler)
+        this._checkType(name, handler);
+		if ((name || '') == '' || ! handler)
 			return this;
 
 		if (this._events[name] == null)
@@ -276,15 +288,15 @@ CControl.prototype =
 		if (this._events[name] == null)
 			return;
 
-		var hdrs = this._events[name];
-		for(var i=0; i < hdrs.length; i++)
-			hdrs[i](object);
+		this._events[name].forEach( function(h) {
+		    h(object);
+		});
 	},
 
 	_checkType: function(name, handler)
 	{
 		if (! (handler instanceof Function))
-			throw String.format("CControl: Handler for '{0} 'should be a function", name || '');
+			throw Error(String.format("CControl: Handler for '{0}' should be a function", name || ''));
 	}
 }
 
@@ -333,7 +345,7 @@ CPage.prototype =
 
     activate: function()
     {
-        if (this._menu)
+        if (this._menu)                         // todo а проверить, что available?
             this._menu.addClass('active');
         if (this._elem)
             this._elem.show();
