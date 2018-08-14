@@ -156,7 +156,7 @@ CLogin.prototype =
 
 		this.logged = rights.isLogged;
 
-		this._raise_onSetup(appData);
+		this._raise_setup(appData);
 	},
 
     _clearErrors: function()
@@ -224,7 +224,7 @@ CLogin.prototype =
 
 	logout: function()
 	{
-		$ajax('login', {logout: true}, his._d_onLogin);
+		$ajax('login', {logout: true}, this._d_onLogin);
 	},
 
     _onMailEnter: function(e) {
@@ -278,25 +278,15 @@ CLogin.prototype =
         }
 
 		this.setup(result.data);
-		//this._raise_onSetup(result.rights);
+		//this._raise_setup(result.rights);
 	},
 
-	on_Setup: function(h)
-	{
-		return this.on("setup", h);
-	},
-
-	remove_onSetup: function(h)
-	{
-		return this.remove("setup", h);
-	},
-
-	_raise_onSetup:	function(appData)
+	_raise_setup:	function(appData)
 	{
 		this.raise("setup", appData);
 	}
 }
-CLogin.inheritFrom(CControl);
+CLogin.inheritFrom(CControl).addEvent('setup');
 
 CPassword = function(root, changePwd)
 {
@@ -509,22 +499,12 @@ CPassword.prototype =
         };
     },
 
-    on_endEdit: function(h)
-    {
-        return this.on("endEdit", h);
-    },
-
-    remove_endEdit: function(h)
-    {
-        return this.remove("endEdit", h);
-    },
-
     _raise_endEdit: function(save)
     {
         this.raise("endEdit", save);
     }
 }
-CPassword.inheritFrom(CControl);
+CPassword.inheritFrom(CControl).addEvent('endEdit');
 
 CProfileNameEdit = function(root)
 {
@@ -778,29 +758,9 @@ CSmsControl.prototype = {
 		this._raise_sendSuccess();
 	},
 
-	on_sendSuccess: function(h)
-	{
-		return this.on("sendSuccess", h);
-	},
-
-	remove_sendSuccess: function(h)
-	{
-		return this.remove("sendSuccess", h);
-	},
-
 	_raise_sendSuccess: function()
 	{
 		this.raise("sendSuccess");
-	},
-
-	on_change: function(h)
-	{
-		return this.on("change", h);
-	},
-
-	remove_change: function(h)
-	{
-		return this.remove("change", h);
 	},
 
 	_raise_change: function(phone)
@@ -808,7 +768,7 @@ CSmsControl.prototype = {
 		this.raise("change", phone);
 	}
 }
-CSmsControl.inheritFrom(CControl);
+CSmsControl.inheritFrom(CControl).addEvent('sendSuccess').addEvent('change');
 
 CMooseChooser = function(elem, multiple)
 {
@@ -894,22 +854,12 @@ CMooseChooser.prototype =
 		this._raise_mooseChange(this.getMoose());
 	},
 
-	on_mooseChange: function(h)
-	{
-		return this.on("mooseChange", h);
-	},
-
-	remove_mooseChange: function(h)
-	{
-		return this.remove("mooseChange", h);
-	},
-
 	_raise_mooseChange: function(ids)
 	{
 		this.raise("mooseChange", ids);
 	}
 }
-CMooseChooser.inheritFrom(CControl);
+CMooseChooser.inheritFrom(CControl).addEvent('mooseChange');
 
 CPeriodChooser = function(elem)
 {
@@ -1122,19 +1072,12 @@ CPeriodChooser.prototype =
         control.val(String.format("{0}.{1}.{2}", date.getDate(), date.getMonth()+1, date.getFullYear()));
     },
 
-    on_periodChange: function(h) {
-        return this.on("periodChange", h);
-    },
-
-    remove_periodChange: function(h) {
-        return this.remove("periodChange", h);
-    },
-
-    _raise_periodChange: function(period) {
+    _raise_periodChange: function(period)
+    {
         this.raise("periodChange", period);
     }
 }
-CPeriodChooser.inheritFrom(CControl);
+CPeriodChooser.inheritFrom(CControl).addEvent('periodChange');
 
 CUserProxy = function()
 {
@@ -1558,22 +1501,12 @@ CManageUsersControl.prototype = {
         return show;
     },
 
-    on_dataChanged: function(h)
-    {
-        return this.on('dataChanged', h);
-    },
-
-    remove_dataChanged: function(h)
-    {
-        return this.remove('dataChanged', h);
-    },
-
     _raise_dataChanged: function()
     {
         this.raise('dataChanged');
     }
 }
-CManageUsersControl.inheritFrom(CControl);
+CManageUsersControl.inheritFrom(CControl).addEvent('dataChanged');
 
 
 CHeatSett = function(elem)
@@ -1635,22 +1568,12 @@ CHeatSett.prototype =
         return res;
     },
 
-    on_change: function(h)
-    {
-        return this.on("change", h);
-    },
-
-    remove_change: function(h)
-    {
-        return this.remove("change", h);
-    },
-
     _raise_change: function(period)
     {
         this.raise("change", period);
     }
 }
-CHeatSett.inheritFrom(CControl);
+CHeatSett.inheritFrom(CControl).addEvent('change');
 
 CMooseMap = function(root, id, root2)
 {
@@ -2758,22 +2681,12 @@ CColumnFilter.prototype =
         return !this._all;
     },
 
-    on_dataChanged: function(h)
-    {
-        return this.on('dataChanged', h);
-    },
-
-    remove_dataChanged: function(h)
-    {
-        return this.remove('dataChanged', h);
-    },
-
     _raise_dataChanged: function()
     {
         this.raise('dataChanged');
     }
 }
-CColumnFilter.inheritFrom(CControl);
+CColumnFilter.inheritFrom(CControl).addEvent('dataChanged');
 
 
 CTipControl = function(root, tips)

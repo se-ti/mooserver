@@ -316,7 +316,7 @@ CController = function()
 
     var menu = $('div.navbar-collapse');
 	this._pass = new CLogin(menu)
-            .on_Setup($cd(this, this._onRightsChange));
+            .on_setup($cd(this, this._onRightsChange));
 
 	window.addEventListener("hashchange", $cd(this, this._onChange), false);
 }

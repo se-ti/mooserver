@@ -697,21 +697,6 @@ CLineEditor.prototype =
         //CApp.single().error(String.toHTML(message));
     },
 
-    on_queryEndEdit: function(h)
-    {
-        return this.on('queryEndEdit', h);
-    },
-
-    remove_queryEndEdit: function(h)
-    {
-        return this.remove('queryEndEdit', h);
-    },
-
-    _raise_queryEndEdit: function(save, item)
-    {
-        this.raise('queryEndEdit', {save: save, item: item});
-    },
-
     _addRow: function()
     {
         var r = this._elem.tBodies[0].insertRow(0);
@@ -747,6 +732,11 @@ CLineEditor.prototype =
         if (!valid)
             return this.error("Ошибка валидации");
         this._raise_queryEndEdit(true, res);
+    },
+
+    _raise_queryEndEdit: function(save, item)
+    {
+        this.raise('queryEndEdit', {save: save, item: item});
     }
 }
-CLineEditor.inheritFrom(CControl);
+CLineEditor.inheritFrom(CControl).addEvent('queryEndEdit');
