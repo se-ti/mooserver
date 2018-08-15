@@ -6,6 +6,9 @@
 if (!defined('IN_TINY'))
 	exit;
 
+if (isset($tinySett['zendPath']) && trim($tinySett['zendPath']) != '')
+    require_once(dirname(__FILE__).$tinySett['zendPath']);
+
 class CTinyDb
 {
     var $db = null;
@@ -39,22 +42,23 @@ class CTinyDb
 		global $tinySett;
 
         $this->ClearError();
-		try 
-		{
-            $charset = isset($tinySett['charset']) ? $tinySett['charset']: 'utf8';
-			$conn = "mysql:dbname={$tinySett['base']};host={$tinySett['host']};charset=$charset";
-			$this->db = new PDO($conn, $tinySett['user'], $tinySett['pwd']);
-		} 
-		catch (PDOException $e) 
-		{
+        try
+        {
+            $user = @$tinySett['user'];
+            $pwd = @$tinySett['pwd'];
+            $conn = self::getConnectionCredentials($tinySett, $user, $pwd);
+            $this->db = new PDO($conn, $user, $pwd);
+        }
+        catch (PDOException $e)
+        {
             $this->Err('Connection failed: ' . $e->getMessage(), true);
-		}
+        }
 
 		$query = "select max(version) as ver from version";
 		$res = $this->Query($query);
 		foreach($res as $r)
 		{
-			if($r['ver'] != self::$Version)
+			if ($r['ver'] != self::$Version)
 				$this->Err("Wrong db version: '{$r['ver']}', expected '" .self::$Version. "'", true);
 			break;
 		}
@@ -62,8 +66,26 @@ class CTinyDb
 
         if (isset($tinySett['timezone']))
             date_default_timezone_set($tinySett['timezone']);
-
 	}
+
+    private static function getConnectionCredentials($tinySett, &$user, &$pwd)
+    {
+        $host = @$tinySett['host'];
+        $db = @$tinySett['base'];
+
+        if (isset($tinySett['zendPath']) && trim($tinySett['zendPath']) != '')
+        {
+            $zdb = Zend_Registry::get("config")->db->config;
+            $host = isset($tinySett['host']) ? $tinySett['host'] : $zdb->host;
+            $db = isset($tinySett['base']) ? $tinySett['base'] : $zdb->dbname;
+            $user = isset($tinySett['user']) ? $tinySett['user'] : $zdb->username;
+            $pwd = isset($tinySett['pwd']) ? $tinySett['pwd'] : $zdb->password;
+        }
+
+        $charset = isset($tinySett['charset']) ? $tinySett['charset']: 'utf8';
+
+        return "mysql:dbname=$db;host=$host;charset=$charset";
+    }
 
     public function beginTran()
     {
