@@ -3,7 +3,8 @@ if (!defined('IN_MOOSE'))
     exit;
 
 $mooSett = array(
-    "base" => "dbase",
+    "zendPath" => "",                   // use zend as db credentials source
+    "base" => "dbase",                  // override those you need
     "host" => "localhost",
     "user" => "user",
     "pwd" => "pwd",
