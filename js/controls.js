@@ -2548,7 +2548,7 @@ CColumnFilter.prototype =
         {
             item = this._items[i];
             if (noSearch || ((item.caption || '').toLocaleLowerCase().indexOf(search) >= 0 ))
-                res += String.format(tpl, item.value, this._curChecked[item.value] ? 'checked' : '', item.caption);
+                res += String.format(tpl, item.value, this._curChecked[item.value] ? 'checked' : '', String.toHTML(item.caption));
         }
 
         this._c.list.html(res);
