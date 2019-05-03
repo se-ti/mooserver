@@ -1205,6 +1205,7 @@ CEditableTableControl = function(elem, options)
     this._alt = null;
 
     this._lastSearch = '';
+    this._tmId = null;
 
     this._sortColumn = null;
     this._inverseSort = false;
@@ -1212,9 +1213,12 @@ CEditableTableControl = function(elem, options)
     this._d_render = $cd(this, this._render);
     this._d_onSave = $cd(this, this._onSave);
     this._d_onToggle = $cd(this, this._onToggle);
+    this._d_add = $cd(this, this._add);
+    this._d_delaySearch = $cd(this, this._delaySearch);
     this._d_onSort = $cd(this, this._onSort);
 
     this._d_edit = $cd(this, this._edit);
+    this._d_onEndEdit = $cd(this, this._onEndEdit);
     this._d_delete = $cd(this, this._delete);
 
     this._buildIn(elem);
@@ -1231,14 +1235,14 @@ CEditableTableControl.prototype = {
 
         c.add = $('<button class="btn btn-default">Добавить</button>')
             .appendTo(c.root)
-            .click($cd(this, this._add));
+            .click(this._d_add);
 
         var t = this;
         c.search = $('<div class="checkbox"><input type="text"/> </div>')
             .appendTo(c.root)
             .find('input')
             .change(function() {if (t._lastSearch != $(this).val()) t._render();}) //this._d_render
-            .keyup(this._d_render);
+            .keyup(this._d_delaySearch);
 
         if (this._sett.onToggle)
             c.inactive = $('<label><input type="checkbox"/> Включая&nbsp;удаленных</label>')
@@ -1253,7 +1257,7 @@ CEditableTableControl.prototype = {
         this._renderHead();
 
         c.lineEditor = new CLineEditor(c.content, this._sett.cols, this._sett.onToggle == null)
-            .on_queryEndEdit($cd(this, this._onEndEdit));
+            .on_queryEndEdit(this._d_onEndEdit);
 
         c.content.on('click', '.lineEdit', this._d_edit)
             .on('click', '.lineDel', this._d_delete);
@@ -1366,7 +1370,7 @@ CEditableTableControl.prototype = {
             this._c.add.toggleClass('hidden', !this._sett.canEdit);
 
         if (this._sett.showLineNumbers)
-            this._sett.cols.splice(0, 0, new Cr.CNumEdit('#', '_lineNumber', {readOnly: true}));
+            this._sett.cols.splice(0, 0, new Cr.CNumEdit('', '__lineNumber', {readOnly: true}));
 
         if (this._c.lineEditor)
             this._c.lineEditor.setColumns(this._sett.cols);
@@ -1477,7 +1481,7 @@ CEditableTableControl.prototype = {
                 {
                     line = '';
                     if (this._sett.showLineNumbers)
-                        sorted[i]._lineNumber = '' + (++lNum);
+                        sorted[i].__lineNumber = '' + (++lNum);
 
                     cls = (noInactive || sorted[i].active) ? (sorted[i].id >= 0 ? '' : ' class="warning"') : ' class="info"';
                     for (var j = 0; j < colLen; j++)
@@ -1491,6 +1495,15 @@ CEditableTableControl.prototype = {
         }
 
         c.body.html(body == '' ? empty : body);
+    },
+
+    _delaySearch: function()
+    {
+        if (this._tmId)
+            window.clearTimeout(this._tmId);
+        var srch = this._c.search;
+        var v = srch.val();
+        this._tmId = window.setTimeout(() => { this._tmId = null; if (v == srch.val()) this._render();}, 150);
     },
 
     _prepareSearch: function(str)
