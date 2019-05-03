@@ -739,7 +739,7 @@ CLineEditor.prototype =
         this._err = $('<div class="alert alert-danger hidden"></div>')
             .appendTo(last);
 
-        this._content.addClass('hideControls');
+        this.enableParent(false);
 
         var first = this._cols.find(c => !c.isReadOnly());
         if (first)
@@ -753,7 +753,7 @@ CLineEditor.prototype =
             if (this._newRow)
             {
                 this._elem.tBodies[0].deleteRow(0);
-                this._content.removeClass('hideControls');
+                this.enableParent(true);
                 return;
             }
             item = this._item;
@@ -768,7 +768,12 @@ CLineEditor.prototype =
         this._item = null;
         this._row = null;
 
-        this._content.removeClass('hideControls');
+        this.enableParent(true);
+    },
+
+    enableParent: function(enable)
+    {
+        this._content.toggleClass('hideControls', !enable);
     },
 
     error: function(message)

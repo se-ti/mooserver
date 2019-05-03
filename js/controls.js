@@ -1274,8 +1274,15 @@ CEditableTableControl.prototype = {
         var c = this._c;
         c.add.get(0).disabled = !enable;
         c.search.get(0).disabled = !enable;
-        if(c.inactive)
+        if (c.inactive)
             c.inactive.get(0).disabled = !enable;
+
+        c.head.find(enable ? '.activator-root-disabled' : '.activator-root')
+            .removeClass('activator-root activator-root-disabled')
+            .addClass(enable ? 'activator-root' : 'activator-root-disabled');
+
+        if (enable && c.lineEditor)
+            c.lineEditor.enableParent(true);
     },
 
     _makeLEData: function()
