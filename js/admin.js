@@ -88,11 +88,58 @@ CAdmin.prototype = {
         var je = $(this._tpl_main)
             .appendTo(row);
 
-        this._gates = new CManageUsersControl(je, 'gates').on_dataChanged(this._cbReread);
-        this._orgs  = new CManageUsersControl(je, 'orgs').on_dataChanged(this._cbReread);
-        this._users = new CManageUsersControl(je, 'users').on_dataChanged(this._cbReread);
-        this._moose = new CManageUsersControl(je, 'moose').on_dataChanged(this._cbReread);
-        this._beacons = new CManageUsersControl(je, 'beacons').on_dataChanged(this._cbReread);
+        this._gates = new CEditableTableControl(je, {
+                    title : 'Гейты',
+                    accusative: 'гейт',
+                    cols: [new CEditLogin('Гейт', 'Логин', 'Комментарий'), new CEditOrgs()],
+                    onAdd: 'addGate',
+                    onEdit: 'addGate',
+                    onToggle: 'toggleGate',
+                    proxy: new CGateProxy()
+                })
+            .on_dataChanged(this._cbReread);
+        this._orgs  = new CEditableTableControl(je, {
+                    title : 'Организации',
+                    accusative: 'организацию',
+                    cols: [new CEditLogin('Название', 'Название', 'Комментарий')],
+                    onAdd: 'addGroup',
+                    onEdit: 'addGroup',
+                    onToggle: 'toggleGroup',
+                    proxy: new COrgProxy()
+                })
+            .on_dataChanged(this._cbReread);
+        this._users = new CEditableTableControl(je, {
+                    title : 'Пользователи',
+                    accusative: 'пользователя',
+                    cols: [new CEditLogin('Логин', 'Email', 'Имя', false), new CEditRights(), new CEditOrgs()],
+                    onAdd: 'addUser',
+                    onEdit: 'addUser',
+                    onToggle: 'toggleUser',
+                    proxy: new CUserProxy()
+                })
+            .on_dataChanged(this._cbReread);
+        this._moose = new CEditableTableControl(je, {
+                    title : 'Животные',
+                    accusative: 'животное',
+                    cols: [new CNameEdit(), new CMoosePhoneEdit('Прибор', true), new CSingleOrg()],
+                    onAdd: 'addMoose',
+                    onEdit: 'addMoose',
+                    onToggle: null, // 'toggleMoose'
+                    proxy: new CMooseProxy(),
+                    showLineNumbers: true
+                })
+            .on_dataChanged(this._cbReread);
+        this._beacons = new CEditableTableControl(je, {
+                    title : 'Приборы',
+                    accusative: 'прибор',
+                    cols: [new CPhoneEdit(), new CMoosePhoneEdit('Животное', false), new CSingleOrg()],
+                    onAdd: 'addBeacon',
+                    onEdit: 'addBeacon',
+                    onToggle: 'toggleBeacon',
+                    proxy: new CBeaconProxy(),
+                    showLineNumbers: true
+                })
+            .on_dataChanged(this._cbReread);
 
         $('<form method="post" enctype="multipart/form-data" action="import.php" target="fileTarget" class="row" style="margin-top: 1em;"><input type="file" name="import[]" multiple class="btn row"/><button class="btn btn-default">Import files!</button></form>')
             .appendTo(this._rm)

@@ -1169,7 +1169,21 @@ COrgProxy.prototype =
 }
 COrgProxy.inheritFrom(CUserProxy);
 
-CManageUsersControl = function(elem, options)
+
+/*
+{
+ title : 'Приборы',
+ accusative: 'прибор',
+ cols: [new CPhoneEdit(), new CMoosePhoneEdit('Животное', false), new CSingleOrg()],
+ onAdd: 'addBeacon',
+ onEdit: 'addBeacon',
+ onToggle: 'toggleBeacon',
+ proxy: new CBeaconProxy(),
+ showLineNumbers: true,
+ canEdit: false
+ }
+ */
+CEditableTableControl = function(elem, options)
 {
     CControl.call(this);
 
@@ -1206,57 +1220,7 @@ CManageUsersControl = function(elem, options)
     this._buildIn(elem);
 }
 
-CManageUsersControl.prototype = {
-    _types: {
-        orgs: {
-            title : 'Организации',
-            accusative: 'организацию',
-            cols: [new CEditLogin('Название', 'Название', 'Комментарий')],
-            onAdd: 'addGroup',
-            onEdit: 'addGroup',
-            onToggle: 'toggleGroup',
-            proxy: new COrgProxy()
-        },
-        users: {
-            title : 'Пользователи',
-            accusative: 'пользователя',
-            cols: [new CEditLogin('Логин', 'Email', 'Имя', false), new CEditRights(), new CEditOrgs()],
-            onAdd: 'addUser',
-            onEdit: 'addUser',
-            onToggle: 'toggleUser',
-            proxy: new CUserProxy()
-        },
-        gates: {
-            title : 'Гейты',
-            accusative: 'гейт',
-            cols: [new CEditLogin('Гейт', 'Логин', 'Комментарий'), new CEditOrgs()],
-            onAdd: 'addGate',
-            onEdit: 'addGate',
-            onToggle: 'toggleGate',
-            proxy: new CGateProxy()
-        },
-        moose: {
-            title : 'Животные',
-            accusative: 'животное',
-            cols: [new CNameEdit(), new CMoosePhoneEdit('Прибор', true), new CSingleOrg()],
-            onAdd: 'addMoose',
-            onEdit: 'addMoose',
-            onToggle: null, // 'toggleMoose'
-            proxy: new CMooseProxy(),
-            showLineNumbers: true
-        },
-        beacons: {
-            title : 'Приборы',
-            accusative: 'прибор',
-            cols: [new CPhoneEdit(), new CMoosePhoneEdit('Животное', false), new CSingleOrg()],
-            onAdd: 'addBeacon',
-            onEdit: 'addBeacon',
-            onToggle: 'toggleBeacon',
-            proxy: new CBeaconProxy(),
-            showLineNumbers: true
-        }
-    },
-
+CEditableTableControl.prototype = {
     _buildIn : function(elem, options)
     {
         var c = this._c;
@@ -1393,7 +1357,7 @@ CManageUsersControl.prototype = {
 
     setOptions: function(options)
     {
-        this._sett = this._types[options] || options || {};
+        this._sett = options || {};
 
         if (options && this._sett.canEdit === undefined)    // старое значение по умолчанию
             this._sett.canEdit = true;
@@ -1582,7 +1546,7 @@ CManageUsersControl.prototype = {
         this.raise('dataChanged');
     }
 }
-CManageUsersControl.inheritFrom(CControl).addEvent('dataChanged');
+CEditableTableControl.inheritFrom(CControl).addEvent('dataChanged');
 
 
 CHeatSett = function(elem)
