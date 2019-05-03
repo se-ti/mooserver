@@ -767,7 +767,11 @@ CBeacon = function(after)
     this._data = null;
 
     this._c_reRead = $cd(this, this.reRead);
+    this._c_onReRead = $cd(this, this._onReRead);
     this._c_reRender = $cd(this, this._reRender);
+    this._c_clickRow = $cd(this, this._clickRow);
+    this._c_export = $cd(this, this._export);
+    this._c_phoneSelect = $cd(this, this._phoneSelect);
 	this._init(after);	
 }
 
@@ -795,7 +799,7 @@ CBeacon.prototype = {
 
 		this._stat = $('<table class="hidden table table-striped"></table>')
                 .appendTo(je)
-                .click($cd(this, this._clickRow));
+                .on('click', 'tbody', this._c_clickRow);
 		//$('<p>manage moose-beacons for root and admin</p>').appendTo(je);
 
         this._period = $(this._periodTpl).appendTo(this._rm);
@@ -803,11 +807,11 @@ CBeacon.prototype = {
                 .append('<input type="hidden" name="all"/>')
 			    .appendTo(this._rm)
 		 	    .find('button')
-			    .click($cd(this, this._export));
+			    .click(this._c_export);
 
 		this._send = new CSmsControl(this._rm)
                 .on_sendSuccess(this._c_reRead)
-			    .on_change($cd(this, this._phoneSelect));
+			    .on_change(this._c_phoneSelect);
 
         var holder = $('<div class="map-panel moo-affix" data-spy="-affix"></div>')
                 .appendTo(this._rm);
@@ -909,7 +913,7 @@ CBeacon.prototype = {
 	
 	reRead: function()
 	{
-		$ajax('getBeaconData', this._getParam(), $cd(this, this._onReRead));
+		$ajax('getBeaconData', this._getParam(), this._c_onReRead);
 	},
 
 	_onReRead: function(result, text, jqXHR)
