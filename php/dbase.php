@@ -295,12 +295,12 @@ class CMooseDb extends CTinyDb
                 $this->ErrRights();
         }
 
-        $phone = $this->ValidateTrimQuote($phone, self::ErrEmptyPhone);
+        $qPhone = $this->ValidateTrimQuote($phone, self::ErrEmptyPhone);
         $canonical = $this->db->quote(self::CanonicalPhone($phone));
 
         $this->beginTran();
 
-        $query = "insert into phone (phone, canonical, demo, group_id) values ($phone, $canonical, {$vd['demo']}, {$vd['group']})";
+        $query = "insert into phone (phone, canonical, demo, group_id) values ($qPhone, $canonical, {$vd['demo']}, {$vd['group']})";
 
         $this->Query($query, self::ErrDupPhone . " $phone, $canonical");
         $res = $this->db->lastInsertId();
@@ -314,8 +314,9 @@ class CMooseDb extends CTinyDb
         $query = "update moose set phone_id = $res, demo = {$vd['demo']}, group_id = {$vd['group']}
                     where id = $mId";
         $this->Query($query);
-
         $this->commit();
+        $this->LogMoosePhoneUpdate($auth, $res, $phone, null, $this->GetMooseByPhone($res));
+
         return $res;
     }
 
@@ -336,13 +337,15 @@ class CMooseDb extends CTinyDb
         }
 
         $vd = $this->ValidateOrgs($auth, $demo, $org);
-        $phone = $this->ValidateTrimQuote($phone, self::ErrEmptyPhone);
+        $qPhone = $this->ValidateTrimQuote($phone, self::ErrEmptyPhone);
         $canonical = $this->db->quote(self::CanonicalPhone($phone));
+
+        $oldMoose = $this->GetMooseByPhone($id);
 
         $this->beginTran();
 
         $query = "update phone
-                    set phone = $phone, canonical = $canonical, demo = {$vd['demo']}, group_id={$vd['group']}
+                    set phone = $qPhone, canonical = $canonical, demo = {$vd['demo']}, group_id={$vd['group']}
                     where id = $id";
         $this->Query($query, self::ErrDupPhone);
 
@@ -357,6 +360,7 @@ class CMooseDb extends CTinyDb
         }
 
         $this->commit();
+        $this->LogMoosePhoneUpdate($auth, $id, $phone, $oldMoose, $this->GetMooseByPhone($id));
 
         return $this->db->lastInsertId();
     }
@@ -379,7 +383,36 @@ class CMooseDb extends CTinyDb
         return true;
     }
 
+    private function LogMoosePhoneUpdate(CTinyAuth $auth, $phoneId, $phone, $prev, $new)
+    {
+        if ($prev == null && $new == null || $prev['id'] == $new['id']) // nothing changed
+            return;
 
+        $verb = 'перевешиваем';
+        if ($prev == null)
+            $verb = 'вешаем';
+        else if ($new == null)
+            $verb = 'снимаем';
+
+        $from = $prev != null ? "c животного {$prev['msg']} " : '';
+        $to = $new != null ? "на животное {$new['msg']}" : '';
+
+        Log::t($this, $auth, 'exchange', "$verb маяк $phoneId, '$phone'  $from$to");
+    }
+
+    private function GetMooseByPhone($phoneId)
+    {
+        $query = "select id, name from moose
+                  where phone_id = $phoneId";
+        $result = $this->Query($query);
+        $row = $result->fetch(PDO::FETCH_ASSOC);
+        if ($row == null)
+            return null;
+
+        $res = ['id' => $row['id'], 'name' => $row['name'], "msg" => "'{$row['name']}' id={$row['id']}"];
+        $result->closeCursor();
+        return $res;
+    }
 
 	function GetMooses(CTinyAuth $auth, $showRights)
 	{
@@ -640,6 +673,7 @@ class CMooseDb extends CTinyDb
         return $res;
     }
 
+    // region track data (points, activity)
 	function GetMooseTracks(CTinyAuth $auth, $ids, $start, $end)
 	{
         $t0 = microtime(true);
@@ -801,6 +835,7 @@ class CMooseDb extends CTinyDb
 
         return $res;
     }
+    // endregion
 
     private function GetBeacons(CTinyAuth $auth, $ids, $all)
     {
@@ -978,6 +1013,7 @@ class CMooseDb extends CTinyDb
         return ['res' => true, 'rc' => $result->rowCount()];
     }
 
+    // region point operations: toggle, comment
     function ToggleMoosePoint(CMooseAuth $auth, $mooseId, $time, $valid)
     {
         $mooseId = $this->ValidateId($mooseId, self::ErrWrongMooseId, 1);
@@ -1103,6 +1139,8 @@ class CMooseDb extends CTinyDb
             'author' => $name,
             'cstamp' => gmdate('Y-m-d', $t) .'T'. gmdate('h:i:s', $t). 'Z'];
     }
+
+    // endregion
 
     function DeleteRawSms(CMooseAuth $auth, $rawSmsId)
     {
