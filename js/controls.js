@@ -1634,18 +1634,18 @@ CMooseMap = function(root, id, root2)
 
     this.tiles = [  // и еще поковыряться тут: http://leaflet-extras.github.io/leaflet-providers/preview/
         {name: 'OSM',
-            format: "http://{s}.tile.osm.org/{z}/{x}/{y}.png",
-            attr: {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'}},
+            format: "https://{s}.tile.osm.org/{z}/{x}/{y}.png",
+            attr: {attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'}},
         {name: 'ESRI World topo map',
-            format: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+            format: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
             attr: {attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'}},
         {name: 'ESRI World imagery',
-            format: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            format: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             attr: {attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}},
 
         {name: 'mapbox',
-            format: 'http://{s}.tiles.mapbox.com/v3/132689/{z}/{x}/{y}.png',
-            attr: {attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+            format: 'https://{s}.tiles.mapbox.com/v3/132689/{z}/{x}/{y}.png',
+            attr: {attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://mapbox.com">Mapbox</a>',
                 maxZoom: 18}}
     ];
     this.colors = ['red', 'green', 'blue', 'cyan', 'brown', 'yellow', 'grey', 'magenta'];
