@@ -2440,6 +2440,8 @@ CColumnFilter = function(root, key, options)
     this._curChecked = {};
     this._curEmpty = false;
 
+    this._lastSearch = null;
+
     this._all = false;
 
     this._options = $.extend({search: true, reset: true, empty: false, emptyMeansAll: true, selectAll: false}, options);
@@ -2473,7 +2475,7 @@ CColumnFilter.prototype =
         c.root = $('<span class="filter-activator glyphicon glyphicon-filter"></span>')
             .appendTo(root);
         $(root)
-            .css('cursor', 'pointer')
+            .addClass('activator-root')
             .click(this._d_onActivate);
 
         c.holder = $(this._tpl)
@@ -2490,12 +2492,11 @@ CColumnFilter.prototype =
         c.search = c.holder.find('input[type="text"]')
             .change(this._d_onSearch)
             .keyup(this._d_onSearch)
+            .on('paste', this._d_onSearch)
             .toggle(this._options.search);
         c.selAll = c.holder.find('input[type="checkbox"]')
             .change(this._d_onSelectAll);
         c.selAll.parents('div:first').toggle(this._options.selectAll);
-
-        $(root).css('white-space', 'nowrap');
     },
 
     clear: function()
@@ -2562,13 +2563,17 @@ CColumnFilter.prototype =
             return;
 
         e.preventDefault();
-        e.stopPropagation();
         this._deactivate();
     },
 
     _onSearch: function()
     {
-        this._render();
+        var srch = this._c.search.val();
+        if (srch != this._lastSearch)
+        {
+            this._render();
+            this._lastSearch = srch;
+        }
     },
 
     _render: function()
