@@ -214,9 +214,10 @@ class CMooseDb extends CTinyDb
                 $this->ErrRights();
         }
 
-        $name = $this->ValidateTrimQuote($name, self::ErrEmptyMoose);
+        $qName = $this->ValidateTrimQuote($name, self::ErrEmptyMoose);
 
-		$query = "insert into moose (phone_id, name, demo, group_id) values (null, $name, {$vd['demo']}, {$vd['group']})";
+        $this->beginTran();
+		$query = "insert into moose (phone_id, name, demo, group_id) values (null, $qName, {$vd['demo']}, {$vd['group']})";
 
 		$this->Query($query, self::ErrDupMoose);
         $res = $this->db->lastInsertId();
@@ -233,6 +234,7 @@ class CMooseDb extends CTinyDb
         $this->Query($query, self::ErrPhoneUsed);
 
         $this->commit();
+        $this->LogPhoneMooseUpdate($auth, $res, $name, null, $this->PhonePropByMoose($res));
         return $res;
 	}
 
@@ -262,10 +264,13 @@ class CMooseDb extends CTinyDb
             $pCond = "and phone.id = $pId";
         }
 
-        $name = $this->ValidateTrimQuote($name, self::ErrEmptyMoose);
+        $qName = $this->ValidateTrimQuote($name, self::ErrEmptyMoose);
 
+        $oldPhone = $this->PhonePropByMoose($id);
+
+        $this->beginTran();
         $query = "update moose, phone
-            set phone_id = null, name = $name, moose.demo = {$vd['demo']}, moose.group_id = {$vd['group']} $pUpdate
+            set phone_id = null, name = $qName, moose.demo = {$vd['demo']}, moose.group_id = {$vd['group']} $pUpdate
             where moose.id = $id $pCond";
 
         $this->Query($query, self::ErrDupMoose);
@@ -276,6 +281,8 @@ class CMooseDb extends CTinyDb
             $query = "update moose set phone_id = $pId where id = $id";
             $this->Query($query, self::ErrPhoneUsed);
         }
+        $this->commit();
+        $this->LogPhoneMooseUpdate($auth, $id, $name, $oldPhone, $this->PhonePropByMoose($id));
 
         return $res;
     }
@@ -315,7 +322,7 @@ class CMooseDb extends CTinyDb
                     where id = $mId";
         $this->Query($query);
         $this->commit();
-        $this->LogMoosePhoneUpdate($auth, $res, $phone, null, $this->GetMooseByPhone($res));
+        $this->LogMoosePhoneUpdate($auth, $res, $phone, null, $this->MoosePropByPhone($res));
 
         return $res;
     }
@@ -340,7 +347,7 @@ class CMooseDb extends CTinyDb
         $qPhone = $this->ValidateTrimQuote($phone, self::ErrEmptyPhone);
         $canonical = $this->db->quote(self::CanonicalPhone($phone));
 
-        $oldMoose = $this->GetMooseByPhone($id);
+        $oldMoose = $this->MoosePropByPhone($id);
 
         $this->beginTran();
 
@@ -360,7 +367,7 @@ class CMooseDb extends CTinyDb
         }
 
         $this->commit();
-        $this->LogMoosePhoneUpdate($auth, $id, $phone, $oldMoose, $this->GetMooseByPhone($id));
+        $this->LogMoosePhoneUpdate($auth, $id, $phone, $oldMoose, $this->MoosePropByPhone($id));
 
         return $this->db->lastInsertId();
     }
@@ -383,6 +390,17 @@ class CMooseDb extends CTinyDb
         return true;
     }
 
+    private function LogPhoneMooseUpdate(CTinyAuth $auth, $mooseId, $name, $prev, $new)
+    {
+        if ($prev == null && $new == null || $prev['id'] == $new['id']) // nothing changed
+            return;
+
+        $from = $prev != null ? "снимаем маяк {$prev['msg']} " : '';
+        $to = $new != null ? "надеваем маяк {$new['msg']}" : '';
+
+        Log::t($this, $auth, 'exchange', "животное '$name', id=$mooseId $from$to");
+    }
+
     private function LogMoosePhoneUpdate(CTinyAuth $auth, $phoneId, $phone, $prev, $new)
     {
         if ($prev == null && $new == null || $prev['id'] == $new['id']) // nothing changed
@@ -397,21 +415,7 @@ class CMooseDb extends CTinyDb
         $from = $prev != null ? "c животного {$prev['msg']} " : '';
         $to = $new != null ? "на животное {$new['msg']}" : '';
 
-        Log::t($this, $auth, 'exchange', "$verb маяк $phoneId, '$phone'  $from$to");
-    }
-
-    private function GetMooseByPhone($phoneId)
-    {
-        $query = "select id, name from moose
-                  where phone_id = $phoneId";
-        $result = $this->Query($query);
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if ($row == null)
-            return null;
-
-        $res = ['id' => $row['id'], 'name' => $row['name'], "msg" => "'{$row['name']}' id={$row['id']}"];
-        $result->closeCursor();
-        return $res;
+        Log::t($this, $auth, 'exchange', "$verb маяк $phoneId, '$phone' $from$to");
     }
 
 	function GetMooses(CTinyAuth $auth, $showRights)
@@ -1249,6 +1253,22 @@ class CMooseDb extends CTinyDb
         return $res;
     }
 
+    private function PhonePropByMoose($mooseId)
+    {
+        $query = "select p.id, phone, canonical
+                    from phone p
+                    inner join moose m on m.phone_id = p.id
+                  where m.id = $mooseId";
+        $result = $this->Query($query);
+        $row = $result->fetch(PDO::FETCH_ASSOC);
+        if ($row == null)
+            return null;
+
+        $res = ['id' => $row['id'], 'phone' => $row['phone'], 'canonical' => $row['canonical'], 'msg' => "'{$row['phone']}' id={$row['id']}"];
+        $result->closeCursor();
+        return $res;
+    }
+
     protected function MooseProp(CTinyAuth $auth, $moose)
     {
         if ($moose == null || !is_string($moose))
@@ -1268,6 +1288,20 @@ class CMooseDb extends CTinyDb
             $this->Err("Нет доступных животных с именем '$qMoose'");
 
         $res = $row['id'];
+        $result->closeCursor();
+        return $res;
+    }
+
+    private function MoosePropByPhone($phoneId)
+    {
+        $query = "select id, name from moose
+                  where phone_id = $phoneId";
+        $result = $this->Query($query);
+        $row = $result->fetch(PDO::FETCH_ASSOC);
+        if ($row == null)
+            return null;
+
+        $res = ['id' => $row['id'], 'name' => $row['name'], "msg" => "'{$row['name']}' id={$row['id']}"];
         $result->closeCursor();
         return $res;
     }

@@ -103,7 +103,7 @@ class CTinyDb
             return;
         $this->useTran = false;
 
-        if($this->db != null)
+        if ($this->db != null)
             $this->db->commit();
     }
 
@@ -113,7 +113,7 @@ class CTinyDb
             return;
         $this->useTran = false;
 
-        if($this->db != null)
+        if ($this->db != null)
             $this->db->rollBack();
     }
 
