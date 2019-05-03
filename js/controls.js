@@ -1177,22 +1177,31 @@ CManageUsersControl = function(elem, options)
         root: null,
         title: null,
         content: null,
+        head: null,
+        body: null,
         add: null,
         inactive: null,
         search: null,
         lineEditor: null
     };
 
-    this._sett = this._types[options] || options;
+    this.setOptions(options);
     this._data = null;
     this._orgs = null;
     this._alt = null;
 
     this._lastSearch = '';
 
-    this._cbRender = $cd(this, this._render);
-    this._cbOnSave = $cd(this, this._onSave);
-    this._cbOnToggle = $cd(this, this._onToggle);
+    this._sortColumn = null;
+    this._inverseSort = false;
+
+    this._d_render = $cd(this, this._render);
+    this._d_onSave = $cd(this, this._onSave);
+    this._d_onToggle = $cd(this, this._onToggle);
+    this._d_onSort = $cd(this, this._onSort);
+
+    this._d_edit = $cd(this, this._edit);
+    this._d_delete = $cd(this, this._delete);
 
     this._buildIn(elem);
 }
@@ -1233,7 +1242,8 @@ CManageUsersControl.prototype = {
             onAdd: 'addMoose',
             onEdit: 'addMoose',
             onToggle: null, // 'toggleMoose'
-            proxy: new CMooseProxy()
+            proxy: new CMooseProxy(),
+            showLineNumbers: true
         },
         beacons: {
             title : 'Приборы',
@@ -1242,7 +1252,8 @@ CManageUsersControl.prototype = {
             onAdd: 'addBeacon',
             onEdit: 'addBeacon',
             onToggle: 'toggleBeacon',
-            proxy: new CBeaconProxy()
+            proxy: new CBeaconProxy(),
+            showLineNumbers: true
         }
     },
 
@@ -1262,24 +1273,26 @@ CManageUsersControl.prototype = {
         c.search = $('<div class="checkbox"><input type="text"/> </div>')
             .appendTo(c.root)
             .find('input')
-            .change(function() {if (t._lastSearch != $(this).val()) t._render();}) //this._cbRender
-            .keyup(this._cbRender);
+            .change(function() {if (t._lastSearch != $(this).val()) t._render();}) //this._d_render
+            .keyup(this._d_render);
 
         if (this._sett.onToggle)
             c.inactive = $('<label><input type="checkbox"/> Включая&nbsp;удаленных</label>')
                 .appendTo(c.search.parent())
                 .find('input')
-                .change(this._cbRender);
+                .change(this._d_render);
 
-        c.content = $('<table class="table table-striped"></table>')
+        c.content = $('<table class="table table-striped wide-content"><thead></thead><tbody></tbody></table>')
             .appendTo(c.root);
+        c.head = c.content.find('thead').on('click', 'th.activator-root', this._d_onSort);
+        c.body = c.content.find('tbody');
+        this._renderHead();
 
         c.lineEditor = new CLineEditor(c.content, this._sett.cols, this._sett.onToggle == null)
             .on_queryEndEdit($cd(this, this._onEndEdit));
 
-        // c.content.click($cd(this, this._edit));
-        c.content.on('click', '.lineEdit', $cd(this, this._edit))
-            .on('click', '.lineDel', $cd(this, this._delete));
+        c.content.on('click', '.lineEdit', this._d_edit)
+            .on('click', '.lineDel', this._d_delete);
     },
 
     toggle: function(enable)
@@ -1326,15 +1339,12 @@ CManageUsersControl.prototype = {
     {
         var item = this._getRowItem(e.target);
 
-        if (!item)
-            throw Error("нет объекта в строке " + idx);
-
         if (item.active && !confirm(String.format("Вы действительно хотите удалить {0} '{1}'?", this._sett.accusative, item._caption)))
             return;
 
         var p = {id: item.id,
             del: item.active};
-        $ajax(this._sett.onToggle, p, this._cbOnToggle);
+        $ajax(this._sett.onToggle, p, this._d_onToggle);
     },
 
     _onToggle: function(result, text, jqXHR)
@@ -1366,7 +1376,7 @@ CManageUsersControl.prototype = {
             return;
         }
 
-        var r = $ajax((param.item.id || 0) > 0 ? this._sett.onEdit : this._sett.onAdd, param.item, this._cbOnSave);
+        var r = $ajax((param.item.id || 0) > 0 ? this._sett.onEdit : this._sett.onAdd, param.item, this._d_onSave);
         r.__item = param.item;
     },
 
@@ -1379,6 +1389,26 @@ CManageUsersControl.prototype = {
         this._c.lineEditor.deactivate(jqXHR.__item);
         this._toggleControls(true);
         this._raise_dataChanged();
+    },
+
+    setOptions: function(options)
+    {
+        this._sett = this._types[options] || options || {};
+
+        if (options && this._sett.canEdit === undefined)    // старое значение по умолчанию
+            this._sett.canEdit = true;
+
+        if (this._c.add)
+            this._c.add.toggleClass('hidden', !this._sett.canEdit);
+
+        if (this._sett.showLineNumbers)
+            this._sett.cols.splice(0, 0, new Cr.CNumEdit('#', '_lineNumber', {readOnly: true}));
+
+        if (this._c.lineEditor)
+            this._c.lineEditor.setColumns(this._sett.cols);
+
+        this._sortColumn = null;
+        this._renderHead();
     },
 
     setData: function(data, orgs, alt)
@@ -1422,6 +1452,24 @@ CManageUsersControl.prototype = {
                 item.orgs.push(hash[item.groups[j]]);
     },
 
+    _renderHead: function()
+    {
+        if (!this._c.head)
+            return;
+
+        var head = '';
+        this._sett.cols.forEach(col =>
+            {
+                var activator = col.comparator() instanceof Function ? '<span class="filter-activator glyphicon glyphicon-sort"/>' : '';
+                head += String.format('<th{0}>{1}{2}</th>', activator != '' ? ' class="activator-root"' : '', String.toHTML(col.headText()), activator);
+            });
+
+        if (this._sett.canEdit)
+            head += '<th class="col-md-4">&nbsp;</th>';
+
+        this._c.head.html('<tr>' + head + '</tr>');
+    },
+
     _render: function()
     {
         var c = this._c;
@@ -1433,44 +1481,52 @@ CManageUsersControl.prototype = {
         var search = this._prepareSearch(this._lastSearch);
 
         var i;
-        var head = '';
         var empty = '';
         var cols = this._sett.cols;
         var colLen = cols.length;
         for (i = 0; i < colLen; i++)
-        {
-            head += '<th>' + cols[i].headText() + '</th>';
             empty += '<td></td>';
-        }
-        head += '<th class="col-md-4">&nbsp;</th>';
         empty = '<tr><td>Нет данных</td>' + empty + '</tr>';
 
         var cTpl = '<td>{0}</td>';
 
+        var proxy = this._sett.proxy;
         var body = '';
         if (data)
         {
+            data.forEach((it, idx) => it.__srcIdx = idx);
+
+            var sorted = data;
+            if (this._sortColumn != null)
+            {
+                sorted = data.map(x => x);
+                var comp = this._sortColumn.comparator();
+                sorted.sort(this._inverseSort ? (a, b) => comp(b, a) : comp);
+            }
+
             var cls;
             var line;
+            var lNum = 0;
             var len = data.length;
             for (i = 0; i < len; i++)
-                if (this._show(data[i], showInactive, search))
+                if (this._show(sorted[i], showInactive, search))
                 {
                     line = '';
-                    cls = (noInactive || data[i].active) ? '' : ' class="info"';
+                    if (this._sett.showLineNumbers)
+                        sorted[i]._lineNumber = '' + (++lNum);
+
+                    cls = (noInactive || sorted[i].active) ? (sorted[i].id >= 0 ? '' : ' class="warning"') : ' class="info"';
                     for (var j = 0; j < colLen; j++)
-                        line += String.format(cTpl, cols[j].cellHtml(data[i]));
+                        line += String.format(cTpl, cols[j].cellHtml(sorted[i]));
 
-                    line += '<td class="col-md-4">' + c.lineEditor.activators(data[i]) + '</td>';
+                    if (this._sett.canEdit)
+                        line += '<td class="col-md-4">' + (proxy.canEdit && !proxy.canEdit(sorted[i]) ? '' : c.lineEditor.activators(sorted[i])) + '</td>';
 
-                    body += String.format('<tr{0} data-id="{1}">{2}</tr>', cls, i, line);
+                    body += String.format('<tr{0} data-id="{1}">{2}</tr>', cls, sorted[i].__srcIdx, line);
                 }
         }
 
-        if (body == '')
-            body = empty;
-
-        c.content.html('<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody>');
+        c.body.html(body == '' ? empty : body);
     },
 
     _prepareSearch: function(str)
@@ -1499,6 +1555,26 @@ CManageUsersControl.prototype = {
                 show = show || ctx[i].indexOf(search[j]) >= 0;
 
         return show;
+    },
+
+    _onSort: function(e)
+    {
+        var tgt = $(e.currentTarget);
+        var idx = tgt.get(0).cellIndex;
+        var spn = tgt.find('span');
+
+        var nc = 'glyphicon-sort';
+        if (spn.hasClass('glyphicon-sort'))
+            nc = 'glyphicon-sort-by-attributes';
+        else if (spn.hasClass('glyphicon-sort-by-attributes'))
+            nc = 'glyphicon-sort-by-attributes-alt';
+
+        this._c.head.find('span.glyphicon').removeClass('glyphicon-sort-by-attributes glyphicon-sort-by-attributes-alt').addClass('glyphicon-sort');
+        spn.removeClass('glyphicon-sort').addClass(nc);
+
+        this._sortColumn = nc == 'glyphicon-sort' ? null : this._sett.cols[idx];
+        this._inverseSort = nc == 'glyphicon-sort-by-attributes-alt';
+        this._render();
     },
 
     _raise_dataChanged: function()

@@ -70,8 +70,147 @@ CEdit.prototype = {
     isReadOnly: function()
     {
         return this._options.readOnly;
+    },
+
+    comparator: function()
+    {
+        return this._options.sort;
     }
 }
+
+$namespace('Cr');
+Cr.CTextEdit = function(head, key, options)
+{
+    CEdit.call(this, head, options);
+
+    this._key = key;
+
+    var opts = options || {};
+    this._caption = opts.caption || '';
+    this._emptyMess = opts.emptyMess || '';
+    this._required = opts.required !== false;
+
+    this._d_validate = $cd(this, this.validate);
+}
+
+Cr.CTextEdit.prototype = {
+    _tpl: '<div class="form-group"><label>{0}<input type="text" class="form-control"/></label></div>',
+    _cbTpl: '<div class="form-group checkbox"><label><input type="checkbox" class="-form-control"/> {0}</label></div>',
+
+
+    cellHtml: function(item)
+    {
+        if (item && item[this._key] == '')
+            return '&nbsp;';    // чтобы строки-пустышки были нормальными
+
+        if (!item || !item[this._key])
+            return '';
+
+        return String.toHTML(item[this._key]);
+    },
+
+    edit: function(cell, item)
+    {
+        CEdit.callBaseMethod(this, 'edit', [cell, item]);
+        var e = $('<fieldset></fieldset>').appendTo(cell);
+
+        var c = this._c;
+
+        c.edit = $(String.format(this._tpl, this._caption))
+            .appendTo(e)
+            .find('input')
+            .val(item[this._key])
+            .change(this._d_validate);
+
+        c.err = $(this._errTpl).appendTo(cell);
+    },
+
+    focus: function()
+    {
+        this._c.edit.focus();
+    },
+
+    validate: function()
+    {
+        var value = this._c.edit.val().trim();
+        var valid = !this._required || this._required && value != '';
+
+        this._errorMessage(valid ? '' : this._emptyMess);
+        return valid;
+    },
+
+    getValue: function(item)
+    {
+        item[this._key] = this._c.edit.val();
+        return item;
+    }
+}
+Cr.CTextEdit.inheritFrom(CEdit);
+
+Cr.CNumEdit = function(head, key, options)
+{
+    Cr.CTextEdit.call(this, head, key, options);
+
+    var opt = options || {};
+    this._min = opt.min;
+    this._max = opt.max;
+}
+
+Cr.CNumEdit.prototype = {
+
+    edit: function(cell, item)
+    {
+        Cr.CTextEdit.callBaseMethod(this, 'edit', [cell, item]);
+        this._c.edit.attr('size', 3).attr('maxlength', 3);
+    },
+
+    validate: function()
+    {
+        var val = this._c.edit.val().trim();
+
+        var valid = false;
+        var msg = '';
+        while (1)
+        {
+            if (val == '' && this._emptyMess != '')
+            {
+                msg = this._emptyMess;
+                break;
+            }
+
+            if (isNaN(val))
+            {
+                msg = String.format("'{0}' - не число", String.toHTML(val));
+                break;
+            }
+
+            if (Math.floor(val) != val)
+            {
+                msg = String.format("'{0}' - не целое число", String.toHTML(val));
+                break;
+            }
+
+            if (this._min !== null && val < this._min)
+            {
+                msg = "Значение должно быть не меньше " + this._min;
+                break;
+            }
+
+            if (this._max !== null && val > this._max)
+            {
+                msg = "Значение должно быть не больше " + this._max;
+                break;
+            }
+
+            break;
+        }
+
+        this._errorMessage(msg);
+
+        return msg == '';
+    }
+}
+Cr.CNumEdit.inheritFrom(Cr.CTextEdit);
 
 CEditLogin = function(head, login, name, mailLogin)
 {
@@ -319,6 +458,11 @@ CEditOrgs.inheritFrom(CEdit);
 CSingleOrg = function()
 {
     CEditOrgs.call(this, true);
+    this._options.sort = function (a, b) {
+        var av = a.orgs && a.orgs.length > 0 ? (a.orgs[0].login || '') : '';
+        var bv = b.orgs && b.orgs.length > 0 ? (b.orgs[0].login || '') : '';
+        return av.localeCompare(bv);
+    };
 }
 
 CSingleOrg.prototype =
@@ -511,85 +655,22 @@ CMoosePhoneEdit.inheritFrom(CEdit);
 
 CNameEdit = function()
 {
-    CEdit.call(this, 'Имя');
-    this._c.edit = null;
-    this._cb_validate = $cd(this, this.validate);
+    Cr.CTextEdit.call(this, 'Имя', 'name', {caption: '', emptyMess: "Не заполнено имя животного"});
 }
-
-CNameEdit.prototype =
-{
-    _tpl: '<div class="form-group"><label>{0}<input type="text" class="form-control"/></label></div>',
-
-    cellHtml: function(item)
-    {
-        return String.toHTML(item.name || '');
-    },
-
-    edit: function(cell, item)
-    {
-        CEdit.callBaseMethod(this, 'edit', [cell, item]);
-        this._c.edit = $(String.format(this._tpl, 'Имя'))
-            .appendTo(cell)
-            .find('input')
-            .val(item.name || '')
-            .change(this._cb_validate);
-
-        this._c.err = $(this._errTpl)
-            .appendTo(cell);
-    },
-
-    validate: function()
-    {
-        var valid = this._c.edit && (this._c.edit.val() || '').trim() != '';
-        this._errorMessage(valid ? '' : String.format("Не заполнено поле '{0}'", this._head.toLowerCase()));
-        return valid;
-    },
-
-    focus: function()
-    {
-        if (this._c.edit)
-            this._c.edit.get(0).focus();
-    },
-
-    getValue: function(item)
-    {
-        item.name = this._c.edit ? this._c.edit.val().trim() : null;
-        return item;
-    }
-}
-CNameEdit.inheritFrom(CEdit);
+CNameEdit.inheritFrom(Cr.CTextEdit);
 
 CPhoneEdit = function()
 {
-    CNameEdit.call(this);
-    this._head = 'Телефон';
+    Cr.CTextEdit.call(this, 'Телефон', 'phone', {caption: '', emptyMess: "Не заполнен телефон"});
 }
 CPhoneEdit.prototype =
 {
     cellHtml: function(item)
     {
         return CSingleBeacon.beaconHref(item.id, item.phone || '');
-    },
-
-    edit: function(cell, item)
-    {
-        CEdit.callBaseMethod(this, 'edit', [cell, item]);
-        this._c.edit = $(String.format(this._tpl, 'Телефон'))
-            .appendTo(cell)
-            .find('input')
-            .val(item.phone || '');
-
-        this._c.err = $(this._errTpl)
-            .appendTo(cell);
-    },
-
-    getValue: function(item)
-    {
-        item.phone = this._c.edit ? this._c.edit.val().trim() : null;
-        return item;
     }
 }
-CPhoneEdit.inheritFrom(CNameEdit);
+CPhoneEdit.inheritFrom(Cr.CTextEdit);
 
 CLineEditor = function(content, columns, noToggle)
 {
@@ -660,8 +741,9 @@ CLineEditor.prototype =
 
         this._content.addClass('hideControls');
 
-        if (this._cols.length > 0)
-            this._cols[0].focus();
+        var first = this._cols.find(c => !c.isReadOnly());
+        if (first)
+            first.focus();
     },
 
     deactivate: function(item)
