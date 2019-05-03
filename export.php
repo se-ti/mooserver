@@ -88,8 +88,8 @@ function exportBeacons()
 	if ($data == null)
 		die('no data');
 
-	$rows = array();
-    $phones = array();
+	$rows = [];
+    $phones = [];
 	foreach($data as $phoneData)
 	{
 		$phone = $phoneData['phone'];
@@ -119,9 +119,9 @@ function exportActivity()
 	prepareIds();
 	$data = getActivity();
 
-	$rows = array(); 
-	$names = array();
-    $qNames = array();
+	$rows = [];
+	$names = [];
+    $qNames = [];
 	if ($data != null)
 		foreach($data as $moose)
 		{
@@ -157,7 +157,7 @@ function exportTracks()
 		die('no data');
 
 	$tracks = '';
-	$names = array();
+	$names = [];
 	foreach ($data as $track)
 	{
 		$pts = '';

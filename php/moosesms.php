@@ -51,7 +51,7 @@ class CMooseSMS
 		$this->gsmTries = 3;
 		$this->gpsOn = $this->gsmTries * 2.7;
 		
-		$this->points = array();
+		$this->points = [];
 		$this->activity = null;
 		$this->diag = null;
 		

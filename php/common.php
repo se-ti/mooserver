@@ -13,9 +13,9 @@ function getRights()
 	$name = $auth->name();
 	if ($name == null || $name == '')
 		$name = $auth->login();
-	$res = array('user' => $name,
+	$res = ['user' => $name,
              'id' => $auth->id(),
-		     'isLogged' => $auth->isLogged());
+		     'isLogged' => $auth->isLogged()];
 
 	if ($auth->isRoot())
 		$res['isRoot'] = true;
@@ -37,7 +37,7 @@ function getData($forceLoadAll = false)
     $t1 = microtime(true);
     $ids = CMooseTools::safeIds();
     if ($ids == null)
-        return array();
+        return [];
 
     $start = CMooseTools::safeTime('start');
     $end = CMooseTools::safeTime('end');
@@ -93,7 +93,7 @@ function getData($forceLoadAll = false)
                 $mData[$idx[$mId]]['activity'] = $act;
             else
             {
-                $mData[] = array('id' => $mId, 'activity' => $act);
+                $mData[] = ['id' => $mId, 'activity' => $act];
                 if ($stamps != null && isset($stamps[$mId]))
                     $mData[$i]['stamps'] = $stamps[$mId];
                 $idx[$mId] = $i++;
@@ -135,11 +135,8 @@ function getSms()
 
     $smsId = checkId(@$_POST['rawSmsId'], 'Недопустимый id sms', false);
 
-    $res = array('track' => $db->GetSmsTrack($auth, $smsId),
-        'activity' => $db->GetSmsActivity($auth, $smsId)
-    );
-
-    return $res;
+    return ['track' => $db->GetSmsTrack($auth, $smsId),
+        'activity' => $db->GetSmsActivity($auth, $smsId)];
 }
 
 function getActivity()
@@ -148,7 +145,7 @@ function getActivity()
 
 	$ids = CMooseTools::safeIds();
 	if ($ids == null)
-		return array();
+		return [];
 
 	return $db->GetMooseActivity($auth, $ids, CMooseTools::safeTime('start'), CMooseTools::safeTime('end'));
 }
@@ -160,7 +157,7 @@ function getBeaconData($forExport = false)
 
 	$ids = CMooseTools::safeIds();
 	if ($ids == null)
-		$ids = array();
+		$ids = [];
 
     $all = @$_POST['all'] == 'true' && $auth->isLogged();
 

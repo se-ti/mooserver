@@ -39,9 +39,9 @@ exit;
 
 function makeResponse($success, $message = null)
 {
-	$r = array('payload' => 
-		array('success' => $success,
-			'error' => $message));
+	$r = ['payload' =>
+		['success' => $success,
+			'error' => $message]];
 
 	echo json_encode($r);
 }
@@ -85,7 +85,7 @@ function sms()  // todo add filtering
         mylog($device_id, $body, $from, $time, '' );
 
 	$time = filter_var ( $time, FILTER_VALIDATE_INT,
-		array('options' => array('min_range' => 946684810, 'max_range' => 4102444810)));
+		['options' => ['min_range' => 946684810, 'max_range' => 4102444810]]);
     
 	if ( is_null ( $device_id ) || !is_string ( $device_id ) )
 		throw new Exception("Invalid sms() 'device_id' argument\n");

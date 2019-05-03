@@ -69,7 +69,7 @@ class CMooseDb extends CTinyDb
                 $this->Err(self::ErrCRights);
         }
 
-        return array ('demo' => $demo ? 1 : 0, 'group' => $group);
+        return ['demo' => $demo ? 1 : 0, 'group' => $group];
     }
 
     // $id обязан быть int
@@ -147,16 +147,16 @@ class CMooseDb extends CTinyDb
     private function CanSeeCond(CTinyAuth $auth, $alias, $table = null, $extAlias = null)
     {
         if ($auth->isSuper())
-            return array('join' => '', 'cond' => 'true');
+            return ['join' => '', 'cond' => 'true'];
 
         $id = $auth->id();
         $demo = CMooseAuth::Demo;
 
-        $res = array(
+        $res = [
             'join' => "inner join usergroups ug on ug.group_id = $alias.group_id or ug.group_id = $demo and $alias.demo = 1
 		            inner join users u on u.id = ug.group_id",
 
-            'cond' => "(ug.user_id = $id and u.removeDate is null)");
+            'cond' => "(ug.user_id = $id and u.removeDate is null)"];
 
         if ($table == null)
             return $res;
@@ -165,7 +165,7 @@ class CMooseDb extends CTinyDb
             {$res['join']}
             where {$res['cond']}";
 
-        $ids = array();
+        $ids = [];
         $result = $this->Query($query);
         foreach ($result as $r)
             $ids[] = $r['id'];
@@ -402,15 +402,15 @@ class CMooseDb extends CTinyDb
 
 		$result = $this->Query($query);
 
-        $arr = array();
+        $arr = [];
 		foreach ($result as $row)
         {
-            $line = array("id" => $row['id'], "name" =>$row['name'], "phone" => self::Obfuscate($auth, $row['phone']), "min" => $row['min_t'], "max" => $row['max_t']);
+            $line = ["id" => $row['id'], "name" =>$row['name'], "phone" => self::Obfuscate($auth, $row['phone']), "min" => $row['min_t'], "max" => $row['max_t']];
             if ($fShowRights)
             {
                 $line['phoneId'] = $row['phone_id'];
                 $line['demo'] = $row['mdemo'] ? true : false;
-                $line['groups'] = array();
+                $line['groups'] = [];
 
                 if (isset($row['mgid']) && $row['mgid'] !== null)
                     $line['groups'][] = $row['mgid'];
@@ -438,16 +438,16 @@ class CMooseDb extends CTinyDb
                     order by phone asc";
 		$result = $this->Query($query);
 
-		$arr = array();
+		$arr = [];
 		foreach ($result as $row)
         {
-            $line = array("id" => $row['id'], "phone" => self::Obfuscate($auth, $row['phone']), "canonical" => self::Obfuscate($auth, $row['canonical']));
+            $line = ["id" => $row['id'], "phone" => self::Obfuscate($auth, $row['phone']), "canonical" => self::Obfuscate($auth, $row['canonical'])];
             if ($fShowRights)
             {
                 $line['moose'] = $row['mid'];
                 $line['demo'] = $row['pdemo'] ? true : false;
                 $line['active'] = $row['active'] ? true : false;
-                $line['groups'] = array();
+                $line['groups'] = [];
                 if (isset($row['pgid']) && $row['pgid'] !== null)
                     $line['groups'][] = $row['pgid'];
             }
@@ -467,12 +467,12 @@ class CMooseDb extends CTinyDb
                         /* g.removeDate is null and */ g.is_group = 1 and u.is_group = 0";
         $result = $this->Query($query);
 
-        $res = array();
+        $res = [];
         foreach ($result as $row)
         {
             $uid = $row['user_id'];
             if (!isset($res[$uid]))
-                $res[$uid] = array('feed' => false, 'admin' => false, 'groups' => array());
+                $res[$uid] = ['feed' => false, 'admin' => false, 'groups' => []];
 
             $gid = $row['group_id'];
             switch($gid)
@@ -500,10 +500,10 @@ class CMooseDb extends CTinyDb
              inner join usergroups ug on ug.group_id = g.id
              where g.id >= $min and g.is_group = 1 and g.removeDate is null and ug.user_id = $uid";
         $result  = $this->Query($query);
-        $res = array();
+        $res = [];
 
         foreach ($result as $row)
-            $res[] = array('id' => $row['gid'], 'login' => $row['login'], 'name' => $row['name']);
+            $res[] = ['id' => $row['gid'], 'login' => $row['login'], 'name' => $row['name']];
 
         return $res;
     }
@@ -720,7 +720,7 @@ class CMooseDb extends CTinyDb
         $result = $this->Query($query);
         $t2 = microtime(true);
 
-        $res = array();
+        $res = [];
         foreach ($result as $row)
         {
             $moose = $row['moose'];
@@ -735,9 +735,9 @@ class CMooseDb extends CTinyDb
         $this->db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $old);
 //        Log::d($this, $auth, "times", sprintf("activity rows: %d", $rowCount));
 
-        $retVal = array();
+        $retVal = [];
         foreach($res as $id => $data)
-            $retVal[] = array('id' => $id, 'activity' => $data);
+            $retVal[] = ['id' => $id, 'activity' => $data];
 
         $t3 = microtime(true);
 
@@ -794,9 +794,9 @@ class CMooseDb extends CTinyDb
 
         $result = $this->Query($query);
 
-        $res = array();
+        $res = [];
         foreach ($result as $row)
-            $res[] = array($row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0);
+            $res[] = [$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
         $result->closeCursor();
 
         return $res;
@@ -953,7 +953,7 @@ class CMooseDb extends CTinyDb
         if (!$auth->isSuper() || !$this->CanModify($auth, $qmoose, true))     // todo разрешить не только super, проверка на права
             $this->ErrRights();
 
-        $ids = filter_var($smsIds, FILTER_VALIDATE_INT, array('flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => array('min_range' => 1)));
+        $ids = filter_var($smsIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
         if ($ids === false || count($ids) == 0)
             return $this->Err(self::ErrWrongSmsId);
 
@@ -975,7 +975,7 @@ class CMooseDb extends CTinyDb
         $this->commit();
 
         Log::t($this, $auth, 'reassignSms', "перевешиваем на животное '$moose', rawSmsIds: '".implode(", ", $ids) ."'");
-        return array('res' => true, 'rc' => $result->rowCount());
+        return ['res' => true, 'rc' => $result->rowCount()];
     }
 
     function ToggleMoosePoint(CMooseAuth $auth, $mooseId, $time, $valid)
@@ -1206,7 +1206,7 @@ class CMooseDb extends CTinyDb
         if ($row == null)
             $this->Err("Нет доступных телефонов с номером '$phone'");
 
-        $res = array('mooseId' => $row['id'], 'phoneId' => $row['pId']);
+        $res = ['mooseId' => $row['id'], 'phoneId' => $row['pId']];
         $result->closeCursor();
         return $res;
     }
@@ -1253,7 +1253,7 @@ class CMooseDb extends CTinyDb
 
 	protected function AddPoints($smsId, $points)
 	{
-		$values = array();		
+		$values = [];
 		$tm = time() - count($points) - 10000; //
 		foreach ($points as $pt)
 		{
@@ -1268,7 +1268,7 @@ class CMooseDb extends CTinyDb
 
 	protected function AddActivity($smsId, $activity)
 	{
-		$values = array();		
+		$values = [];
 		$tm = time() - count($activity) - 10000; //
 		foreach ($activity as $pt)
 		{
@@ -1303,7 +1303,7 @@ class CMooseDb extends CTinyDb
             $phones = 'true';
         else
         {
-            $phones = filter_var($phoneIds, FILTER_VALIDATE_INT, array('flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => array('min_range' => 1)));
+            $phones = filter_var($phoneIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
             if (!$phones)
                 $this->Err(self::ErrWrongPhoneId);
             $phones = 'rs.phone_id in (' . implode(', ', $phones). ')';
@@ -1313,7 +1313,7 @@ class CMooseDb extends CTinyDb
             $mooses = 'true';
         else
         {
-            $mooses = filter_var($mooseIds, FILTER_VALIDATE_INT, array('flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => array('min_range' => 1)));
+            $mooses = filter_var($mooseIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
             if (!$mooses)
                 $this->Err(self::ErrWrongMooseId);
             $mooses = 's.moose in (' . implode(', ', $mooses). ')';

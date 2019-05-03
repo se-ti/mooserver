@@ -26,14 +26,13 @@ class CTinyAuth
 
 	protected $validated;
 
-    static $forgetTpl = array(
-                            'key' => 'forget',
+    static $forgetTpl = [	'key' => 'forget',
                             'subj' => 'Cмена пароля на {{APP_NAME}}',
-                            'mail' => "Здравствуйте, {{NAME}}\nКто-то, возможно вы, запросил смену пароля на {{APP_NAME}}\n\nЕсли это были вы -- в течение {{HOUR}} часов перейдите по ссылке {{HREF}}\nВ противном случае не делайте ничего\n\nС уважением, \nАдминистрация {{APP_NAME}}");
+                            'mail' => "Здравствуйте, {{NAME}}\nКто-то, возможно вы, запросил смену пароля на {{APP_NAME}}\n\nЕсли это были вы -- в течение {{HOUR}} часов перейдите по ссылке {{HREF}}\nВ противном случае не делайте ничего\n\nС уважением, \nАдминистрация {{APP_NAME}}"];
 
-    static $registerTpl = array( 'key'=> 'verify',
+    static $registerTpl = [ 'key'=> 'verify',
                             'subj' => 'Регистрация на {{APP_NAME}}',
-                            'mail' => "Здравствуйте, {{NAME}}!\nВы были зарегистрированы на сервере {{APP_NAME}}\n\nВаш логин: {{LOGIN}}\nПароль: {{PWD}}\n\nС уважением, \nАдминистрация {{APP_NAME}}");
+                            'mail' => "Здравствуйте, {{NAME}}!\nВы были зарегистрированы на сервере {{APP_NAME}}\n\nВаш логин: {{LOGIN}}\nПароль: {{PWD}}\n\nС уважением, \nАдминистрация {{APP_NAME}}"];
     //"Здравствуйте {{NAME}}! Кто-то, возможно вы, прислал вам приглашение на {{APP_NAME}}. Для продолжения регистрации в течение {{HOUR}} часов перейдите по ссылке {{HREF}} .\n Если письмо было отправлено вам по ошибке -- просто проигнорируйте его.\n\nС уважением, \nАдминистрация {{APP_NAME}}");
 
 	function __construct(CTinyDb $db)
@@ -118,7 +117,7 @@ class CTinyAuth
 	private function setAnonymous()
 	{	
 		$this->id = self::Anonymous;
-		$this->groups = array();
+		$this->groups = [];
 		$this->name = 'Anonymous';
 		$this->login = '';
 		$this->SID = '';
@@ -166,7 +165,7 @@ class CTinyAuth
 		}
 
 		$this->id = self::Root;
-		$this->groups = array(self::Admins);
+		$this->groups = [self::Admins];
         Log::st($this, "auth", "API login successful");
 		return true;
 	}
@@ -302,13 +301,13 @@ class CTinyAuth
         global $tinySett;
         $href = self::BaseHref() . "$id/{$tpl['key']}/$token";
 
-        $pairs = array(
+        $pairs = [
 			'{{APP_NAME}}' => $tinySett['appName'],
             '{{HREF}}' => $href,
             '{{HOUR}}' => CTinyDb::TokenValidHours,
             '{{LOGIN}}' => $login,
             '{{PWD}}' => $pwd,
-            '{{NAME}}' => $name == null ? $login : $name);
+            '{{NAME}}' => $name == null ? $login : $name];
 
         $body = $this->FillTemplate($tpl['mail'], $pairs);
         $subj = $this->FillTemplate($tpl['subj'], $pairs);

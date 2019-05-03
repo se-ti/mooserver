@@ -13,7 +13,7 @@ class CMooService
 {
     public static function listFolder($db, $auth, $folder, $allowedExts)
     {
-        $file_parts = array();
+        $file_parts = [];
         $ext = '';
 
         $l = strlen($folder);

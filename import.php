@@ -48,14 +48,14 @@ function parseFile($name, $uploadName)
 	global $auth, $db;
 	$SuccessCounter = 0;
 
-	$Log = array ();
+	$Log = [];
 	
-    $result = array(
+    $result = [
         'ok' => false,
-        'log' => array(),
+        'log' => [],
         'error' => null,
         'status' => null
-    );
+    ];
 	
 	if (!$auth->canAdmin() && !$auth->canFeed())
         dieError("You have no rights to import csv files.");
@@ -207,6 +207,6 @@ function PackStringList ( $StringListArray )
 
 function dieError($msg)
 {
-    die (json_encode(array('error' => $msg)));
+    die (json_encode(['error' => $msg]));
 }
 ?>

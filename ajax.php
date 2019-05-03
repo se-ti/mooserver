@@ -159,13 +159,12 @@ function login()
 function getProfile()
 {
     global $auth, $db;
-    $res = array('login' => $auth->login(),
+    $res = ['login' => $auth->login(),
                  'name' => $auth->name(),
                 'isSuper' => $auth->isSuper(),
                 'canAdmin' => $auth->canAdmin(),
                 'canFeed'  => $auth->canFeed(),
-                'orgs' => $db->GetUserOrgs($auth)
-        );
+                'orgs' => $db->GetUserOrgs($auth)];
 
     return $res;
 }
@@ -195,7 +194,7 @@ function verifyToken()
     if ($res === false)
         dieError('Неправильный или просроченный токен');
 
-    return array('res' => $res);
+    return ['res' => $res];
 }
 
 function resetPassword()
@@ -211,7 +210,7 @@ function resetPassword()
     if ($res !== true)
         dieError($res);
 
-    return array('res' => $res);
+    return ['res' => $res];
 }
 
 function changePwd()
@@ -237,7 +236,7 @@ function changePwd()
     if ($res !== true)
         dieError($res);
 
-    return array('res' => $res);
+    return ['res' => $res];
 }
 
 function changeName()
@@ -246,7 +245,7 @@ function changeName()
     if (!$auth->isLogged())
         dieError(CTinyDb::ErrCRights);
     $name = varNotEmpty('name', false, 'Недопустимое имя пользователя');
-    return array('res' => $db->ChangeName($auth, $name));
+    return ['res' => $db->ChangeName($auth, $name)];
 }
 
 function getUsers()
@@ -277,11 +276,11 @@ function addMoose()
 
     $id = @$_POST['id'];
     if ($id == null)
-	    return array("id" => $db->AddMoose($auth, $phoneId, $name, $demo, count($org) >  0 ? $org[0] : null));
+	    return ["id" => $db->AddMoose($auth, $phoneId, $name, $demo, count($org) >  0 ? $org[0] : null)];
 
     $id = checkId($id, 'Недопустимый id животного');
     $res = $db->UpdateMoose($auth, $id, $phoneId, $name, $demo, count($org) >  0 ? $org[0] : null);
-    return array('id' => $res);
+    return ['id' => $res];
 }
 
 function addPhone()
@@ -297,11 +296,11 @@ function addPhone()
 
     $id = @$_POST['id'];
     if ($id == null)
-        return array("id" => $db->AddPhone($auth, $mooseId, $phone, $demo, count($org) >  0 ? $org[0] : null));
+        return ["id" => $db->AddPhone($auth, $mooseId, $phone, $demo, count($org) >  0 ? $org[0] : null)];
 
     $id = checkId($id, 'Недопустимый id телефона');
     $res = $db->UpdatePhone($auth, $id, $mooseId, $phone, $demo, count($org) >  0 ? $org[0] : null);
-    return array('id' => $res);
+    return ['id' => $res];
 }
 
 
@@ -327,13 +326,13 @@ function addUser() // todo verify all!!!
         if (!is_numeric($res))
             dieError($res);
 
-        return array('id' => $res);
+        return ['id' => $res];
     }
 
     $id = checkId($id, 'Недопустимый id пользователя');
 
     $res = $auth->UpdateUser($db, $id, $title, $name, $orgs, $isSuper, $canAdmin, $canFeed);
-    return array('id' => $id);
+    return ['id' => $id];
 }
 
 function addOrg()
@@ -347,11 +346,11 @@ function addOrg()
 
     $id = @$_POST['id'];
     if ($id == null)
-        return array("id" => $db->CreateGroup($auth, $title, $name));
+        return ["id" => $db->CreateGroup($auth, $title, $name)];
 
     $id = checkId($id, 'Недопустимый id группы');
 
-    return array("id" => $db->UpdateGroup($auth, $id, $title, $name));
+    return ["id" => $db->UpdateGroup($auth, $id, $title, $name)];
 }
 
 function toggleBeacon()
@@ -381,7 +380,7 @@ function commonUGToggle($isGroup, $errInvalidId)
     $id = checkId(@$_POST['id'], $errInvalidId);
 
     $db->ToggleUserGroup($auth, $id, $del, $isGroup, $errInvalidId);
-    return array();
+    return [];
 }
 
 function toggleOrg()
@@ -411,7 +410,7 @@ function addGate()
 
     $id = @$_POST['id'];
     if ($id == null)
-        return array("id" => $auth->AddGate($db, $title, $name, $orgs));
+        return ["id" => $auth->AddGate($db, $title, $name, $orgs)];
 
     $id = checkId($id, "Недопустимый id гейта", false);
 
@@ -454,7 +453,7 @@ function deleteSms()
     $smsId = checkId(@$_POST['rawSmsId'], 'Недопустимый id sms', false);
     $db->DeleteRawSms($auth, $smsId);
 
-    return array('res' => true);
+    return ['res' => true];
 }
 
 function reassignSms()
@@ -535,7 +534,7 @@ function getLogs()
     $levels = @$_POST['levels'];
     if ($levels != null)
     {
-        $levels = filter_var($levels, FILTER_VALIDATE_INT, array('options' => array('min_range' => CTinyDb::LogInfo, 'max_range' => CTinyDb::LogCritical), 'flags' => FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY));
+        $levels = filter_var($levels, FILTER_VALIDATE_INT, ['options' => ['min_range' => CTinyDb::LogInfo, 'max_range' => CTinyDb::LogCritical], 'flags' => FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY]);
         if ($levels === false)
             dieError('недопустимые уровни логов');
     }
@@ -554,7 +553,7 @@ function addLog()
     global $auth, $db;
 
     $message = $title = varNotEmpty('message', true, "Не указано сообщение");
-    $level = filter_var($_POST['level'], FILTER_VALIDATE_INT, array('options' => array('min_range' => CTinyDb::LogInfo, 'max_range' => CTinyDb::LogCritical)));
+    $level = filter_var($_POST['level'], FILTER_VALIDATE_INT, ['options' => ['min_range' => CTinyDb::LogInfo, 'max_range' => CTinyDb::LogCritical]]);
     if ($level === false)
         dieError('недопустимый уровень логов');
     
@@ -570,7 +569,7 @@ function addLog()
 
     die;
 	global $mooSett;
-	$res = array();
+	$res = [];
 	
 	$req = sprintf("mysql -p%s -h%s -u%s -D%s < ", $mooSett['pwd'], $mooSett['host'], $mooSett['user'], $mooSett['base']);
 	system($req . "tinydb.sql", $res['tiny_create']);
@@ -594,7 +593,7 @@ function checkId($id, $err, $canBeNull = false)
     if ($id == null && $canBeNull == true)
         return $id;
 
-    $id = filter_var($id, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
+    $id = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if ($id === false)
         dieError($err);
     return $id;
@@ -614,7 +613,7 @@ function validateIdArray($orgs, $strict, $maxCount = -1, $errMsg = "Недопу
 
 function makeError($msg)
 {
-	return json_encode(array('error' => $msg));
+	return json_encode(['error' => $msg]);
 }
 
 function dieError($msg)

@@ -226,7 +226,7 @@ class CTinyDb
 	protected function UserBy($where, $query = null)
 	{
 		if ($where === null || !is_string($where))
-			return array();
+			return [];
 
 		if ($query == null || !is_string($query))
 			$query = "select *, UNIX_TIMESTAMP(CONVERT_TZ(removeDate, '+0:00', @@session.time_zone)) as removed, UNIX_TIMESTAMP(CONVERT_TZ(block_till, '+0:00', @@session.time_zone)) as block
@@ -234,7 +234,7 @@ class CTinyDb
 
 		$result = $this->Query($query);
 
-		$res = array();
+		$res = [];
 		foreach($result as $r)
 		{
 			$res = $r;
@@ -243,7 +243,7 @@ class CTinyDb
 		$result->closeCursor();
 
 		if (!isset($res['id']))
-			return array();
+			return [];
 
 		$r = $this->GetUsersGroups($res['id']);
         if ($r != null)
@@ -266,7 +266,7 @@ class CTinyDb
 				where user_id = $userId and users.removeDate is null";
 		$result = $this->Query($query);
 
-		$res = array();
+		$res = [];
 		foreach($result as $r)
 			$res[] = $r['group_id'];
 
@@ -285,11 +285,11 @@ class CTinyDb
 
 		$user = $this->UserBy('', $query);
 		if (!isset($user['id']))
-			return array();
+			return [];
 
-		$user['session'] = array(
+		$user['session'] = [
 			'start' => intval(@$user['st']),
-			'last' =>  intval(@$user['cur']));
+			'last' =>  intval(@$user['cur'])];
 		unset($user['st']);
 		unset($user['cur']);
 
@@ -324,13 +324,13 @@ class CTinyDb
 
     private function ValidateNameComment($name, $comment, $errNoName = 'не задано имя')
     {
-        return array('name' => $this->ValidateTrimQuote($name, $errNoName),
-                    'comment' => ($comment !== null && is_string($comment)) ? $this->db->quote(trim($comment)) : 'null');
+        return ['name' => $this->ValidateTrimQuote($name, $errNoName),
+                'comment' => ($comment !== null && is_string($comment)) ? $this->db->quote(trim($comment)) : 'null'];
     }
 
     protected function ValidateId($id, $err, $min = 1)
     {
-        filter_var($id, FILTER_VALIDATE_INT, array('options' => array('min_range' => $min)));
+        filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min]]);
         if ($id === false)
             $this->Err($err);
 
@@ -407,10 +407,9 @@ class CTinyDb
     {
         // todo validate email for users
         $v = $this->ValidateNameComment($name, $comment, 'Не задано имя пользователя');
-        $fld = array(
+        $fld = [
             "login = {$v['name']}",
-            "name = {$v['comment']}"
-        );
+            "name = {$v['comment']}"];
 
         $res = $this->UpdateUserGroup($auth, $id, $fld, false,  CTinyDb::ErrDupUser);
         // $res->rowCount() > 0; ???
@@ -423,10 +422,9 @@ class CTinyDb
     function UpdateGroup(CTinyAuth $auth, $id, $name, $comment)
     {
         $v = $this->ValidateNameComment($name, $comment, 'Не задано название организации');
-        $fld = array(
+        $fld = [
             "login = {$v['name']}",
-            "name = {$v['comment']}"
-        );
+            "name = {$v['comment']}"];
 
         $res = $this->UpdateUserGroup($auth, $id, $fld, true,  CTinyDb::ErrDupGroup);
         // $res->rowCount() > 0; ???
@@ -438,7 +436,7 @@ class CTinyDb
         if ($pwd === null || !is_string($pwd) || strlen($pwd) == 0)
             $this->Err('Пароль не может быть пустым');
 
-        $fld = array("pwd = {$this->db->quote($pwd)}");
+        $fld = ["pwd = {$this->db->quote($pwd)}"];
         $res = $this->UpdateUserGroup($auth, $id, $fld, false, '');
         Log::t($this, $auth, 'update', 'password changed');
 
@@ -452,7 +450,7 @@ class CTinyDb
 
         $nm = $name == null || $name == '' ? 'null' : $this->db->quote($name);
 
-        $res = $this->UpdateUserGroup($auth, $auth->id(), array("name = $nm"), false, '');
+        $res = $this->UpdateUserGroup($auth, $auth->id(), ["name = $nm"], false, '');
         return true;
     }
 
@@ -462,7 +460,7 @@ class CTinyDb
 
         $id = $this->ValidateId($id, $errInvalidId, CTinyAuth::Root + 1);
 
-        $res = $this->UpdateUserGroup($auth, $id, array($delete), $isGroup, $isGroup ? CTinyDb::ErrDupGroup : CTinyDb::ErrDupUser);
+        $res = $this->UpdateUserGroup($auth, $id, [$delete], $isGroup, $isGroup ? CTinyDb::ErrDupGroup : CTinyDb::ErrDupUser);
         return true;
     }
 
@@ -540,7 +538,7 @@ class CTinyDb
 
         $isSuper = $auth->isSuper();
 
-        $out = array();
+        $out = [];
         foreach($groupIds as $id)
             if ($isSuper || in_array($id, $canUse))
                 $out[] =  "($userId, $id)";
@@ -715,14 +713,14 @@ class CTinyDb
 
         if ($levels != null)
         {
-            $levels = filter_var($levels, FILTER_VALIDATE_INT, array('options' => array('min_range' => self::LogInfo, 'max_range' => self::LogCritical), 'flags' => FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY));
+            $levels = filter_var($levels, FILTER_VALIDATE_INT, ['options' => ['min_range' => self::LogInfo, 'max_range' => self::LogCritical], 'flags' => FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY]);
             if ($levels === false)
                 $this->Err("недопустимый уровень логов");
 
             if (count($levels) > 0)
             {
-                $levs = array();
-                $set = array('info', 'trace', 'debug', 'error', 'critical');
+                $levs = [];
+                $set = ['info', 'trace', 'debug', 'error', 'critical'];
                 foreach($levels as $l)
                     $levs[] = $this->db->quote($set[$l]);
 
@@ -735,7 +733,7 @@ class CTinyDb
         {
             if (!is_array($ops))
                 $this->Err("недопустимый список операций");
-            $qops = array();
+            $qops = [];
             foreach ($ops as $op)
                 if ($op == null || !is_string($op))
                     $this->Err('недопустимая операция');
@@ -771,28 +769,28 @@ class CTinyDb
             order by id desc $limit";
 
         $result = $this->Query($query);
-        $res = array();
+        $res = [];
         foreach($result as $r)
         {
-            $res[] = array('id' => $r['id'],
+            $res[] = ['id' => $r['id'],
                 'stamp' => $r['sstamp'],
                 'level' => $r['level'],
                 'uid' => $r['user_id'],
                 'login' => $r['login'],
                 'duration' => $r['duration'],
                 'op' => $r['operation'],
-                'message' => $r['message']);
+                'message' => $r['message']];
         }
         
         $query = "select distinct operation
                     from logs
                     order by operation";
         $result = $this->Query($query);
-        $ops = array();
+        $ops = [];
         foreach($result as $r)
             $ops[] = $r['operation'];
 
-        return array('logs' => $res, 'ops' => $ops);
+        return ['logs' => $res, 'ops' => $ops];
     }
 }
 

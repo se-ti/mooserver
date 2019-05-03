@@ -69,7 +69,7 @@ class CMooseAuth extends CTinyAuth
     function AddUser(CTinyDb $db, $name, $comment, array $orgs, $super, $admin, $feed) // todo validate all
     {
         if ($orgs == null)
-            $orgs = array();
+            $orgs = [];
 
         if ($this->isSuper() && $super == true && array_search(self::Super, $orgs) === false )
             $orgs[] = self::Super;
