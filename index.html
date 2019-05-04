@@ -1383,6 +1383,7 @@ CGate.prototype =
         this.reRead();
         if (this._map)
             this._map.invalidateSize();
+        this._toggleControls(true);
     },
 
     reRead: function()
@@ -1591,6 +1592,7 @@ CGate.prototype =
     _toggleControls: function(enable)
     {
         this._justErr.get(0).disabled = !enable;
+        this._table.toggleClass('hideControls', !enable);
     },
 
     _startChangeMoose: function(e)
@@ -1621,21 +1623,20 @@ CGate.prototype =
         this._mooseSel._smsId = smsId;
 
         this._toggleControls(false);
-        this._table.addClass('hideControls');
         $saveCancel(cell, $cd(this, this._changeMoose), $cd(this, this._cancelChangeMoose));
+        var t = this;
+        window.setTimeout(function() {t._mooseSel.focus();}, 0);
     },
 
     _cancelChangeMoose: function()
     {
         this._toggleControls(true);
-        this._table.removeClass('hideControls');
         this.reRead();
     },
 
     _changeMoose: function()
     {
         this._toggleControls(true);
-        this._table.removeClass('hideControls');
 
         var ms = this._mooseSel;
         if (!ms)
