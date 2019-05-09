@@ -328,6 +328,12 @@ class CTinyDb
                 'comment' => ($comment !== null && is_string($comment)) ? $this->db->quote(trim($comment)) : 'null'];
     }
 
+    protected function escapeForLike($str)
+    {
+        $qStr = $this->ValidateTrimQuote($str);
+        return str_replace(['_', '%', '\\\\'], ['\_', '\%', '\\\\\\\\'], substr($qStr, 1, strlen($qStr)-2));    // отрезаем кавычки с краев, т.к. добавим свои
+    }
+
     protected function ValidateId($id, $err, $min = 1)
     {
         filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min]]);
@@ -747,8 +753,7 @@ class CTinyDb
         $searchCond = 'true';
         if ($search !== null && trim($search) != '')
         {
-            $search = $this->ValidateTrimQuote($search);
-            $search = substr($search, 1, strlen($search)-2);    // отрезаем кавычки с краев -- т.к. добавим свои
+            $search = $this->escapeForLike($search);
             $searchCond = "(message like '%$search%' or u.login like '%$search%')" ;
         }
 
