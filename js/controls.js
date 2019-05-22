@@ -2558,7 +2558,7 @@ CColumnFilter.prototype =
     {
         this._checked = this._curChecked;
         this._empty = this._curEmpty;
-        this._c.root.toggleClass('text-danger', !this._all);
+        this._updateActivator();
 
         this._deactivate();
         this._raise_dataChanged();
@@ -2632,6 +2632,8 @@ CColumnFilter.prototype =
 
         this._curChecked = $.extend({}, this._checked);
         this._curEmpty = this._empty;
+
+        return this;
     },
 
     getValues: function()
@@ -2650,8 +2652,27 @@ CColumnFilter.prototype =
             empty: this._empty};
     },
 
-    setValues: function(values) // todo !!!
+    setValues: function(values)
     {
+        var tmp = values;
+        this._empty = false;
+        if (this._options.empty) {
+            this._empty = values.empty;
+            tmp = values.values;
+        }
+
+        this._checked = {};
+        for (var v of tmp)
+            this._checked[v] = true;
+
+        this._curChecked = $.extend({}, this._checked);
+        this._curEmpty = this._empty;
+
+        this._render();
+        this._stat();
+        this._updateActivator();
+
+        return this;
     },
 
     _onChange: function(e)
@@ -2706,6 +2727,11 @@ CColumnFilter.prototype =
         this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')));
         this._c.resetBtn.get(0).disabled = st.empty == false && st.count == 0;
         this._c.selAll[0].checked = st.visible == this._c.list.find('input').length;
+    },
+
+    _updateActivator: function()
+    {
+        this._c.root.toggleClass('text-danger', !this._all);
     },
 
     _stat: function()
