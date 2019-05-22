@@ -305,7 +305,7 @@ CLogs.prototype =
         this._filter = new CColumnFilter(this._table.find('th').get(3), 'levels', {search: false, reset: false})
             .on_dataChanged(this._d_reRead)
             .setItems(items)
-            .setValues([3]);
+            .setValues([3, 4]);
 
         var items2 = [{caption: 'addSms', value: 'addSms'},
             {caption: 'activity_times', value: 'activity_times'},
