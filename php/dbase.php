@@ -927,17 +927,23 @@ class CMooseDb extends CTinyDb
         $direct = 'false';
         if (count($beacons['directIds']) > 0)
             $direct = 'rs.phone_id in (' . implode($beacons['directIds'], ', ') . ')';
+        if ($beacons['mAccess'] == 'true')  // просто оптимизация
+            $direct = 'true';
+
         $timeCond = $this->TimeCondition('position.stamp', $start, $end);
 
-        $query = "select rs.phone_id as pId, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, DATE_FORMAT(pos.st,'%Y-%m-%dT%TZ') as pos_time, sms.moose as smsMid
-				from raw_sms rs
-				inner join sms on sms.raw_sms_id = rs.id
-				left join (select sms_id, max(stamp) as st from position where true $timeCond group by sms_id) pos on pos.sms_id = sms.id
-				
-				where rs.phone_id in ($cond) and (sms.moose is null and $direct or {$beacons['mAccess']})
-				 order by pos.st desc
-				  ";// в принципе те маяки и (доступное животное или непривязанное смс с ныне доступного маяка)
+        $query = "select id as pId, rec.*
+                from phone p
+                left join
+                    (select rs.phone_id, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, pos.st as st, DATE_FORMAT(pos.st,'%Y-%m-%dT%TZ') as pos_time, sms.moose as smsMid
+                    from raw_sms rs
+                    inner join sms on sms.raw_sms_id = rs.id
+                    inner join (select sms_id, max(stamp) as st from position where true $timeCond group by sms_id) pos on pos.sms_id = sms.id
 
+                    where sms.moose is null and $direct or {$beacons['mAccess']}
+                    ) rec on p.id = rec.phone_id
+                where p.id in ($cond)
+                order by rec.st desc"; // в принципе те маяки и (доступное животное или непривязанное смс с ныне доступного маяка)
 
         //Log::t($this, $auth, 'beaconStat', $query);
         $result = $this->Query($query);
