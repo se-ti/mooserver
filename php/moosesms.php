@@ -363,7 +363,8 @@ class CMooseSMSv3 extends CMooseSMS
 			$this->SetError ( "Unsupported compression: $this->CompressionFactor/$this->CompressionType" );
 			return;
 		}
-		
+
+		$dSkip = 0;
 		$PointLength = 5;
 		$XFieldLength = 11;
 		$YFieldLength = 11;
@@ -408,7 +409,7 @@ class CMooseSMSv3 extends CMooseSMS
 					(tan ( $Y*pi()/$YFieldCapacity) + tan ( ($Y+1)*pi()/$YFieldCapacity))/2;
 					
 			if ( $X > -$XFieldCapacity/2+$XFieldCapacity/80 && $X < $XFieldCapacity/2-$XFieldCapacity/80 &&
-				 $Y > -$YFieldCapacity/2+$YFieldCapacity/80 && $Y < $YFieldCapacity/2-$YFieldCapacity/80 ) 
+				 $Y > -$YFieldCapacity/2+$YFieldCapacity/80 && $Y < $YFieldCapacity/2-$YFieldCapacity/80 )
 			{	// If the value is close to the range edge, it's most probably invalid.
 				$Point[0]=$this->points[0][0] + $dLat;
 				$Point[1]=$this->points[0][1] + $dLong;
@@ -417,7 +418,13 @@ class CMooseSMSv3 extends CMooseSMS
 			
 				$this->points[] = $Point;
 			}
+			else
+				$dSkip++;
+
 		}
+
+		if ( $dSkip > 0 )
+			$this->ProcessSkippedDiagnostic ( $dSkip );
 	}
 	
 	protected function ProcessActivity ()
@@ -470,8 +477,24 @@ class CMooseSMSv3 extends CMooseSMS
 	
 	protected function ProcessReloadDiagnostic ()
 	{
-		$this->diag = "Reload";
+		$this->AddDiag( 'Reload' );
 		//echo ("Reload!");
+	}
+
+	protected function ProcessSkippedDiagnostic ($numSkipped)
+	{
+		$this->AddDiag( "$numSkipped points skipped" );
+	}
+
+	private function AddDiag ($msg)
+	{
+		if ($this->diag == null)
+			$this->diag = '';
+
+		if ($this->diag != '')
+			$this->diag .= ', ';
+
+		$this->diag .= $msg;
 	}
 }
 
