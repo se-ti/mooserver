@@ -1455,5 +1455,53 @@ class CMooseDb extends CTinyDb
 
         $this->Query($query);
     }
+
+    public function UpdateSmsDiagnose(CTinyAuth $auth, $min = 0)
+    {
+        if (!$auth->isSuper())
+            $this->ErrRights();
+
+        $min = $this->ValidateId($min, "недопустимый минимальный raw_sms_id", 0);
+
+        $query = "select rs.id, rs.text, stamp, diagnose
+            from raw_sms rs
+            inner join sms s on s.raw_sms_id = rs.id
+            where rs.id >= $min
+            limit 15000";
+
+        $i = 0;
+        $cn = 0;
+        $log = [];
+        $upd = [];
+        $result = $this->Query($query);
+
+        $t0 = microtime(true);
+
+        foreach($result as $r)
+        {
+            $i++;
+            $msg = CMooseSMS::CreateFromText ($r['text'], strtotime($r['stamp']));
+            if ($msg->diag != $r['diagnose'])
+            {
+                $upd[$r['id']] = $msg->diag;
+                $cn++;
+            }
+
+            if ($i % 1000 == 0)
+                $log[] = sprintf("%d tested, %d found in %.1f sec<br/>", $i, $cn, microtime(true) - $t0);
+        }
+        $result->closeCursor();
+
+        foreach ($upd as $id => $diag)
+        {
+            $qd = $this->db->quote($diag);
+            $query = "update sms set diagnose = $qd where raw_sms_id = $id";
+            $this->Query($query);
+        }
+
+        $log[] = sprintf("end in %.1f sec<br/>", microtime(true) - $t0);
+        $log[] = "$i, res: <br/>" . print_r($upd, 1);
+        return $log;
+    }
 }
 ?>
