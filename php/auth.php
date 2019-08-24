@@ -112,7 +112,7 @@ class CMooseAuth extends CTinyAuth
 
         $res = $db->UpdateUser($this, $id, $name, $comment, $orgs);
         if ($res !== true)
-            $this->Err('что-то странное 2');
+            throw new Exception('что-то странное 2');
 
         return $res;
     }
@@ -139,7 +139,7 @@ class CMooseAuth extends CTinyAuth
 
         $res = $db->UpdateUser($this, $id, $name, $comment, $orgs);
         if ($res !== true)
-            $this->Err('что-то странное');
+            throw new Exception('что-то странное');
 
         return $res;
     }
