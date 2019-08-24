@@ -51,7 +51,7 @@ class CTinyDb
         }
         catch (PDOException $e)
         {
-            $this->Err('Connection failed: ' . $e->getMessage(), true);
+            $this->Err('Connection failed: ' . $e->getMessage());
         }
 
 		$query = "select max(version) as ver from version";
@@ -59,7 +59,7 @@ class CTinyDb
 		foreach($res as $r)
 		{
 			if ($r['ver'] != self::$Version)
-				$this->Err("Wrong db version: '{$r['ver']}', expected '" .self::$Version. "'", true);
+				$this->Err("Wrong db version: '{$r['ver']}', expected '" .self::$Version. "'");
 			break;
 		}
 		$res->closeCursor();
@@ -129,7 +129,7 @@ class CTinyDb
 
     protected function ErrRights()
     {
-        return $this->Err(CTinyDb::ErrCRights);
+        $this->Err(CTinyDb::ErrCRights);
     }
 
     protected function ErrDuplicate($msg)
@@ -141,7 +141,7 @@ class CTinyDb
         return true;
     }
 
-	protected function Err($msg, $die = true)
+	protected function Err($msg)
 	{
         $this->rollback();
 
