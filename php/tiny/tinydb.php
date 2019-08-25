@@ -299,7 +299,7 @@ class CTinyDb
 	function UserById($id)
 	{
 		if ($id == null || !is_int($id))
-            return $this->Err("incorrect userId '$id'");
+            $this->Err("incorrect userId '$id'");
 		return $this->UserBy("id = $id");
 	}
 
@@ -606,9 +606,9 @@ class CTinyDb
     function SetUserToken(CTinyAuth $auth, $userId, $type)
     {
         if ($auth == null)
-            return $this->ErrRights();
+            $this->ErrRights();
         if ($userId == null || !is_numeric($userId))
-            return $this->Err('некорректный $userId');
+            $this->Err('некорректный $userId');
 
         switch ($type)
         {
@@ -616,18 +616,18 @@ class CTinyDb
                 if (! ($auth->canAdmin() && $auth->id() != $userId ||
                         $auth->isLogged() && $auth->id() == $userId || // !auth->validated()
                         !$auth->isLogged() ))
-                    return $this->Err('нельзя запрашивать подтверждение');
+                    $this->Err('нельзя запрашивать подтверждение');
                 break;
             case CTinyDb::ResetPwd:
                 if ($auth->isLogged())
-                    return $this->Err('залогиненые пользователи не бывают забывшими пароль');
+                    $this->Err('залогиненые пользователи не бывают забывшими пароль');
                 break;
             case CTinyDb::OptOut:
                 if (!$auth->isLogged() || $auth->id() != $userId)
-                    return $this->Err('запрос на удаление не от своего имени');
+                    $this->Err('запрос на удаление не от своего имени');
                 break;
             default:
-                return $this->Err('wrong token type');
+                $this->Err('wrong token type');
         }
 
         $tokenValidHours = CTinyDb::TokenValidHours;
@@ -640,7 +640,7 @@ class CTinyDb
 
         $result = $this->Query($query);
         if ($result->rowCount() != 1)
-            return $this->Err('не смогли записать токен');
+            $this->Err('не смогли записать токен');
 
         return $rawToken;
     }

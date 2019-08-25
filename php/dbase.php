@@ -998,7 +998,7 @@ class CMooseDb extends CTinyDb
 
         $ids = filter_var($smsIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
         if ($ids === false || count($ids) == 0)
-            return $this->Err(self::ErrWrongSmsId);
+            $this->Err(self::ErrWrongSmsId);
 
         $qids = implode(', ', $ids);
 
