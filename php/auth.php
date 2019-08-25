@@ -34,6 +34,7 @@ class CMooseAuth extends CTinyAuth
 		//$this->id = self::Import;
 		$this->validated = true;
 		$this->groups[] = self::Feeders;
+        return true;
 	}
 
     protected function canLoginDirectly($usr, $needSession)
@@ -82,7 +83,7 @@ class CMooseAuth extends CTinyAuth
 
         $db->beginTran();
 
-        $pwd = $db->CreateToken(6);
+        $pwd = $db->CreateToken(self::MinPasswordLen);
         $res = $db->CreateUser($this, $name, $comment, password_hash($pwd, PASSWORD_BCRYPT), true, $orgs, 'Не задан логин пользователя', "Пользователь '$name' уже есть в системе");
 
         $token = $db->SetUserToken($this, $res, CTinyDb::Verify);

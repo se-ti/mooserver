@@ -437,14 +437,14 @@ class CTinyDb
         return true;
     }
 
-    function ChangePassword(CTinyAuth $auth, $id, $pwd)
+    function ChangePassword(CTinyAuth $auth, $id, $pwdHash)
     {
-        if ($pwd === null || !is_string($pwd) || strlen($pwd) == 0)
+        if ($pwdHash === null || !is_string($pwdHash) || strlen($pwdHash) == 0)
             $this->Err('Пароль не может быть пустым');
 
-        $fld = ["pwd = {$this->db->quote($pwd)}"];
+        $fld = ["pwd = {$this->db->quote($pwdHash)}"];
         $res = $this->UpdateUserGroup($auth, $id, $fld, false, '');
-        Log::t($this, $auth, 'update', 'password changed');
+        Log::t($this, $auth, 'update', "password changed for user $id");
 
         return true;
     }

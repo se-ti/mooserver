@@ -18,6 +18,8 @@ class CTinyAuth
 	const Short = 3600; // 1 hour
 	const Long = 2592000; // 30 days
 
+	const MinPasswordLen = 6;
+
 	protected $id;
 	protected $name;
 	protected $login;
@@ -33,7 +35,13 @@ class CTinyAuth
     static $registerTpl = [ 'key'=> 'verify',
                             'subj' => 'Регистрация на {{APP_NAME}}',
                             'mail' => "Здравствуйте, {{NAME}}!\nВы были зарегистрированы на сервере {{APP_NAME}}.\n\nВаш логин: {{LOGIN}}\nПароль: {{PWD}}\n\nС уважением, \nАдминистрация {{APP_NAME}}"];
+
+	static $forceResetTpl = [ 'key'=> 'forceReset',
+							'subj' => 'Cмена пароля на {{APP_NAME}}',
+							'mail' => "Здравствуйте, {{NAME}}!\nАдминистратор {{APP_NAME}} принудительно сменил ваш пароль.\n\nВаш логин: {{LOGIN}}\nПароль: {{PWD}}\n\nС уважением, \nАдминистрация {{APP_NAME}}"];
     //"Здравствуйте {{NAME}}! Кто-то, возможно вы, прислал вам приглашение на {{APP_NAME}}. Для продолжения регистрации в течение {{HOUR}} часов перейдите по ссылке {{HREF}} .\n Если письмо было отправлено вам по ошибке -- просто проигнорируйте его.\n\nС уважением, \nАдминистрация {{APP_NAME}}");
+
+
 
 	function __construct(CTinyDb $db)
 	{
@@ -287,6 +295,26 @@ class CTinyAuth
 
         return true;
     }
+
+	function forceResetPassword(CTinyDb $db, $uid)
+	{
+		if (!$this->isSuper())
+			throw new Exception(CTinyDb::ErrCRights);
+
+		$newPwd = $db->CreateToken(self::MinPasswordLen);
+		$user = $db->UserById($uid);
+		if (!isset($user['id']) || $user['removed'] != null || $user['is_group'] == true)
+			throw new Exception ('Операция невозможна, пользователь удален');
+
+		$res = $db->ChangePassword($this, $uid, password_hash($newPwd, PASSWORD_BCRYPT));
+
+		$out = $this->SendTokenMail($res['id'], $user['login'], $user['name'], $newPwd, '', CTinyAuth::$forceResetTpl);
+		if ($out == false)
+			throw new Exception("force reset: Ошибка отправки сообщения");
+
+		Log::t($db, $this, "force reset", "for login {$user['login']}");
+		return $newPwd;
+	}
 
     public static function BaseHref()
     {
