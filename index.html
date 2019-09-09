@@ -1039,9 +1039,10 @@ CBeacon.prototype = {
             return;
         }
 
-        var row = jTgt.parents('tr[data-id]:first');
+        var row = jTgt.is('tr') ? jTgt : jTgt.parents('tr[data-id]:first');
         id = row.attr('data-id');
-        window.location.hash += '/' + id;
+        if (id != null)
+            window.location.hash += '/' + id;
     }
 }
 CBeacon.inheritFrom(CPage);
