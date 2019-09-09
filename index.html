@@ -397,8 +397,7 @@ CController.prototype = {
 
         //console.log('orc: ' + rights.isRoot);
 
-		for (var i = 0; i < this._pages.length; i++)
-			this._pages[i].setRights(appData.rights);
+        this._pages.forEach(function(p) { p.setRights(appData.rights);} );
 	},
 
 	getMoose: function()
@@ -416,9 +415,7 @@ CController.prototype = {
 
 		this._pass.setup(result);
 
-		for (var i = 0; i < this._pages.length; i++)
-			this._pages[i].setData(result);
-
+        this._pages.forEach(function(p) { p.setData(result); } );
         this.activate();
 	},
 
@@ -1457,25 +1454,17 @@ CGate.prototype =
         var phones = CApp.single().getPhones();
         if (phones && !this._phoneFilter)
         {
-            var it = [];
-            for (var i = 0; i < phones.length; i++)
-                it.push({caption: phones[i].phone, value: phones[i].id});
-
             this._phoneFilter = new CColumnFilter(this._head.find('th').get(4), 'phone', {selectAll: true})
                 .on_dataChanged(this._c_reRead);
-            this._phoneFilter.setItems(it);
+            this._phoneFilter.setItems(phones.map(function(p) { return {caption: p.phone, value: p.id}; }));
         }
 
         var mooses = CApp.single().getMoose();
         if (mooses && ! this._mooseFilter)
         {
-            var it = [];
-            for (var i = 0; i < mooses.length; i++)
-                it.push({caption: mooses[i].name, value: mooses[i].id});
-
             this._mooseFilter = new CColumnFilter(this._head.find('th').get(5), 'moose', {selectAll: true})
                 .on_dataChanged(this._c_reRead);
-            this._mooseFilter.setItems(it);
+            this._mooseFilter.setItems(mooses.map(function(m) { return {caption: m.name, value: m.id}; }));
         }
     },
 
@@ -1766,13 +1755,11 @@ CProfile.prototype = {
             arr.push('Просмотр');
         c.rights.html(arr.join('<br/>'));
 
-        arr = [];
         if (result.isSuper)
-            arr.push('&lt;все&gt;');
+            arr = ['&lt;все&gt;'];
         else
-            for (var i = 0; i < result.orgs.length; i++)
-                arr.push(String.format('<dl><dt>{0} </dt><dd>{1}</dd></dl>', String.toHTML(result.orgs[i].login), String.toHTML(result.orgs[i].name)));
-        if(arr.length == 0)
+            arr = result.orgs.map(function (org) { return String.format('<dl><dt>{0} </dt><dd>{1}</dd></dl>', String.toHTML(org.login), String.toHTML(org.name));});
+        if (arr.length == 0)
             arr.push('&lt;нет&gt;');
         c.orgs.html(arr.join(''));
     },
