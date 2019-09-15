@@ -2474,6 +2474,10 @@ CColumnFilter = function(root, key, options)
     this._d_onClickOutside = $cd(this, this._onClickOutside);
     this._d_onChange = $cd(this, this._onChange);
     this._d_onSelectAll = $cd(this, this._onSelectAll);
+    this._d_onSearchKeyup = $cd(this, this._onSearchKeyup);
+    this._d_onSearchKeydown = $cd(this, this._onSearchKeydown);
+    this._d_onListKeyup = $cd(this, this._onListKeyup);
+    this._d_onListKeydown = $cd(this, this._onListKeydown);
     this._buildIn(root);
 }
 
@@ -2492,7 +2496,7 @@ CColumnFilter.prototype =
     _buildIn: function(root)
     {
         var c = this._c;
-        c.root = $('<span class="filter-activator glyphicon glyphicon-filter"></span>')
+        c.root = $('<button class="filter-activator glyphicon glyphicon-filter"></button>')
             .appendTo(root);
         $(root)
             .addClass('activator-root')
@@ -2508,14 +2512,19 @@ CColumnFilter.prototype =
             .click(this._d_onReset)
             .toggle(this._options.reset);
         c.list = c.holder.find('ul')
-            .change(this._d_onChange);
+            .change(this._d_onChange)
+            .on('keydown', 'input[type="checkbox"]', this._d_onListKeydown)
+            .on('keyup', 'input[type="checkbox"]', this._d_onListKeyup);
         c.search = c.holder.find('input[type="text"]')
             .change(this._d_onSearch)
-            .keyup(this._d_onSearch)
+            .keyup(this._d_onSearchKeyup)
+            .keydown(this._d_onSearchKeydown)
             .on('paste', this._d_onSearch)
             .toggle(this._options.search);
         c.selAll = c.holder.find('input[type="checkbox"]')
-            .change(this._d_onSelectAll);
+            .change(this._d_onSelectAll)
+            .keydown(this._d_onListKeydown)
+            .keyup(this._d_onListKeyup);
         c.selAll.parents('div:first').toggle(this._options.selectAll);
     },
 
@@ -2593,6 +2602,93 @@ CColumnFilter.prototype =
         {
             this._render();
             this._lastSearch = srch;
+        }
+    },
+
+
+    _onSearchKeydown: function(e)
+    {
+        if (e.keyCode != 40)
+            return;
+
+        if (this._options.selectAll)
+            this._c.selAll.focus();
+        else
+            this._c.list.find('input[type="checkbox"]:first').focus();
+
+        e.preventDefault();
+    },
+
+    _onSearchKeyup: function(e)
+    {
+        let code = e.keyCode;
+        if (code == 27)
+        {
+            this._onCancel();
+            e.preventDefault();
+            return;
+        }
+
+        this._onSearch();
+    },
+
+    _onListKeydown: function(e)
+    {
+        if (e.keyCode != 38 && e.keyCode != 40)
+            return;
+
+        var el = $(e.currentTarget).parents('li:first');
+        if (e.keyCode == 40)   // down
+            el = el.length == 0 ? this._c.list.find('li:first') : el.next();
+        else if (e.keyCode == 38)    //up
+        {
+            if (el.length == 0) // that was all btn
+            {
+                this._c.search.focus();
+                return;
+            }
+
+            el = el.prev();
+            if (el.length == 0)
+            {
+                if (this._options.selectAll)
+                    el = this._c.selAll.parent();
+                else
+                {
+                    this._c.search.focus();
+                    return;
+                }
+            }
+        }
+
+        if (el && el.length > 0)
+        {
+            e.preventDefault();
+            el.find('input[type="checkbox"]').focus();
+        }
+    },
+
+    _onListKeyup: function(e)
+    {
+        let code = e.keyCode;
+        if (code == 13)
+        {
+            this._onOk();
+            e.preventDefault();
+        }
+        else if (code == 27)
+        {
+            this._onCancel();
+            e.preventDefault();
+        }
+        else if ((code < 32 || code > 40) && e.key.length == 1)
+        {
+            var srch = this._c.search;
+            srch.val(srch.val() + e.key)
+                .focus();
+
+            e.preventDefault();
+            this._onSearch();
         }
     },
 
