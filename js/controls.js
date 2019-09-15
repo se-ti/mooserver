@@ -2634,6 +2634,20 @@ CColumnFilter.prototype =
 
     _onListKeydown: function(e)
     {
+        if (e.keyCode == 8)         // backspace
+        {
+            e.preventDefault();
+
+            var srch = this._c.search;
+            var v = srch.val();
+            if (v == '')
+                return;
+
+            srch.val(v.substring(0, v.length - 1))
+                .focus();
+            this._onSearch();
+        }
+
         if (e.keyCode != 38 && e.keyCode != 40)
             return;
 
