@@ -1614,7 +1614,9 @@ CHeatSett.prototype =
             level: 20,
             step: 1,    /*2.4 1 0.5*/
             degree: 1,   /*HeatCanvas.QUAD*/
-            opacity: 0.8
+
+            opacity: 0.8,
+            zIndex: 201
         };
         if (c.weight)
             res.weight = c.weight.get(0).checked;
@@ -1725,7 +1727,7 @@ CMooseMap.prototype = {
         var param = null;
         if (root2 != null)
         {
-            this.heatMap = new L.TileLayer.HeatCanvas({},{'step':1 /*2.4 1 0.5*/, 'degree': 1, 'opacity':0.8});
+            this.heatMap = L.tileLayer.heatcanvas({},{step: 1 /*2.4 1 0.5*/, degree: 1, opacity: 0.8, zIndex: 201});
             this._heatSett = new CHeatSett(root2)
                 .on_change(this._d_render);
 
@@ -1854,7 +1856,7 @@ CMooseMap.prototype = {
             heatSett = this._heatSett.get_Value();
             this.map.removeLayer(this.heatMap);
             this.heatMap.clear();
-            this.heatMap.setOptions(heatSett);
+            this.heatMap.setHeatOptions(heatSett);
         }
 
         if (!this._topLayer)
@@ -1911,7 +1913,7 @@ CMooseMap.prototype = {
 
     _newPoly: function(idx, id, key)
     {
-        var l = L.polyline([], {color: this.colors[idx % this.colors.length], noClip: true, weight: this._forPrint ? 3 : 2})
+        var l = L.polyline([], {color: this.colors[idx % this.colors.length], noClip: true, opacity: 0.5, weight: this._forPrint ? 3 : 2})
             .addTo(this.map);
         l.__id = id;
         l.__key = key;
@@ -2149,7 +2151,7 @@ CMooseMap.prototype = {
 
     _createMarker: function(pt, color)
     {
-        return  L.circleMarker(pt, {color: color, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1});
+        return  L.circleMarker(pt, {color: color, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1, weight: 2});
     },
 
     _onMove: function(e)
