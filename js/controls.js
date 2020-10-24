@@ -1736,7 +1736,8 @@ CMooseMap.prototype = {
 
         this._modalEdit = new CModalEdit().on_onClose(this._d_onCommentEdited);
 
-        L.control.scale({imperial:false}).addTo(this.map);
+        this.map.addControl(L.control.fullscreen())
+            .addControl(L.control.scale({imperial:false}));
         var ctrl = L.control.layers(layers, param).addTo(this.map);
         this._extendControls(ctrl);
         this._onToggleOverlay();
