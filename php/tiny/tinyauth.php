@@ -149,14 +149,22 @@ class CTinyAuth
 			$db->EndSession($this->SID);
 
 		unset($_COOKIE[$tinySett['cookie']]);
-		setcookie($tinySett['cookie'], "", time()-3600);
+		self::authCookie("", time()-3600);
 	}
 
 	protected function startSession(CTinyDb $db, $long = false)
 	{
-		global $tinySett;
 		$this->SID = $db->StartSession($this);
-		setcookie($tinySett['cookie'], $this->SID, time() + ($long ? self::Short : self::Long ));
+		self::authCookie($this->SID, time() + ($long ? self::Short : self::Long ));
+	}
+
+	private static function authCookie($sid, $expireOn)
+	{
+		global $tinySett;
+		if (PHP_VERSION_ID < 70300)
+			setcookie($tinySett['cookie'], $sid, $expireOn, '/; samesite=strict', '', false, true);
+		else
+			setcookie($tinySett['cookie'], $sid, ['expires' => $expireOn, 'samesite' => 'strict', 'httponly' => true]);
 	}
 
 	protected function updateSession(CTinyDb $db)

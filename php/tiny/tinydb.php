@@ -336,7 +336,7 @@ class CTinyDb
 
     protected function ValidateId($id, $err, $min = 1)
     {
-        filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min]]);
+        $id = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min]]);
         if ($id === false)
             $this->Err($err);
 
