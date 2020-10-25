@@ -1384,7 +1384,7 @@ class CMooseDb extends CTinyDb
             $this->ErrRights();
 
         $limit = ($limit === null) ? 100 : $this->ValidateId($limit, "Недопустимое значение limit", 1);
-        $justErr = $justErr === true ? ' (s.id is null or m.id is null or char_length(rs.text) < 50) ' : 'true';
+        $justErr = $justErr === true ? ' (s.id is null or m.id is null or char_length(rs.text) < 50 or rs.stamp < s.maxt) ' : 'true';
 
         if ($phoneIds === null)
             $phones = 'true';
@@ -1409,7 +1409,8 @@ class CMooseDb extends CTinyDb
         $access = $this->CanSeeCond($auth, 'p');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose');
 
-        $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, rs.ip, rs.xfw_ip, rs.phone_id, p.phone, s.id as 'sid', us.login, us.name as 'uname', m.name as 'mname', s.diagnose
+        $query = "select rs.id, rs.text, rs.stamp, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as sstamp, UNIX_TIMESTAMP(rs.stamp) as ustamp, rs.ip, rs.xfw_ip, rs.phone_id,
+                        p.phone, s.id as 'sid', UNIX_TIMESTAMP(s.maxt) as umaxt, us.login, us.name as 'uname', m.name as 'mname', s.diagnose
             from raw_sms rs
             inner join users us on us.id = rs.user_id
             inner join phone p on p.id = rs.phone_id
@@ -1440,10 +1441,12 @@ class CMooseDb extends CTinyDb
                 'diagnose' => $r['diagnose'],
                 'error' => ''];
 
-            if ($tmp['sid'] == null)
+            if ($tmp['sid'] == null || $r['ustamp'] + CMooseSMS::PointGrace < $r['umaxt'])
             {
                 $msg = CMooseSMS::CreateFromText ($tmp['text'], strtotime($tmp['stamp']));
                 $tmp['error'] = $msg->GetErrorMessage();
+                if ($tmp['diagnose'] == '' && $msg->diag != '')
+                    $tmp['diagnose'] = $msg->diag;
             }
             $res[] = $tmp;
         }

@@ -33,6 +33,8 @@ class CMooseSMS
 	
 	const PROPRIETARYBASE64_INDEX = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&#";
 	const Artificial = "ArtificialSmsPrefix ";
+	const GateGrace = 10800;	// прощаем, если часы гейта убегают от сервера на 3 часа
+	const PointGrace = 43200;	// прощаем, если точки убегают на 12 часов в будущее от гейта или сервера
 
 	
 	function CMooseSMS($text, $time = null)
@@ -239,17 +241,45 @@ class CMooseSMS
 		return $r;
     }
 
-	protected function CheckDate($refdate, $test, $tag = "")
+	protected function CheckDate($serverNow, $test, $tag = "")
 	{
-		if ($test > $refdate && $this->WarningMessage == null) {
+		if ($test > $serverNow && $this->WarningMessage == null) {
 			$gate = gmdate("c",  $this->time);
-			$ref =  gmdate("c",  $refdate);
+			$ref =  gmdate("c",  $serverNow);
 			$test = gmdate("c",  $test);
 
-			$this->WarningMessage = "$tag: parsed time in future: \nref: $ref \ntest: $test \ngate: $gate, sms: $this->text";
+			$this->WarningMessage = "$tag: parsed time in future: \nserver: $ref \ntest: $test \ngate: $gate, sms: $this->text";
         }
 
         return $test;
+	}
+
+	protected function ProcessTimeDiagnostic()
+	{
+		$now = time();
+
+		if ($this->time > $now + self::GateGrace)
+			$this->AddDiag('Gate timestamp is later than server one!');
+
+		$cn = count($this->points);
+		if ($cn <= 0)
+			return;
+
+		if ($this->points[0][2] > $this->time + self::PointGrace || $this->points[$cn-1][2] > $this->time + self::PointGrace)
+			$this->AddDiag('point timestamp is later than gateway one!');
+		else if ($this->points[0][2] > $now + self::PointGrace || $this->points[$cn-1][2] > $now + self::PointGrace)
+			$this->AddDiag('point timestamp is later than server one!');
+	}
+
+	protected function AddDiag ($msg)
+	{
+		if ($this->diag == null)
+			$this->diag = '';
+
+		if ($this->diag != '')
+			$this->diag .= ', ';
+
+		$this->diag .= $msg;
 	}
 }
 
@@ -294,6 +324,8 @@ class CMooseSMSv3 extends CMooseSMS
 			$this->ProcessPointsArray ();
 		if ( $this->IsOk )
 			$this->ProcessActivity ();
+
+		$this->ProcessTimeDiagnostic();
 	}
 	
 	protected function ProcessTechHeader ()
@@ -346,12 +378,12 @@ class CMooseSMSv3 extends CMooseSMS
 			  }
 		
 		$NewPoint[0] = $LatDegree + $LatPartsOfDegree/65536;
-		$NewPoint[1] = $LongDegree + $LongPartsOfDegree/32768;				
+		$NewPoint[1] = $LongDegree + $LongPartsOfDegree/32768;
 		$NewPoint[2] =	gmmktime ( 0, 0, 0, 1, 1, $this->GetEpochYear($DayOfYear)) +
 						($DayOfYear-1) * 24 * 60 * 60 +
-						 $TimeOfDayIn10MinIntervals * 60 * 10;
+						$TimeOfDayIn10MinIntervals * 60 * 10;
 		//$this->TestValue2 = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 35, 8 );
-		
+
 		
 		$this->points[] = $NewPoint;
 	}
@@ -477,24 +509,13 @@ class CMooseSMSv3 extends CMooseSMS
 	
 	protected function ProcessReloadDiagnostic ()
 	{
-		$this->AddDiag( 'Reload' );
+		$this->AddDiag('Reload');
 		//echo ("Reload!");
 	}
 
 	protected function ProcessSkippedDiagnostic ($numSkipped)
 	{
-		$this->AddDiag( "$numSkipped points skipped" );
-	}
-
-	private function AddDiag ($msg)
-	{
-		if ($this->diag == null)
-			$this->diag = '';
-
-		if ($this->diag != '')
-			$this->diag .= ', ';
-
-		$this->diag .= $msg;
+		$this->AddDiag("$numSkipped points skipped");
 	}
 }
 
@@ -601,6 +622,8 @@ class CMooseSMSv1 extends CMooseSMS
             $this->ProcessPointsArray();
         if ($this->IsOk)
             $this->ProcessActivity($this->refDate);
+
+		$this->ProcessTimeDiagnostic();
     }
 
     static function matches($text)
