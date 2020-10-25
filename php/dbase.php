@@ -1007,17 +1007,19 @@ class CMooseDb extends CTinyDb
           where raw_sms_id in ($qids)";
 
         $this->beginTran();
+        $old = $this->GetRawSmsMooses($auth, $ids);
+
         $result = $this->Query($query);
         $result->closeCursor();
 
         $mooses = $this->GetRawSmsMooses($auth, $ids);
         if ($moose != null)
             $mooses[] = $moose;
-        $this->SetMooseTimestamp($auth, $mooses);
+        $this->SetMooseTimestamp($auth, array_merge($old, $mooses));
 
         $this->commit();
 
-        Log::t($this, $auth, 'reassignSms', "перевешиваем на животное '$moose', rawSmsIds: '".implode(", ", $ids) ."'");
+        Log::t($this, $auth, 'reassignSms', "перевешиваем c животных '". implode(',', $old) ."' на животное '$moose', rawSmsIds: '".implode(", ", $ids) ."'");
         return ['res' => true, 'rc' => $result->rowCount()];
     }
 
@@ -1161,11 +1163,20 @@ class CMooseDb extends CTinyDb
 
         $mooses = $this->GetRawSmsMooses($auth, [$rawSmsId]);
 
-        $query = "delete from activity where sms_id in (select id from sms where raw_sms_id = $rawSmsId)";
-        $this->Query($query);
+        $smsId = [];
+        $r0 = $this->Query("select id from sms where raw_sms_id = $rawSmsId");
+        foreach ($r0 as $row)
+            $smsId[] = $row['id'];
 
-        $query = "delete from position where sms_id in (select id from sms where raw_sms_id = $rawSmsId)";
-        $this->Query($query);
+        if (count($smsId) > 0)
+        {
+            $smsIds = implode(', ', $smsId);
+            $query = "delete from activity where sms_id  in ($smsIds)";
+            $this->Query($query);
+
+            $query = "delete from position where sms_id in ($smsIds)";
+            $this->Query($query);
+        }
 
         $query = "delete from sms where raw_sms_id = $rawSmsId";
         $this->Query($query);
