@@ -82,11 +82,10 @@ function sms()  // todo add filtering
     //if (@$_GET['log'] != null)
 		
 		//rawlog ( $_POST);
-        mylog($device_id, $body, $from, $time, '' );
+	mylog($device_id, $body, $from, $time, '' );
 
-	$time = filter_var ( $time, FILTER_VALIDATE_INT,
-		['options' => ['min_range' => 946684810, 'max_range' => 4102444810]]);
-    
+	$time = decodeLongTime($time);
+
 	if ( is_null ( $device_id ) || !is_string ( $device_id ) )
 		throw new Exception("Invalid sms() 'device_id' argument\n");
 	
@@ -95,25 +94,42 @@ function sms()  // todo add filtering
 	
 	if ( is_null ( $from ) || !is_string ( $from ) )
 		throw new Exception("Invalid sms() 'from' argument\n");
-	
+
 	if ( is_null ( $body ) || !is_string ( $body ) )
 		throw new Exception("Invalid sms() 'body' argument\n");
 		
-	
-	if (is_numeric($time))
-        $time /= 1000;  // боремся с ненужными микросекундами
-	
-		
+
     $res = $auth->gateLogin($db, $device_id, $secret);
     if ($res !== true)
 		throw new Exception("Login as '$device_id' error: '$res'\n");
 
-	$msg = CMooseSMS::CreateFromText($body, $time);	
-		
+	$msg = CMooseSMS::CreateFromText($body, $time);
     $res = $db->AddData($auth, $from, $msg);
 	
     Log::t($db, $auth, "addSms", "via gate for '$from' " . CMooseTools::addSmsMessage($res));
     return $res;
+}
+
+
+/// @return: false, если не получилось, unixtimestamp -- если пришло нормальное время
+function decodeLongTime($time)
+{
+	if (PHP_INT_SIZE == 8)
+	{
+		$time = filter_var($time, FILTER_VALIDATE_INT,
+			['options' => ['min_range' => 946684810000, 'max_range' => 4102444810000]]);
+
+		if (is_numeric($time))
+			$time /= 1000;  // боремся с ненужными микросекундами
+	}
+	else	// на 32-битных системах timestamp с микросекундами не влезает в инт -- пользуемся мягкостью php
+	{
+		$time = preg_match('/(\d+)\d{3}/', $time, $matches);
+		if ($time)
+			$time = filter_var($matches[1], FILTER_VALIDATE_INT,
+				['options' => ['min_range' => 946684810, 'max_range' => PHP_INT_MAX]]);
+	}
+	return $time;
 }
 
 function mylog($device_id, $body, $from, $time, $secret)
