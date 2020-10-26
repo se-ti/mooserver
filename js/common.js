@@ -211,7 +211,7 @@ function $ajax(method, param, success, fail)
         reqParams.contentType = false;
     }
 
-    var r = $.ajax(reqParam);
+    var r = $.ajax(reqParams);
 
     fail = fail || function(jqXHR, textStatus, errorThrown)
         {
