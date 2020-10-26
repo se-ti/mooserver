@@ -197,13 +197,21 @@ if (!Array.isArray)
 
 function $ajax(method, param, success, fail)
 {
-	var r = $.ajax({
-		dataType: "json",
-		url: 'ajax.php?m='+method,
-		data: param,
-		success: success,
-		type: 'post'
-		});
+    var reqParams = {
+        dataType: 'json',
+        url: 'upl.php?m='+method,
+        data: param,
+        success: success,
+        type: 'post'
+    };
+
+    if (param instanceof FormData)
+    {
+        reqParams.processData = false;
+        reqParams.contentType = false;
+    }
+
+    var r = $.ajax(reqParam);
 
     fail = fail || function(jqXHR, textStatus, errorThrown)
         {
