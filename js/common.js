@@ -199,7 +199,7 @@ function $ajax(method, param, success, fail)
 {
     var reqParams = {
         dataType: 'json',
-        url: 'upl.php?m='+method,
+        url: 'ajax.php?m='+method,
         data: param,
         success: success,
         type: 'post'
