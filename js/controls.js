@@ -1811,7 +1811,9 @@ CMooseMap.prototype = {
                 for (var j = 1; j < this.data.length; j++)
                     bnd = bnd.extend(this.data[j].getBounds());
 
-                this.map.fitBounds(this._inflateBounds(bnd));
+                bnd = this._inflateBounds(bnd);
+                if (bnd.isValid())
+                    this.map.fitBounds(bnd);
             }
 
             this._fitBounds = false;
@@ -1820,7 +1822,7 @@ CMooseMap.prototype = {
 
     _inflateBounds: function(bounds)
     {
-        if (!bounds)
+        if (!bounds || !bounds.isValid())
             return bounds;
 
         var d = bounds.getSouthEast().distanceTo(bounds.getNorthWest()) > this._inflate.threshold ? this._inflate.large : this._inflate.small;
@@ -2390,7 +2392,7 @@ CKTreeItem.prototype = {
 
     _nearest: function(pt, extBnds, limMeters)
     {
-        if (!extBnds.intersects(this._rect))
+        if (!extBnds || !this._rect.isValid() || !extBnds.intersects(this._rect))
             return null;
 
         if (this._data != null)
