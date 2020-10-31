@@ -1459,6 +1459,8 @@ class CMooseDb extends CTinyDb
 		return "'".gmdate('Y-m-d H:i:s', $stamp)."'";
 	}
 
+    //region service functions
+
 	/// зачищает записи об успешном логине для основного гейта
 	public function SimplifyGateLogs(CTinyAuth $auth)
     {
@@ -1517,5 +1519,78 @@ class CMooseDb extends CTinyDb
         $log[] = "$i, res: <br/>" . print_r($upd, 1);
         return $log;
     }
+
+    public function RecomputeSmsDates(CTinyAuth $auth, $rawSmsId)
+    {
+        if (!$auth->isSuper())
+            $this->ErrRights();
+
+        $rawSmsId = $this->ValidateId($rawSmsId, "недопустимый минимальный raw_sms_id", 0);
+
+        $t0 = microtime(true);
+
+        $this->beginTran();
+
+        $mooses = $this->GetRawSmsMooses($auth, [$rawSmsId]);
+
+        $sms = null;
+        $query = "select text, UNIX_TIMESTAMP(CONVERT_TZ(stamp, '+0:00', @@session.time_zone)) as ustamp, stamp, DATE_FORMAT(stamp,'%Y-%m-%dT%TZ') as sstamp from raw_sms where id = $rawSmsId";
+        $r0 = $this->Query($query);
+        foreach ($r0 as $row) {
+            $sms = $row['text'];
+            $time = $row['ustamp'];
+            $st = $row['stamp'];
+            $sst = $row['sstamp'];
+            break;
+        }
+        $r0->closeCursor();
+        if ($sms == '')
+            $this->Err("empty message for raswSms '$rawSmsId'");
+
+        $smsId = [];
+        $r0 = $this->Query("select id from sms where raw_sms_id = $rawSmsId");
+        foreach ($r0 as $row)
+            $smsId[] = $row['id'];
+        if (count($smsId) > 1)
+            $this->Err('too many sms ids (' . implode(', ', $smsId) . ") for raw sms $rawSmsId");
+
+        $msg = CMooseSMS::CreateFromText($sms, $time);
+        if (!$msg->IsValid())
+            $this->Err($msg->GetErrorMessage());
+
+        //$this->Err("raw sms $rawSmsId, sms: $smsId[0], ut: $time, time: ". $this->ToSqlTime($time) ." sqlString: $sst, sqlTime: $st, $msg->diag");
+
+        if (count($smsId) > 0)
+        {
+            $smsIds = implode(', ', $smsId);
+            $query = "delete from activity where sms_id  in ($smsIds)";
+            $this->Query($query);
+
+            $query = "delete from position where sms_id in ($smsIds)";
+            $this->Query($query);
+        }
+
+        if ($msg->points != null)
+            $this->AddPoints($smsId[0], $msg->points);
+        if ($msg->activity != null)
+            $this->AddActivity($smsId[0], $msg->activity);
+
+        $qDiag = $this->TrimQuote($msg->diag);
+        // set sms mint-maxt  todo а если точек нет?  и вообще сделать на триггерах
+        $query = "update sms s set
+                    mint = (select min(p.stamp) from position p where p.sms_id = $smsId[0]),
+                    maxt = (select max(p.stamp) from position p where p.sms_id = $smsId[0]),
+                    diagnose = $qDiag
+                    WHERE s.id = $smsId[0]";
+        $this->Query($query);
+
+        $this->SetMooseTimestamp($auth, $mooses);
+
+        $this->commit();
+
+        return sprintf("end in %.1f sec<br/>", microtime(true) - $t0);
+    }
+
+    // endregion
 }
 ?>

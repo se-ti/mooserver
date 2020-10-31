@@ -311,6 +311,11 @@ class CTinyDb
 		return $this->UserBy("login = " . $this->db->quote($login));
 	}
 
+    protected function TrimQuote($str)
+    {
+        return ($str !== null && is_string($str)) ? $this->db->quote(trim($str)) : 'null';
+    }
+
     protected function ValidateTrimQuote($str, $err = 'строка должна быть не пустой')
     {
         if ($str == null || ! is_string($str))
@@ -325,7 +330,7 @@ class CTinyDb
     private function ValidateNameComment($name, $comment, $errNoName = 'не задано имя')
     {
         return ['name' => $this->ValidateTrimQuote($name, $errNoName),
-                'comment' => ($comment !== null && is_string($comment)) ? $this->db->quote(trim($comment)) : 'null'];
+                'comment' => $this->TrimQuote($comment)];
     }
 
     protected function escapeForLike($str)
