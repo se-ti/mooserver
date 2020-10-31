@@ -64,7 +64,6 @@ class CMooseSMS
 		//$this->TestValue = CMooseSMS::a64toi ("9");
 
 		//$this->ProcessSMSText ();
-		
 	}
 
 
@@ -159,14 +158,23 @@ class CMooseSMS
 		return $Result;
 	}
 
+	/**
+	 * The message does not carry a year, which it's generated in.
+	 * If the day in sms is after the receiving one, most probably, it was in the previous year.
+	 * That's expected behaviour for the end of the year, but let's add diagnostics for other ones;
+	 */
 	protected function GetEpochYear($dayOfYear)
 	{
         $epochYear = gmdate("Y", $this->time);
+		$receivedOn = gmdate("z", $this->time); // 0-based day of year
 
-        if ($dayOfYear > 365 - 14 && date("m", $this->time) < 2)
-            $epochYear--; 	// The message does not carry a year, which it's generated in.
-        // If the message is received in the beginning of an year, but was sent
-        // in the end of an year, mostly probably it was the previous year.
+		if ($dayOfYear - 1 > $receivedOn)	// $dayOfНear is 1-based, $receivedOn -- 0-based
+		{
+			$epochYear--;
+			$receivedOn++;
+			if ($dayOfYear < 365 - 14 || $receivedOn > 31)
+				$this->AddDiag("Точки из '$dayOfYear' дня получены в '$receivedOn' день года. Возможно ошибочно определен '$epochYear' год.");
+		}
 
 		return $epochYear;
 	}
@@ -351,15 +359,15 @@ class CMooseSMSv3 extends CMooseSMS
 	
 	protected function ProcessPointsHeader ()
 	{
-		$LatDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 59, 7 );
-		$LatPartsOfDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 43, 16 );
-		$LongDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 35, 8 );
-		$LongPartsOfDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 20, 15 );
+		$LatDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 59, 7 );
+		$LatPartsOfDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 43, 16 );
+		$LongDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 35, 8 );
+		$LongPartsOfDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 20, 15 );
 		
-		$DayOfYear = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 11, 9 );
-		$TimeOfDayIn10MinIntervals = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 3, 8 );
-		$this->CompressionFactor = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 66, 4 );
-		$this->CompressionType = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 70, 2 );
+		$DayOfYear = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 11, 9 );
+		$TimeOfDayIn10MinIntervals = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 3, 8 );
+		$this->CompressionFactor = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 66, 4 );
+		$this->CompressionType = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 70, 2 );
 		
 		
 		if ( $LatDegree === NULL || $LatPartsOfDegree === NULL || $LongDegree === NULL ||
@@ -379,12 +387,11 @@ class CMooseSMSv3 extends CMooseSMS
 		
 		$NewPoint[0] = $LatDegree + $LatPartsOfDegree/65536;
 		$NewPoint[1] = $LongDegree + $LongPartsOfDegree/32768;
-		$NewPoint[2] =	gmmktime ( 0, 0, 0, 1, 1, $this->GetEpochYear($DayOfYear)) +
+		$NewPoint[2] = gmmktime ( 0, 0, 0, 1, 1, $this->GetEpochYear($DayOfYear)) +
 						($DayOfYear-1) * 24 * 60 * 60 +
 						$TimeOfDayIn10MinIntervals * 60 * 10;
 		//$this->TestValue2 = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 35, 8 );
 
-		
 		$this->points[] = $NewPoint;
 	}
 	
