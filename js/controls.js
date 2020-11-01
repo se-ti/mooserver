@@ -1114,7 +1114,7 @@ CUserProxy.prototype =
 
     getContext: function(item)
     {
-        return this._appendOrgs(this._text(item), item.orgs);
+        return this._appendOrgs(this._html(item), item.orgs);
     }
 }
 
@@ -1127,7 +1127,7 @@ CBeaconProxy.prototype =
 {
     getContext: function(item)
     {
-        var res = this._appendOrgs(this._text(item), item.orgs);
+        var res = this._appendOrgs(this._html(item), item.orgs);
         var moose = CApp.single().getMoose();
         for (var i = 0; i < moose.length; i++)
         {
@@ -1164,7 +1164,7 @@ COrgProxy.prototype =
 {
     getContext: function(item)
     {
-        return this._text(item);
+        return this._html(item);
     }
 }
 COrgProxy.inheritFrom(CUserProxy);
@@ -1664,6 +1664,7 @@ CMooseMap = function(root, id, root2)
     this._heatSett = null;
     this._contextMenu = null;
     this._modalEdit = null;
+    this._mooseAttr = null;
 
     this.data = [];	  // слои на карте
     this.source = null; // исходные точки
@@ -1688,6 +1689,7 @@ CMooseMap = function(root, id, root2)
     this._d_onContextMenu = $cd(this, this._onContextMenu);
     this._d_onToggleOverlay = $cd(this, this._onToggleOverlay);
     this._d_onCommentEdited = $cd(this, this._onCommentEdited);
+    this._d_onFullScreenChanged = $cd(this, this._onFullScreenChanged);
 
     this._buildIn(root, id, root2);
 }
@@ -1741,6 +1743,18 @@ CMooseMap.prototype = {
         var ctrl = L.control.layers(layers, param).addTo(this.map);
         this._extendControls(ctrl);
         this._onToggleOverlay();
+
+        this._mooseAttr = new (L.Control.extend(LeafTextControl))({position : 'topleft'});
+
+        document.addEventListener('fullscreenchange', this._d_onFullScreenChanged, false);
+    },
+
+    _onFullScreenChanged: function()
+    {
+        if (!this.map || !this._mooseAttr)
+            return;
+
+        document.fullscreenElement ? this._mooseAttr.addTo(this.map) : this._mooseAttr.remove();
     },
 
     _extendControls: function(ctrl)
@@ -1803,21 +1817,21 @@ CMooseMap.prototype = {
         this.clearTracks();
         this.setTracks(this.source);
 
-        if (this.data.length > 0)
+        if (this.data.length <= 0)
+            return;
+
+        if (this._fitBounds)
         {
-            if (this._fitBounds)
-            {
-                var bnd = this.data[0].getBounds();
-                for (var j = 1; j < this.data.length; j++)
-                    bnd = bnd.extend(this.data[j].getBounds());
+            var bnd = this.data[0].getBounds();
+            for (var j = 1; j < this.data.length; j++)
+                bnd = bnd.extend(this.data[j].getBounds());
 
-                bnd = this._inflateBounds(bnd);
-                if (bnd.isValid())
-                    this.map.fitBounds(bnd);
-            }
-
-            this._fitBounds = false;
+            bnd = this._inflateBounds(bnd);
+            if (bnd.isValid())
+                this.map.fitBounds(bnd);
         }
+
+        this._fitBounds = false;
     },
 
     _inflateBounds: function(bounds)
@@ -1842,6 +1856,9 @@ CMooseMap.prototype = {
 
         if (this._marker)
             this.map.removeLayer(this._marker);
+
+        if (this._mooseAttr)
+            this._mooseAttr.setHtml(null);
 
         this.data = [];
     },
@@ -1912,6 +1929,8 @@ CMooseMap.prototype = {
 
         //if (this._showInvalid)
             this.map.addLayer(this._topLayer);
+
+        this._mooseAttr.setHtml((data || []).map(function(d) {return String.toHTML((d.caption || '').trim());}));
     },
 
     _newPoly: function(idx, id, key)
@@ -3074,4 +3093,49 @@ CModalEdit.prototype =
     }
 }
 CModalEdit.inheritFrom(CControl).addEvent('onClose');
+
+var LeafTextControl = {
+    initialize: function (options)
+    {
+        options = options || {};
+
+        this._c = {
+            root: null,
+            ele: null
+        };
+
+        this._html = options.html || '';
+
+        L.Util.setOptions(this, options);
+    },
+
+    onAdd: function (map)
+    {
+        this._c.root = $('<div class="leaflet-control " style="display:none; position: relative; left: 3em; top: -15.3ex; padding: 0.2ex 0.5em; font-size: larger; text-shadow: white 1px 1px 1px, white -1px 1px, white 1px -1px, white -1px -1px; background-color: rgba(255,255,255,0.5)"></div>');
+        this._update();
+
+        return this._c.root[0];
+    },
+
+    onRemove: function(map)
+    {
+        this._c.root.empty();
+        this._c.ele = null;
+    },
+
+    setHtml: function(html)
+    {
+        if (Array.isArray(html))
+            html = html.join('<br/>');
+        this._html = (html || '').trim();
+        return this._update();
+    },
+
+    _update: function()
+    {
+        this._c.root && this._c.root.toggle((this._html || '') != '')
+            .html(this._html);
+        return this;
+    }
+};
 

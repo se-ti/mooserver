@@ -691,6 +691,8 @@ CMoose.prototype =
         var delayLoad = [];
 
         var uHash = CMooseMapHelper.makeUserHash();
+        var mooseHash = {};
+        (CApp.single().getMoose() || []).forEach(function(m) { mooseHash[m.id] = m;});
         for (var i = 0; i < result.length; i++)
         {
             if (result[i].useCache)
@@ -707,7 +709,9 @@ CMoose.prototype =
                     delayLoad.push(result[i].id);
             }
 
-            this.source.push({id: result[i].id, key: 'mooseId', data: gtd});
+            var cap = [];
+            ['name', 'phone'].forEach(function(id) {if (mooseHash[result[i].id][id]) cap.push(mooseHash[result[i].id][id])});
+            this.source.push({id: result[i].id, key: 'mooseId', data: gtd, caption: cap.join(', ')});
             if (!gtd || !gtd || gtd.length <= 0)
                 continue;
 
