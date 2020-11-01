@@ -307,15 +307,11 @@ CLogs.prototype =
             .setItems(items)
             .setValues([3, 4]);
 
-        var self = this;
-        this._filters = [];
         var head = this._table.find('th');
-        [
+        this._filters = [
             {idx: 7, key: 'ops', opts: {search: true, reset: false, selectAll: true}},
             {idx: 5, key: 'users', opts: {search: true, reset: false, selectAll: true}}
-        ].forEach(function (opt) {
-            self._filters.push(new CColumnFilter(head.get(opt.idx), opt.key, opt.opts).on_dataChanged(self._d_reRead));
-        });
+        ].map(function (opt) { return new CColumnFilter(head.get(opt.idx), opt.key, opt.opts).on_dataChanged(this._d_reRead);}, this);
     },
 
     activate: function(s)
@@ -337,8 +333,7 @@ CLogs.prototype =
         if (filters == null)
             return;
 
-        var self = this;
-        this._filters.forEach(function (f) { self._updateFilter(filters, f); });
+        this._filters.forEach(function (f) { this._updateFilter(filters, f); }, this);
     },
 
     _updateFilter: function(filters, filter)
@@ -390,9 +385,8 @@ CLogs.prototype =
         var filters = {};
         this._filters.forEach(function (f)
         {
-            var res = [];
-            (result[f.getKey()] || []).forEach(function(it) {res.push({caption: it, value: it})});
-            filters[f.getKey()] = res;
+            filters[f.getKey()] = (result[f.getKey()] || [])
+                .map(function(it) { return {caption: it, value: it}; });
         });
         
         this._updateFilters(filters);
