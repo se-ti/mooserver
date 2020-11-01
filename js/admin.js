@@ -248,7 +248,7 @@ CLogs = function(after)
     this._body = null;
     this._search = null;
     this._filter = null;
-    this._filter2 = null;
+    this._filters = [];
 
     this._d_reRead = $cd(this, this.reRead);
     this._d_clearFilters = $cd(this, this._clearFilters);
@@ -307,19 +307,15 @@ CLogs.prototype =
             .setItems(items)
             .setValues([3, 4]);
 
-        var items2 = [{caption: 'addSms', value: 'addSms'},
-            {caption: 'activity_times', value: 'activity_times'},
-            {caption: 'auth', value: 'auth'},
-            {caption: 'gate', value: 'gate'},
-            {caption: 'getBeaconData', value: 'getBeaconData'},
-            {caption: 'reassignSms', value: 'reassignSms'},
-            {caption: 'request restore', value: 'request restore'},
-            {caption: 'togglePoint', value: 'togglePoint'},
-            {caption: 'webClient', value: 'webClient'}];
-        
-        this._filter2 = new CColumnFilter(this._table.find('th').get(7), 'ops', {search: true, reset: false, selectAll: true})
-            .on_dataChanged(this._d_reRead)
-            .setItems(items2);
+        var self = this;
+        this._filters = [];
+        var head = this._table.find('th');
+        [
+            {idx: 7, key: 'ops', opts: {search: true, reset: false, selectAll: true}},
+            {idx: 5, key: 'users', opts: {search: true, reset: false, selectAll: true}}
+        ].forEach(function (opt) {
+            self._filters.push(new CColumnFilter(head.get(opt.idx), opt.key, opt.opts).on_dataChanged(self._d_reRead));
+        });
     },
 
     activate: function(s)
@@ -331,9 +327,25 @@ CLogs.prototype =
     _clearFilters: function()
     {
         this._filter.clear();
-        this._filter2.clear();
+        this._filters.forEach(function(f) { f && f.clear();});
         this._search.val('');
         this.reRead();
+    },
+
+    _updateFilters: function(filters)
+    {
+        if (filters == null)
+            return;
+
+        var self = this;
+        this._filters.forEach(function (f) { self._updateFilter(filters, f); });
+    },
+
+    _updateFilter: function(filters, filter)
+    {
+        var items = filters[filter.getKey()];
+        if (!filter.isActive() && items != null && items.length > 0)
+            filter.setItems(items);
     },
 
     _onEnter: function(e)
@@ -350,11 +362,15 @@ CLogs.prototype =
         var param = {
             search: (this._search.val()||'').trim(),
             limit: this._rowLimit.val(),
-            levels: this._filter.getValues(),
-            ops: this._filter2.getValues()
+            levels: this._filter.getValues()
         };
+        var hasActive = false;
+        this._filters.forEach(function(f) { if (!f) return;
+            param[f.getKey()] = f.getValues();
+            hasActive = hasActive || f.isActive();
+        });
 
-        this._clearFilters.get(0).disabled = !this._filter.isActive() && !this._filter2.isActive() && param.search == '';
+        this._clearFilters.get(0).disabled = !this._filter.isActive() && !hasActive && param.search == '';
 
         $ajax('getLogs', param, $cd(this, this._onReRead));
     },
@@ -370,15 +386,16 @@ CLogs.prototype =
             return;
 
         this._render(result.logs);
-        
-        if (!this._filter2.isActive() && result.ops != null && result.ops.length > 0)
+
+        var filters = {};
+        this._filters.forEach(function (f)
         {
-            var items = [];
-            for (var i =0; i < result.ops.length; i++)
-                items.push({caption: result.ops[i], value: result.ops[i]});
-            
-            this._filter2.setItems(items);
-        }
+            var res = [];
+            (result[f.getKey()] || []).forEach(function(it) {res.push({caption: it, value: it})});
+            filters[f.getKey()] = res;
+        });
+        
+        this._updateFilters(filters);
     },
 
     _render: function(result)

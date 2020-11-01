@@ -542,10 +542,14 @@ function getLogs()
     $ops = @$_POST['ops'];
     if ($ops != null && (!is_array($ops) || count($ops) != count(array_filter($ops))))
         dieError('недопустимая операция');
+
+    $users = @$_POST['users'];
+    if ($users != null && (!is_array($users) || count($users) != count(array_filter($users))))
+        dieError('недопустимые пользователи');
     
     $search = @$_POST['search'];
 
-    return $db->GetLogs($auth, $levels, $ops, $search, $limit);
+    return $db->GetLogs($auth, $levels, $ops, $users, $search, $limit);
 }
 
 function addLog()

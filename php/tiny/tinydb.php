@@ -715,13 +715,12 @@ class CTinyDb
         $this->Query($query);
     }
 
-    function GetLogs(CTinyAuth $auth, $levels, $ops, $search, $limit)
+    function GetLogs(CTinyAuth $auth, $levels, $ops, $users, $search, $limit)
     {
         if (!$auth->canAdmin())
             $this->ErrRights();
 
-        $cond = 'true';
-
+        $ands = [];
         if ($levels != null)
         {
             $levels = filter_var($levels, FILTER_VALIDATE_INT, ['options' => ['min_range' => self::LogInfo, 'max_range' => self::LogCritical], 'flags' => FILTER_FORCE_ARRAY | FILTER_REQUIRE_ARRAY]);
@@ -735,32 +734,20 @@ class CTinyDb
                 foreach($levels as $l)
                     $levs[] = $this->db->quote($set[$l]);
 
-                $cond = 'level in ('. implode(', ', $levs) .')';
+                $ands[] = 'level in ('. implode(', ', $levs) .')';
             }
         }
 
-        $opsCond = 'true';
-        if ($ops != null)
-        {
-            if (!is_array($ops))
-                $this->Err("недопустимый список операций");
-            $qops = [];
-            foreach ($ops as $op)
-                if ($op == null || !is_string($op))
-                    $this->Err('недопустимая операция');
-                else
-                    $qops[] = $this->db->quote($op);
-            
-            if (count($qops) > 0)
-                $opsCond = 'operation in ('. implode(', ', $qops) .')';
-        }
 
-        $searchCond = 'true';
+        $ands[] = $this->getStringFilterCondition($ops, 'operation', 'недопустимый список операций', 'недопустимая операция');
+        $ands[] = $this->getStringFilterCondition($users, 'login', 'недопустимый список пользователей', 'недопустимый пользователь');
         if ($search !== null && trim($search) != '')
         {
             $search = $this->escapeForLike($search);
-            $searchCond = "(message like '%$search%' or u.login like '%$search%')" ;
+            $ands[] = "(message like '%$search%' or u.login like '%$search%')" ;
         }
+
+
 
         $limit = $limit === null ? '' : " limit " . $this->ValidateId($limit, "Недопустимое значение limit", 1);
 
@@ -770,12 +757,14 @@ class CTinyDb
         $join = $auth->isSuper() ? '' : "inner join usergroups oth on oth.user_id = l.user_id
             inner join users gr on gr.id = oth.group_id
             left join usergroups my on my.group_id = oth.group_id ";
-        $joinCond = $auth->isSuper() ? 'true' : "gr.removedate is null and gr.is_group = true and my.user_id = $id and my.group_id > $min";
+        if (!$auth->isSuper())
+            $ands[] = "gr.removedate is null and gr.is_group = true and my.user_id = $id and my.group_id > $min";
 
+        $ands = count($ands) > 0 ? implode(' and ', $ands) : 'true';
         $query = "select l.*, DATE_FORMAT(l.stamp,'%Y-%m-%dT%TZ') as sstamp, u.login from logs l
             left join users u on u.id = l.user_id
             $join
-            where true and $cond and $opsCond and $joinCond and $searchCond
+            where $ands
             order by id desc $limit";
 
         $result = $this->Query($query);
@@ -792,15 +781,65 @@ class CTinyDb
                 'message' => $r['message']];
         }
         
-        $query = "select distinct operation
-                    from logs
-                    order by operation";
+        return ['logs' => $res,
+            'ops' => $this->GetFilterOptions('operation'),
+            'users' => $this->GetFilterOptions('login', 'users', 'is_group = false')];
+    }
+
+    private function strValidator($str, $err)
+    {
+        if (!is_string($str))
+            $this->Err($err);
+        return $this->db->quote($str);
+    }
+
+    private function getStringFilterCondition($vals, $field, $notAnArrErr, $errMess)
+    {
+        return $this->getFilterCondition($vals, $field, 'strValidator', $notAnArrErr, $errMess);
+    }
+
+    private function getFilterCondition($vals, $field, $validator, $notAnArrErr, $errMess)
+    {
+        if ($vals == null)
+            return 'true';
+
+        if (!is_array($vals))
+            $this->Err($notAnArrErr);
+        $qVals = [];
+        $hasNull = false;
+        foreach ($vals as $val)
+            if ($val == null)
+                $hasNull = true;
+            else
+                $qVals[] = call_user_func([$this, $validator], $val, $errMess);
+
+        $conds = [];
+        if ($hasNull)
+            $conds[] = "$field is null";
+        if (count($qVals) > 0)
+            $conds[] = $field . ' in ('. implode(', ', $qVals) .')';
+
+        if (count($conds) > 1)
+            return '( ' . implode(' or ', $conds) . ')';
+        if (count($conds) == 1)
+            return $conds[0];
+
+        return 'true';
+    }
+
+    private function GetFilterOptions($column, $table = 'logs', $where = "true")
+    {
+        $query = "select distinct $column
+                    from $table
+                    where $where
+                    order by $column";
+
         $result = $this->Query($query);
         $ops = [];
         foreach($result as $r)
-            $ops[] = $r['operation'];
+            $ops[] = $r[$column];
 
-        return ['logs' => $res, 'ops' => $ops];
+        return $ops;
     }
 }
 
