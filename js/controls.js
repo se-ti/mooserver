@@ -3026,7 +3026,6 @@ CContextMenu.prototype = {
         document.addEventListener('contextmenu', this._d_onExternClick, true);
         this._render(context);
 
-        console.log(e.target, e);
         this._c.root.css(this._getPosition(e)).addClass('open');
         return this;
     },
