@@ -2914,6 +2914,121 @@ CColumnFilter.prototype =
 CColumnFilter.inheritFrom(CControl).addEvent('dataChanged');
 
 
+CContextMenu = function()
+{
+    this._c  = {
+        root:  null};
+    this._context = null;
+    this._items = [];
+
+    this._d_onExternClick = $cd(this, this._onExternClick);
+
+    this.init();
+}
+
+CContextMenu._instance = null;
+CContextMenu.single = function() {
+    if (!CContextMenu._instance)
+        CContextMenu._instance = new CContextMenu();
+    return this._instance
+}
+
+CContextMenu.prototype = {
+
+    _tpl:  '<div class="context-menu-holder dropdown" style="position: absolute;">' +
+                '<ul class="dropdown-menu" aria-labelledby="dropdownMenu1"></ul>' +
+            '</div>',
+
+    init: function() {
+        this._c.root = $(this._tpl).appendTo(document.body);
+    },
+
+    show: function(e, context) {
+        if (!this._items || this._items.length <= 0)
+            return;
+
+        this._context = context;
+
+        document.addEventListener('click', this._d_onExternClick, true);
+        document.addEventListener('contextmenu', this._d_onExternClick, true);
+        this._render(context);
+
+        console.log(e.target, e);
+        this._c.root.css(this._getPosition(e)).addClass('open');
+        return this;
+    },
+
+    _getPosition: function(e) {
+        var r = this._c.root.find('ul');
+        var w = r.outerWidth();
+        var h = r.outerHeight();
+
+        var d = 2;
+        var px = 'px';
+        var dx = e.clientX + w > $(window).width() && e.clientX > w ?  -w - d : d;  // не влезает в экран справа, но влезет слева
+        var dy = e.clientY + h > $(window).height() && e.clientY > h ? -h - d : d;
+
+        return {
+            left: e.pageX + dx + px,
+            top: e.pageY + dy + px
+        };
+    },
+
+    hide: function() {
+        this._c.root.removeClass('open');
+        document.removeEventListener('click', this._d_onExternClick, true);
+        document.removeEventListener('contextmenu', this._d_onExternClick, true);
+        return this;
+    },
+
+    setItems: function(items) {
+        this._items = (items || []).map(i => this._validateItem(i));
+
+        return this;
+    },
+
+    addItem: function(item) {
+        this._items = this._items || [];
+        this._items.push(this._validateItem(item));
+
+        return this;
+    },
+
+    _validateItem: function(item) {
+        item = $.extend({}, {caption: '', action: null, active: true, isSeparator: false}, item);
+        item.caption = (item.caption || '').trim();
+        if (item.action && ! item.action instanceof Function)
+            console && console.error('CContextMenu item', item.caption, 'action is not a function');
+
+        item.active = item.active && (item.isSeparator || item.action && item.caption != '');
+
+        return item;
+    },
+
+    _render: function(context) {
+        var el = this._c.root.find('ul').empty();
+
+        this._items.forEach(it => {
+                if (it.separator) {
+                    $('<li role="separator" class="divider"></li>').appendTo(el);
+                    return;
+                }
+
+                $(String.format('<li class="{0}"><a href="#">{1}</a></li>', it.active ? '': 'disabled', String.toHTML(it.caption)))
+                    .appendTo(el)
+                    .click(e => {e.preventDefault(); this.hide(); it.action(e, this._context);});
+            }
+        );
+    },
+
+    _onExternClick: function(e) {
+        if (e.target && $(e.target).parents('.context-menu-holder').length > 0)
+            return;
+
+        this.hide();
+    }
+};
+
 CTipControl = function(root, tips)
 {
     this._tips = null;
