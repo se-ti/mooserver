@@ -195,6 +195,18 @@ if (!Array.isArray)
         return Object.prototype.toString.call(arg) === '[object Array]';
     };
 
+if (!Object.entries) {
+    Object.entries = function( obj ){
+        var ownProps = Object.keys( obj ),
+            i = ownProps.length,
+            resArray = new Array(i); // preallocate the Array
+        while (i--)
+            resArray[i] = [ownProps[i], obj[ownProps[i]]];
+
+        return resArray;
+    };
+}
+
 function $ajax(method, param, success, fail)
 {
     var reqParams = {

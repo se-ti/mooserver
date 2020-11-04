@@ -2488,7 +2488,7 @@ CColumnFilter = function(root, key, options)
 
     this._all = false;
 
-    this._options = $.extend({search: true, reset: true, empty: false, emptyMeansAll: true, selectAll: false}, options);
+    this._options = $.extend({search: true, reset: true, empty: false, emptyMeansAll: true, selectAll: false, body: null}, options);
 
     this._d_onActivate = $cd(this, this._onActivate);
     this._d_onOk = $cd(this, this._onOk);
@@ -2502,6 +2502,7 @@ CColumnFilter = function(root, key, options)
     this._d_onSearchKeydown = $cd(this, this._onSearchKeydown);
     this._d_onListKeyup = $cd(this, this._onListKeyup);
     this._d_onListKeydown = $cd(this, this._onListKeydown);
+    this._d_onContextMenu = $cd(this, this._onContextMenu);
     this._buildIn(root);
 }
 
@@ -2550,6 +2551,9 @@ CColumnFilter.prototype =
             .keydown(this._d_onListKeydown)
             .keyup(this._d_onListKeyup);
         c.selAll.parents('div:first').toggle(this._options.selectAll);
+
+        if (this._options.body && root.cellIndex != null)
+            $(this._options.body).on('contextmenu', 'tr td', this._d_onContextMenu);
     },
 
     clear: function()
@@ -2909,6 +2913,75 @@ CColumnFilter.prototype =
     _raise_dataChanged: function()
     {
         this.raise('dataChanged');
+    },
+
+    _externUpdate: function(values, add) {
+        if (!values)
+            return;
+
+        this._curEmpty = this._empty;
+
+        var hash = {};
+        values.forEach(v => hash[v] = true);
+        var filtered = this._items.filter(it => (it.value|| '') != '');
+        if (add)
+            filtered.forEach(it => this._curChecked[it.value] = !!hash[it.value]);  // убрать всех, кроме добавляемых
+        else {
+            var noChecked = !filtered.some(it => this._curChecked[it.value] != undefined);  // в будущем -- на самом деле если add != include
+            filtered.forEach(it => this._curChecked[it.value] = (noChecked || this._curChecked[it.value]) && !hash[it.value]);
+        }
+
+        this._stat();
+        this._onOk();
+    },
+
+    _onContextMenu: function(e) {
+        if (!e || !e.target)
+            return;
+
+        var jTgt = $(e.target);
+        var cell = jTgt.is('td') ? jTgt : jTgt.parents('td:first');
+        if (cell.get(0).cellIndex != this._c.root.parent().get(0).cellIndex)
+            return;
+
+        var text = this._getPureText(cell.get(0)).trim();
+        if (text == '')
+            return;
+
+        var items = this._items||[];
+        var values = items.filter(it => it.caption == text);
+        if (values.length <= 0)
+            return;
+
+        var ops = [];
+        // если единственный -- не показывать
+        if (values.length != 1 || !this._checked[values[0].value] || Object.entries(this._checked).filter(ent => ent[1]).length > 1)
+            ops.push({caption: String.format("Оставить только '{0}'", values[0].caption), action: (e, ctx) => this._externUpdate(ctx, true)});
+
+        // единственный выбранный -- caption == сбросить фильтр
+        if (values.length != 1 || this._checked[values[0].value] || items.some(it => (it.value || '') != '') && items.every(it => (it.value || '') == '' || !this._checked[it.value])) {
+            var cap = this._checked[values[0].value] && Object.entries(this._checked).filter(ent => ent[1]).length == 1 ? 'Сбросить фильтр' : String.format("Скрыть '{0}'", values[0].caption);
+            ops.push({ caption: cap, action: (e, ctx) => this._externUpdate(ctx, false) });
+        }
+
+        if (ops.length == 0)
+            return;
+
+        e.preventDefault();
+        CContextMenu.single()
+            .setItems(ops)
+            .show(e, values.map(v => v.value));
+    },
+
+    _getPureText: function(domElement) {
+        if (!domElement)
+            return '';
+        var res = '';
+        for (var i = 0; i < domElement.childNodes.length; i++)
+            if (domElement.childNodes[i].nodeType == 3)// textNode
+                res += domElement.childNodes[i].textContent;
+
+        return res;
     }
 }
 CColumnFilter.inheritFrom(CControl).addEvent('dataChanged');

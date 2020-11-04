@@ -299,18 +299,18 @@ CLogs.prototype =
         this._table = $('<table class="hidden table table-striped table-condensed"></table>')
             .appendTo(je);
         this._table.html('<thead><tr><th>#</th><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead><tbody></tbody>');
+        var head = this._table.find('th');
         this._body = this._table.find('tbody');
 
         var items = [{caption: 'info', value: 0}, {caption: 'trace', value: 1}, {caption: 'debug', value: 2}, {caption: 'error', value: 3}, {caption: 'critical', value: 4}];
-        this._filter = new CColumnFilter(this._table.find('th').get(3), 'levels', {search: false, reset: false})
+        this._filter = new CColumnFilter(head.get(3), 'levels', {search: false, reset: false, body: this._body})
             .on_dataChanged(this._d_reRead)
             .setItems(items)
             .setValues([3, 4]);
 
-        var head = this._table.find('th');
         this._filters = [
-            {idx: 7, key: 'ops', opts: {search: true, reset: false, selectAll: true}},
-            {idx: 5, key: 'users', opts: {search: true, reset: false, selectAll: true}}
+            {idx: 7, key: 'ops', opts: {search: true, reset: false, selectAll: true, body: this._body}},
+            {idx: 5, key: 'users', opts: {search: true, reset: false, selectAll: true, body: this._body}}
         ].map(function (opt) { return new CColumnFilter(head.get(opt.idx), opt.key, opt.opts).on_dataChanged(this._d_reRead);}, this);
     },
 
