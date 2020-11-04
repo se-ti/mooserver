@@ -1884,6 +1884,9 @@ CMooseMap.prototype = {
         else
             this.map.removeLayer(this._topLayer);
 
+        var minTime = null;
+        var maxTime = null;
+
         for (var i = 0; i < data.length; i++)
         {
             var pt;
@@ -1922,6 +1925,14 @@ CMooseMap.prototype = {
             series.setLatLngs(ll);
             series.__kTree = new CKTreeItem(ll);
             this.data.push(series);
+
+            if (src.length > 0)
+            {
+                if (!minTime || minTime > src[0][2])
+                    minTime = src[0][2];
+                if (!maxTime || maxTime < src[src.length - 1][2])
+                    maxTime = src[src.length - 1][2];
+            }
         }
 
         if (showHeat)
@@ -1930,7 +1941,10 @@ CMooseMap.prototype = {
         //if (this._showInvalid)
             this.map.addLayer(this._topLayer);
 
-        this._mooseAttr.setHtml((data || []).map(function(d) {return String.toHTML((d.caption || '').trim());}));
+        var caps = (data || []).map(function(d) {return String.toHTML((d.caption || '').trim());});
+        if (minTime)
+            caps.unshift(String.format('c {0} по {1}', new Date(Date.parse(minTime)).toLocaleDateString(), new Date(Date.parse(maxTime)).toLocaleDateString()));
+        this._mooseAttr.setHtml(caps);
     },
 
     _newPoly: function(idx, id, key)
