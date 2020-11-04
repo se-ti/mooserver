@@ -1486,7 +1486,7 @@ CGate.prototype =
         var mooses = CApp.single().getMoose();
         if (mooses && ! this._mooseFilter)
         {
-            this._mooseFilter = new CColumnFilter(this._head.find('th').get(5), 'moose', {selectAll: true})
+            this._mooseFilter = new CColumnFilter(this._head.find('th').get(5), 'moose', {selectAll: true, body: this._body})
                 .on_dataChanged(this._c_reRead);
             this._mooseFilter.setItems(mooses.map(function(m) { return {caption: m.name, value: m.id}; }));
         }
