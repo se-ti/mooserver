@@ -1729,7 +1729,7 @@ CMooseMap.prototype = {
         var param = null;
         if (root2 != null)
         {
-            this.heatMap = L.tileLayer.heatcanvas({},{step: 1 /*2.4 1 0.5*/, degree: 1, opacity: 0.8, zIndex: 201});
+            this.heatMap = L.TileLayer.heatcanvas({},{step: 1 /*2.4 1 0.5*/, degree: 1, opacity: 0.8, zIndex: 201});
             this._heatSett = new CHeatSett(root2)
                 .on_change(this._d_render);
 
