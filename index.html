@@ -728,7 +728,7 @@ CMoose.prototype =
             jq.param = param;
         }
 
-		this.map.render(this.source);
+		this.map.render(this.source, delayLoad.length > 0);
         if (st != null)
             this.periodChooser.setTimes(st, en);
 	},

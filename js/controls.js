@@ -1679,6 +1679,7 @@ CMooseMap = function(root, id, root2)
     this._forPrint = false;
 
     this._fitBounds = true;
+    this._skipHeatMap = false;
 
     this._inflate = (root2 == null) ? this._inflateSett : { threshold: 300, large: 0.002, small: 0.008}; // на большом экране надо больше увеличивать зону просмотра
 
@@ -1788,9 +1789,10 @@ CMooseMap.prototype = {
         this.map.invalidateSize();
     },
 
-    render: function(source)
+    render: function(source, skipHeatUpdate)
     {
         this._fitBounds = true;
+        this._skipHeatMap = skipHeatUpdate || false;
         this.source = source;
         this._render();
     },
@@ -1872,11 +1874,12 @@ CMooseMap.prototype = {
 
         var heatSett;
         var hasHeat = this.heatMap != null;
-        var showHeat = hasHeat && this.map.hasLayer(this.heatMap);
+        var showHeat = hasHeat && this.map.hasLayer(this.heatMap) && !this._skipHeatMap;
         if (hasHeat)
         {
             heatSett = this._heatSett.get_Value();
-            this.map.removeLayer(this.heatMap);
+            if (!this._skipHeatMap)
+                this.map.removeLayer(this.heatMap);
             this.heatMap.clear();
             this.heatMap.setHeatOptions(heatSett);
         }
@@ -1916,7 +1919,7 @@ CMooseMap.prototype = {
                 pt._idx = idx++;
                 ll.push(pt);
 
-                if (hasHeat)
+                if (hasHeat && !this._skipHeatMap)
                     this.heatMap.pushData(src[j][0], src[j][1], this._heatLevel(heatSett, src[j]));
 
                 if (!valid)
