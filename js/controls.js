@@ -1678,6 +1678,8 @@ CMooseMap = function(root, id, root2)
     this._canComment = false;
     this._forPrint = false;
 
+    this._fitBounds = true;
+
     this._inflate = (root2 == null) ? this._inflateSett : { threshold: 300, large: 0.002, small: 0.008}; // на большом экране надо больше увеличивать зону просмотра
 
     this._d_render = $cd(this, this._render);
@@ -1786,9 +1788,9 @@ CMooseMap.prototype = {
         this.map.invalidateSize();
     },
 
-    render: function(source, fitBounds)
+    render: function(source)
     {
-        this._fitBounds = fitBounds || false;
+        this._fitBounds = true;
         this.source = source;
         this._render();
     },
@@ -2402,7 +2404,7 @@ CMooseMapHelper.prototype =
         if (result.track.length == 1)
             result.track.push(result.track[0]);
 
-        jqXHR.__mapControl.render([{data:CMooseMapHelper.glueTrackData(result, CMooseMapHelper.makeUserHash()), id: jqXHR.__rawId, key: 'rawSmsId'}], true);
+        jqXHR.__mapControl.render([{data:CMooseMapHelper.glueTrackData(result, CMooseMapHelper.makeUserHash()), id: jqXHR.__rawId, key: 'rawSmsId'}]);
     }
 }
 

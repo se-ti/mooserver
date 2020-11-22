@@ -470,7 +470,6 @@ CMoose = function(after)
     this.tipControl = null;
 
 	this._exportBtn = null;
-    this._fitBounds = true;
 
     this._canAdmin = false;
 
@@ -648,7 +647,6 @@ CMoose.prototype =
 
 	reRead: function(moosePhones)
 	{
-        this._fitBounds = this._fitBounds || moosePhones != null;
         var param = this._getParam(moosePhones);
 		var jq = $ajax('getData', param, this._d_onRreRead);
         jq.param = param;
@@ -730,7 +728,7 @@ CMoose.prototype =
             jq.param = param;
         }
 
-		this.map.render(this.source, this._fitBounds);
+		this.map.render(this.source);
         if (st != null)
             this.periodChooser.setTimes(st, en);
 	},
@@ -772,7 +770,7 @@ CMoose.prototype =
                 }
         }
 
-        this.map.render(this.source, this._fitBounds);
+        this.map.render(this.source);
     }
 }
 CMoose.inheritFrom(CPage);
