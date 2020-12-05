@@ -1147,7 +1147,7 @@ class CMooseDb extends CTinyDb
         return ['res' => true,
             'rc' => $result->rowCount(),
             'author' => $name,
-            'cstamp' => gmdate('Y-m-d', $t) .'T'. gmdate('h:i:s', $t). 'Z'];
+            'cstamp' => gmdate('Y-m-d', $t) .'T'. gmdate('H:i:s', $t). 'Z'];
     }
 
     // endregion
