@@ -1580,6 +1580,7 @@ CHeatSett = function(elem)
     };
 
     this._c_onChange = $cd(this, this._raise_change);
+    this._c_scaler= $cd(this, this._scaler);
     this._buildIn(elem);
 }
 
@@ -1592,19 +1593,27 @@ CHeatSett.prototype =
         var tpl = '<div class="panel panel-default" style="margin-top: 3ex;"> ' +
             '<div class="panel-body form-horizontal"> ' +
             '<div class="row -form-group" style="margin-bottom: 1ex;"><div class="col-sm-offset-4 col-sm-8"><div class="checkbox "><label><input type="checkbox"/> учитывать активность</label></div></div></div>'+
-            '<div class="row"><label for="hs_level" class="col-sm-4 control-label">Level</label><div class="col-sm-8"><input class="form-control" type="text" placeholder="level" value="20" id="hs_level"/></div></div>' +
-            '<div class="row"><label for="hs_degree" class="col-sm-4 control-label">Degree</label><div class="col-sm-8"><input class="form-control" type="text" placeholder="degree" value="1" id="hs_degree"/></div></div>' +
-            '<div class="row"><label for="hs_step" class="col-sm-4 control-label">Step</label><div class="col-sm-8"><input class="form-control" type="text" placeholder="degree" value="1" id="hs_step"/></div></div>' +
+            '<div class="row"><label for="hs_level" class="col-sm-4 control-label">Level</label><div class="col-sm-8"><input class="form-control no-spinner" type="number" placeholder="level" value="20" id="hs_level"/></div></div>' +
+            '<div class="row"><label for="hs_degree" class="col-sm-4 control-label">Degree</label><div class="col-sm-8"><input class="form-control no-spinner" type="number" placeholder="degree" value="1" id="hs_degree"/></div></div>' +
+            '<div class="row"><label for="hs_step" class="col-sm-4 control-label">Step</label><div class="col-sm-8"><input class="form-control no-spinner" type="number" placeholder="degree" value="1" id="hs_step"/></div></div>' +
             '</div>' +
             '</div>';
 
         var e =  $(tpl).appendTo(root);
         c.root = e;
         c.weight = e.find('input[type="checkbox"]');
-        c.level = e.find('#hs_level');
-        c.degree = e.find('#hs_degree');
-        c.step = e.find('#hs_step');
+        c.level = e.find('#hs_level').keydown(this._c_scaler);
+        c.degree = e.find('#hs_degree').keydown(this._c_scaler);
+        c.step = e.find('#hs_step').keydown(this._c_scaler);
         e.find('input').change(this._c_onChange);
+    },
+
+    _scaler: function(e)
+    {
+        if (e.which != 38 && e.which != 40) // up or down key
+            return;
+
+        e.target.step = e.ctrlKey ? 0.1 : 1;
     },
 
     get_Value: function()
