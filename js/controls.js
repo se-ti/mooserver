@@ -1957,7 +1957,7 @@ CMooseMap.prototype = {
 
         var caps = (data || []).map(function(d) {return String.toHTML((d.caption || '').trim());});
         if (minTime)
-            caps.unshift(String.format('c {0} по {1}', new Date(Date.parse(minTime)).toLocaleDateString(), new Date(Date.parse(maxTime)).toLocaleDateString()));
+            caps.unshift(String.format('c {0} по {1}', new Date(minTime).toLocaleDateString(), new Date(maxTime).toLocaleDateString()));
         this._mooseAttr.setHtml(caps);
     },
 
@@ -2171,17 +2171,12 @@ CMooseMap.prototype = {
         var p = this._marker._popup;            // HACK !!!
         if (p)
         {
-            var d = new Date();
-            d.setTime(Date.parse(ll._time));
-            var c = String.format("{0}<br/>{1} N, {2} E", d.toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
+            var c = String.format("{0}<br/>{1} N, {2} E", new Date(ll._time).toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
             if (ll._cnt != null)
                 c += String.format('<br/>Активность: {2} ({0} / {1})', ll._sum || 0, ll._cnt || 0, ll._str || '');
 
             if (ll._comment != null)
-            {
-                d.setTime(Date.parse(ll._commentTime));
-                c+= String.format('<br/><br/>{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), d.toLocaleString());
-            }
+                c += String.format('<br/><br/>{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), new Date(ll._commentTime).toLocaleString());
             p.setContent(c);
 
             if (!p._isOpen)                         // HACK 2 !!!
@@ -2377,17 +2372,9 @@ CMooseMapHelper._binarySearch = function(arr, time)
 
 CMooseMapHelper._strToTime = function(arr, idx)
 {
-    if (!arr || arr.length <= 0 || idx < 0)
-        return;
-
-    var d;
-    var len = arr.length;
-    for (var i = 0; i < len; i++)
-    {
-        d = new Date();
-        d.setTime(Date.parse(arr[i][idx]));
-        arr[i].tm = d;
-    }
+    if (arr && arr.length > 0 && idx >= 0)
+        for (var i = 0, len = arr.length; i < len; i++)
+            arr[i].tm = new Date(arr[i][idx]);
 }
 
 CMooseMapHelper.prototype =

@@ -700,7 +700,7 @@ CMoose.prototype =
             if (result[i].useCache)
             {
                 gtd = CApp.single().getMooseData(result[i].id);
-                gtd = CMooseMapHelper.filter(gtd, jqXHR.param.start ? new Date(Date.parse(jqXHR.param.start)) : null, jqXHR.param.end ? new Date(Date.parse(jqXHR.param.end)) : null);
+                gtd = CMooseMapHelper.filter(gtd, jqXHR.param.start ? new Date(jqXHR.param.start) : null, jqXHR.param.end ? new Date(jqXHR.param.end) : null);
             }
             else
             {
@@ -1041,9 +1041,7 @@ CBeacon.prototype = {
             res += String.format('<div{0}>{1}</div>', cls, String.format(item[k]));
         }
 
-        var d = new Date();
-        d.setTime(Date.parse(item[0]));
-        return String.format('<td title="получено: {0}" data-id="{1}">{2}</td>', d.toLocaleString(), item[7], res);
+        return String.format('<td title="получено: {0}" data-id="{1}">{2}</td>', new Date(item[0]).toLocaleString(), item[7], res);
     },
 
     _clickRow: function(e)
@@ -1233,7 +1231,6 @@ CSingleBeacon.prototype =
         var body = '';
         var line = '';
         var cls;
-        var d = new Date();
 
         var mooseNames = {};
         var moose = CApp.single().getMoose();
@@ -1248,8 +1245,8 @@ CSingleBeacon.prototype =
 
             for(var j = 0; j < phdLen; j++)
             {
-                line = this._localeDateCell(d, phd[j][0], true)
-                     + this._localeDateCell(d, phd[j][1], false);
+                line = this._localeDateCell(phd[j][0], true)
+                     + this._localeDateCell(phd[j][1], false);
 
                 for (var k = 2; k < 7; k++)
                 {
@@ -1287,12 +1284,12 @@ CSingleBeacon.prototype =
         return item[idx] != null && (idx == 4 && item[idx] < CSingleBeacon.prototype.cold || idx == 3 && item[idx] < CSingleBeacon.prototype.low);
     },
 
-    _localeDateCell: function(date, val, full)
+    _localeDateCell: function(val, full)
     {
         if (!val)
             return '<td>&lt;нет&gt;</td>';
 
-        date.setTime(Date.parse(val));
+        var date = new Date(val);
         return String.format('<td>{0}</td>', full ? date.toLocaleString() : date.toLocaleDateString());
     },
 
@@ -1459,8 +1456,7 @@ CGate.prototype =
         {
             it = result[i];
 
-            var d = new Date();
-            d.setTime(Date.parse(it.stamp));
+            var d = new Date(it.stamp);
             var stat = this._itemStatus(it);
             var diagnose = it.diagnose ? ('<br/>' + String.makeBreakable(it.diagnose)): '';
             body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), CSingleBeacon.beaconHref(it.phoneId, it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))

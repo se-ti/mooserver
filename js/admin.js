@@ -408,9 +408,7 @@ CLogs.prototype =
         {
             it = result[i];
 
-            var d = new Date();
-            d.setTime(Date.parse(it.stamp));
-            body += String.format(tpl, i+1, it.id, d.toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), String.toHTML(it.message));
+            body += String.format(tpl, i+1, it.id, new Date(it.stamp).toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), String.toHTML(it.message));
         }
 
         this._body.html(body);
