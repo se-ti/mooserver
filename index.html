@@ -766,7 +766,7 @@ CMoose.prototype =
             stamp = cache.getMooseStamp(result[i].id, jqXHR.param.start, jqXHR.param.end);
             cache.addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, stamp, gtd);
 
-            for (var j; j < this.source.length; j++)
+            for (var j = 0; j < this.source.length; j++)
                 if (this.source[j].id == result[i].id)
                 {
                     this.source[j].data = gtd;

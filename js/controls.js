@@ -2299,14 +2299,28 @@ CMooseMapHelper.glueTrackData = function(result, userHash)
     var aLen = act.length;
     var len = track.length;
 
+    var pos;
+    var idx = -1;
+    var guess = 20;
     for (i = 0; i < len; i++)
     {
         var t = track[i].tm;
-        j = 0;
-        var idx = aLen - 1;
+
+        // попробуем ускорить поиск, угадав диапазон
+        if (tPt && idx >= 0 && idx + tPt.cnt + guess < aLen && t-act[idx].tm > delta && t-act[idx + tPt.cnt + guess].tm < delta)
+        {
+            j = idx;
+            idx += tPt.cnt + guess;
+        }
+        else  // не получилось -- пойдем штатно
+        {
+            j = 0;
+            idx = aLen - 1;
+        }
+
         while (idx > j+1)				// binary search
         {
-            var pos = Math.floor((idx + j) / 2);
+            pos = Math.floor((idx + j) / 2);
             if (t - act[pos].tm > delta)
                 j = pos;
             else
@@ -2374,7 +2388,7 @@ CMooseMapHelper._strToTime = function(arr, idx)
 {
     if (arr && arr.length > 0 && idx >= 0)
         for (var i = 0, len = arr.length; i < len; i++)
-            arr[i].tm = new Date(arr[i][idx]);
+            arr[i].tm = Date.parse(arr[i][idx]);
 }
 
 CMooseMapHelper.prototype =
@@ -2409,13 +2423,17 @@ CMooseMapHelper.prototype =
 
 CKTreeItem = function(latLngs, sectByLat)
 {
-    this._rect = L.latLngBounds(latLngs);
     this._data = latLngs;
     this._left = null;
     this._right = null;
 
     if (this._data.length > 100)
+    {
         this._subdivide(sectByLat || false);
+        this._rect = this._left._rect.extend(this._right._rect);
+    }
+    else
+        this._rect = L.latLngBounds(latLngs);
 }
 
 CKTreeItem.prototype = {
@@ -2464,17 +2482,24 @@ CKTreeItem.prototype = {
 
     _subdivide: function (sectByLat)
     {
-        var byLat = function(a, b) {return a.lat - b.lat};
-        var byLng = function(a, b) {return a.lng - b.lng};
-        this._data.sort(sectByLat ? byLat : byLng);
+        this._data.sort(sectByLat ? this._byLat : this._byLng);
 
         var res = this._data.splice(0, this._data.length / 2);
         this._right = new CKTreeItem(this._data, !sectByLat);
         this._left = new CKTreeItem(res, !sectByLat);
 
         this._data = null;
-    }
+    },
 
+    _byLat: function(a, b)
+    {
+        return a.lat - b.lat;
+    },
+
+    _byLng: function(a, b)
+    {
+        return a.lng - b.lng
+    }
 }
 
 
