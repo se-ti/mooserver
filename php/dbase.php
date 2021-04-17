@@ -219,7 +219,7 @@ class CMooseDb extends CTinyDb
         $this->beginTran();
 		$query = "insert into moose (phone_id, name, demo, group_id) values (null, $qName, {$vd['demo']}, {$vd['group']})";
 
-		$this->Query($query, self::ErrDupMoose);
+		$this->Query($query, self::ErrDupMoose . ': ' .$qName);
         $res = $this->db->lastInsertId();
 
         if ($phoneId == null)
@@ -273,7 +273,7 @@ class CMooseDb extends CTinyDb
             set phone_id = null, name = $qName, moose.demo = {$vd['demo']}, moose.group_id = {$vd['group']} $pUpdate
             where moose.id = $id $pCond";
 
-        $this->Query($query, self::ErrDupMoose);
+        $this->Query($query, self::ErrDupMoose. ': ' .$qName);
         $res = $this->db->lastInsertId();
 
         if ($phoneId != null)
