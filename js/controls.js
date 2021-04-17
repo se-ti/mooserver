@@ -1217,6 +1217,8 @@ CEditableTableControl = function(elem, options)
     this._d_delaySearch = $cd(this, this._delaySearch);
     this._d_onSort = $cd(this, this._onSort);
 
+    this._d_onShortcutKeyDown = $cd(this, this._onShortcutKeyDown);
+
     this._d_edit = $cd(this, this._edit);
     this._d_onEndEdit = $cd(this, this._onEndEdit);
     this._d_delete = $cd(this, this._delete);
@@ -1233,7 +1235,7 @@ CEditableTableControl.prototype = {
         c.title = $('<h2>' + this._sett.title + '</h2>')
             .appendTo(c.root);
 
-        c.add = $('<button class="btn btn-default">Добавить</button>')
+        c.add = $('<button class="btn btn-default" title="Ctrl+Alt+ +">Добавить</button>')
             .appendTo(c.root)
             .click(this._d_add);
 
@@ -1283,6 +1285,11 @@ CEditableTableControl.prototype = {
 
         if (enable && c.lineEditor)
             c.lineEditor.enableParent(true);
+
+        if (enable)
+            $(document).keydown(this._d_onShortcutKeyDown);
+        else
+            $(document).off('keydown', this._d_onShortcutKeyDown);
     },
 
     _makeLEData: function()
@@ -1366,6 +1373,12 @@ CEditableTableControl.prototype = {
         this._raise_dataChanged();
     },
 
+    _onShortcutKeyDown: function(e)
+    {
+        if ($(this._c.root).is(':visible') && (e.which == 107 || e.which == 61) && e.ctrlKey && e.altKey)
+            this._add(e);
+    },
+
     setOptions: function(options)
     {
         this._sett = options || {};
@@ -1384,6 +1397,8 @@ CEditableTableControl.prototype = {
 
         this._sortColumn = null;
         this._renderHead();
+
+        return this;
     },
 
     setData: function(data, orgs, alt)
@@ -1415,6 +1430,8 @@ CEditableTableControl.prototype = {
                 this._sett.cols[i].setData(leData);
 
         this._render();
+
+        return this;
     },
 
     _orgIdsToNames: function(hash, item)

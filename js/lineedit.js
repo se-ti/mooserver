@@ -688,12 +688,13 @@ CLineEditor = function(content, columns, noToggle)
 
     this._d_save = $cd(this, this._save);
     this._d_cancel = $cd(this, this._cancel);
+    this._d_onKey = $cd(this, this._onKey);
 }
 
 CLineEditor.prototype =
 {
-    _saveTpl: '<button class="btn btn-primary">Сохранить</button> ',
-    _cancelTpl: ' <button class="btn btn-default">Отменить</button>',
+    _saveTpl: '<button class="btn btn-primary" title="Ctrl + Enter">Сохранить</button> ',
+    _cancelTpl: ' <button class="btn btn-default" title="Esc">Отменить</button>',
 
     activators: function(item)
     {
@@ -720,6 +721,7 @@ CLineEditor.prototype =
 
         this._item = item;
         this._row = row;
+        $(row).keydown(this._d_onKey);
 
         for (var i = 0; i < this._cols.length; i++)
         {
@@ -765,6 +767,7 @@ CLineEditor.prototype =
 
         cells[cells.length -1].innerHTML = this.activators(item);
 
+        $(this._row).off('keydown', this._d_onKey);
         this._item = null;
         this._row = null;
 
@@ -819,6 +822,14 @@ CLineEditor.prototype =
         if (!valid)
             return this.error("Ошибка валидации");
         this._raise_queryEndEdit(true, res);
+    },
+
+    _onKey: function(e)
+    {
+        if (e.which == 13 && e.ctrlKey)
+            this._save(e);
+        else if (e.which == 27)
+            this._cancel(e);
     },
 
     _raise_queryEndEdit: function(save, item)
