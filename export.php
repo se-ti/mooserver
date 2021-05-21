@@ -81,8 +81,6 @@ function mooseName($mooses, $id)
 
 function exportBeacons()
 {
-	global $db, $auth;
-
 	prepareIds();
 	$data = getBeaconData(true);
 	if ($data == null)
@@ -102,7 +100,7 @@ function exportBeacons()
 
 	$header = "Экспорт маяков\n";
 	$header .= csvTimeHeader();
-	$header .="\nМаяк;Получено;последняя точка;вн. id;V;T C;GPS on мин;GSM tries;rawSms id;;id животного";
+	$header .="\nМаяк;Получено;последняя точка;вн. id;V;T C;GPS on мин;GSM tries;rawSms id;текст смс;id животного;кличка";
 
     $fname = count($phones) == 1 ? preg_replace('/[^\dx]/', '', $phones[0]) : 'beacons';
 	

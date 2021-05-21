@@ -935,9 +935,10 @@ class CMooseDb extends CTinyDb
         $query = "select id as pId, rec.*
                 from phone p
                 left join
-                    (select rs.phone_id, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, sms.maxt as st, DATE_FORMAT(sms.maxt,'%Y-%m-%dT%TZ') as pos_time, sms.moose as smsMid
+                    (select rs.phone_id, DATE_FORMAT(rs.stamp,'%Y-%m-%dT%TZ') as tm, rs.id as rsId, text, int_id, volt, temp, gps_on, gsm_tries, sms.maxt as st, DATE_FORMAT(sms.maxt,'%Y-%m-%dT%TZ') as pos_time, sms.moose as smsMid, m.name
                     from raw_sms rs
                     inner join sms on sms.raw_sms_id = rs.id
+                    left join moose m on m.id = sms.moose
                     where true $timeCond and (sms.moose is null and $direct or {$beacons['mAccess']} )
                     ) rec on p.id = rec.phone_id
                 where p.id in ($cond)
@@ -956,7 +957,7 @@ class CMooseDb extends CTinyDb
                 Log::e($this, $auth, 'beaconStat', "no phone with id '$ph'");
 
             if ($row['pos_time'] != null)
-                $hash[$ph]['data'][] = [$row['tm'], $row['pos_time'], $row['int_id'], $row['volt'], $row['temp'], $row['gps_on'], $row['gsm_tries'], $row['rsId'], $addText ? $row['text'] : null, $row['smsMid']];
+                $hash[$ph]['data'][] = [$row['tm'], $row['pos_time'], $row['int_id'], $row['volt'], $row['temp'], $row['gps_on'], $row['gsm_tries'], $row['rsId'], $addText ? $row['text'] : null, $row['smsMid'], $export ? $row['name'] : null];
         }
         $result->closeCursor();
 
