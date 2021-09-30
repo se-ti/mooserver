@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
     <meta content="Отслеживание животных, отслеживание диких животных, маяки, маяки для животных, gps, ЖПС, glonass, глонасс, gps-tracking, gps-tracker, mooserver, лоси, волки, лошади" name="keywords">
     <meta content="Отслеживание диких животных" name="description">
@@ -136,6 +137,16 @@ button.filter-activator:focus {
     position: relative;
     top: 1px;
     margin-right: 0.25em;
+}
+
+table.wide-content {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+    table.wide-content {
+        display: block;
+    }
 }
 
 </style>
@@ -827,7 +838,7 @@ CBeacon.prototype = {
         this._showAll = e.find('input[type="checkbox"]')
                 .change(this._c_reRead);
 
-		this._stat = $('<table class="hidden table table-striped"></table>')
+		this._stat = $('<table class="hidden table table-striped wide-content"></table>')
                 .appendTo(je)
                 .on('click', 'tbody', this._c_clickRow);
 		//$('<p>manage moose-beacons for root and admin</p>').appendTo(je);
@@ -1131,7 +1142,7 @@ CSingleBeacon.prototype =
             .append('<h1><small></small></h1>')
             .appendTo(row);
         this._phone = je.find('h1 small');
-        this._table = $('<table class="hidden table table-moo-striped"></table>')
+        this._table = $('<table class="hidden table table-moo-striped wide-content"></table>')
             .on('click', 'tbody > tr', this._c_rowClick)
             .appendTo(je);
 
@@ -1382,7 +1393,7 @@ CGate.prototype =
         this._justErr = ctrl.find('input[type="checkbox"]')
                 .change(this._c_reRead);
 
-        this._table = $('<table class="hidden table table-moo-striped"><thead></thead><tbody></tbody></table>')
+        this._table = $('<table class="hidden table table-moo-striped wide-content"><thead></thead><tbody></tbody></table>')
                 .appendTo(je);
         this._body = this._table.find('tbody')
             .on('click', 'button.del', this._c_delClick)

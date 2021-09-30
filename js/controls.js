@@ -1252,7 +1252,7 @@ CEditableTableControl.prototype = {
                 .find('input')
                 .change(this._d_render);
 
-        c.content = $('<table class="table table-striped wide-content"><thead></thead><tbody></tbody></table>')
+        c.content = $('<table class="table table-striped wide-content wide-content"><thead></thead><tbody></tbody></table>')
             .appendTo(c.root);
         c.head = c.content.find('thead').on('click', 'th.activator-root', this._d_onSort);
         c.body = c.content.find('tbody');

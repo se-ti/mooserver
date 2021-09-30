@@ -296,7 +296,7 @@ CLogs.prototype =
             .change(this._d_reRead)
             .keydown(this._d_onEnter);
 
-        this._table = $('<table class="hidden table table-striped table-condensed"></table>')
+        this._table = $('<table class="hidden table table-striped table-condensed wide-content"></table>')
             .appendTo(je);
         this._table.html('<thead><tr><th>#</th><th>id</th><th>stamp</th><th>level</th><th>uid</th><th>login</th><th>duration</th><th>op</th><th>msg</th></tr></thead><tbody></tbody>');
         var head = this._table.find('th');
