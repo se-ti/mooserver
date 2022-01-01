@@ -227,6 +227,19 @@ function $ajax(method, param, success, fail)
 
     fail = fail || function(jqXHR, textStatus, errorThrown)
         {
+            if (jqXHR && jqXHR.status == 401 && jqXHR.responseJSON && jqXHR.responseJSON.error)
+            {
+                window.location.hash = '';
+
+                if (window.CApp)
+                {
+                    CApp.single().error(String.toHTML(jqXHR.responseJSON.error));
+                    CApp.single().reset();
+                }
+
+                return;
+            }
+
             var rt = jqXHR.responseText || '';
             var respStat = jqXHR.status == 200 ? String.format("response len: {0}, head: {1}...", rt.length, rt.substr(0, 50)): '';
 
@@ -239,6 +252,26 @@ function $ajax(method, param, success, fail)
 
     r.fail(fail);
 	return r;
+}
+
+function $ajaxErr(method, param, success, fail)
+{
+    var succ = function(result, text, jqXHR)
+    {
+        if (result.error)
+        {
+            if (console)
+                console.log(result.error, jqXHR);
+
+            log("Ошибка Ajax: " + result.error);
+            return;
+        }
+
+        if (success && (success instanceof Function))
+            success(result, text, jqXHR);
+    };
+
+    return $ajax(method, param, succ, fail);
 }
 
 
@@ -373,7 +406,7 @@ CPage.prototype =
         if (this._text)
             document.title = 'MooServer: ' + this._text;
 
-        CApp.single().error('');
+        //CApp.single().error('');
 
         this._isActive = true;
     },

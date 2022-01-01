@@ -622,6 +622,9 @@ function makeError($msg)
 
 function dieError($msg)
 {
+    global $auth;
+    if ($msg == CTinyDb::ErrCRights && ($auth == null || !$auth->isLogged()))
+        http_response_code(401); // 403 -- forbidden
     die(makeError($msg));
 }
 

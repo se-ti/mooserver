@@ -204,6 +204,7 @@ CApp = function()
     this._err = null;
     this._timeout = null;
     this._global = null;
+    this._controller = null;
     this.clearData();
 
     this._cb_autoHide = $cd(this, this._autoHide);
@@ -219,7 +220,7 @@ CApp.single = function()
 
 CApp.prototype = {
 
-    _errTpl: '<div class="center-block col-xs-6" style="position: absolute; top:35px; z-index: 2000;"><div class="alert" role="alert"></div></div>',
+    _errTpl: '<div class="center-block col-xs-6" style="position: absolute; top:35px; z-index: 2000; cursor: pointer;"><div class="alert" role="alert"></div></div>',
 
     error: function(html)
     {
@@ -299,10 +300,21 @@ CApp.prototype = {
         return this._global.users;
     },
 
+    setController: function (controller)
+    {
+        this._controller = controller;
+    },
+
+    reset: function()
+    {
+        if (this._controller)
+            this._controller.getMoose();
+    },
+
     _setMessage: function(html, isErr, timeout)
     {
         if (!this._err)
-            this._err = $(this._errTpl).prependTo('div.container:visible'); //.insertAfter('div.navbar-inverse');
+            this._err = $(this._errTpl).prependTo($('#main').parent()); //.insertAfter('div.navbar-inverse');
 
         if (this._timeout != null)
         {
@@ -317,8 +329,13 @@ CApp.prototype = {
                 .toggleClass('alert-danger', isErr || false)
                 .toggleClass('alert-info', (!isErr) || false);
 
-        if (!empty && (timeout || 0) > 0)
-            this._timeout = window.setTimeout(this._cb_autoHide, timeout);
+        if (!empty)
+        {
+            if ((timeout || 0) > 0)
+                this._timeout = window.setTimeout(this._cb_autoHide, timeout);
+            else
+                this._err.click(this._cb_autoHide);
+        }
     },
 
      _autoHide: function()
@@ -376,6 +393,8 @@ CController.prototype = {
 
     appInit: function()
     {
+        CApp.single().setController(this);
+
         var menu = $('.navbar-inverse');
         this.setPages([new CMoose(menu),
             new CBeacon(menu),
