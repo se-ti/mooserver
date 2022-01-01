@@ -149,17 +149,11 @@ CAdmin.prototype = {
 
     reRead: function()
     {
-        $ajax('getUsers', {all: false}, $cd(this, this._onReRead));
+        $ajaxErr('getUsers', {all: false}, $cd(this, this._onReRead));
     },
 
     _onReRead: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         this._gates.setData(result.gates, result.org);
         this._orgs.setData(result.org, result.org);
         this._users.setData(result.users, result.org);
@@ -367,16 +361,11 @@ CLogs.prototype =
 
         this._clearFilters.get(0).disabled = !this._filter.isActive() && !hasActive && param.search == '';
 
-        $ajax('getLogs', param, $cd(this, this._onReRead));
+        $ajaxErr('getLogs', param, $cd(this, this._onReRead));
     },
 
     _onReRead: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
         if (!this._table)
             return;
 

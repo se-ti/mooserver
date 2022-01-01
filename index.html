@@ -597,17 +597,11 @@ CMoose.prototype =
 
     _reloadMoose: function()
     {
-        $ajax('getMoose', null, $cd(this, this._onGetMoose));
+        $ajaxErr('getMoose', null, $cd(this, this._onGetMoose));
     },
 
     _onGetMoose: function(result, text, jqXHR)  // это же загрузка application level data!
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         this.setData(result);
         var app = CApp.single();
         app.setMoose(result.mooses);
@@ -682,7 +676,7 @@ CMoose.prototype =
 	reRead: function(moosePhones)
 	{
         var param = this._getParam(moosePhones);
-		var jq = $ajax('getData', param, this._d_onRreRead);
+		var jq = $ajaxErr('getData', param, this._d_onRreRead);
         jq.param = param;
 	},
 
@@ -707,12 +701,6 @@ CMoose.prototype =
           
 	_onReRead: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         var st = null;
         var en = null;
         var gtd;
@@ -758,7 +746,7 @@ CMoose.prototype =
         {
             var param = jqXHR.param;
             param.ids = delayLoad;
-            var jq = $ajax('delayedActivity', param, this._d_onDelayLoad);
+            var jq = $ajaxErr('delayedActivity', param, this._d_onDelayLoad);
             jq.param = param;
         }
 
@@ -774,12 +762,6 @@ CMoose.prototype =
     */
     _onDelayLoad: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         var gtd;
         var data;
         var stamp;
@@ -973,16 +955,11 @@ CBeacon.prototype = {
 	
 	reRead: function()
 	{
-		$ajax('getBeaconData', this._getParam(), this._c_onReRead);
+		$ajaxErr('getBeaconData', this._getParam(), this._c_onReRead);
 	},
 
 	_onReRead: function(result, text, jqXHR)
 	{
-		if (result.error)
-		{
-            log('Ошибка Ajax: ' + result.error);
-			return;
-		}
 		if (!this._stat)
 			return;
 
@@ -1227,7 +1204,7 @@ CSingleBeacon.prototype =
 
     reRead: function()
     {
-        $ajax('getBeaconData', this._getParam(), this._c_onReRead);
+        $ajaxErr('getBeaconData', this._getParam(), this._c_onReRead);
     },
 
     _export: function()
@@ -1244,11 +1221,6 @@ CSingleBeacon.prototype =
 
     _onReRead: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
         if (!this._table)
             return;
 
@@ -1451,17 +1423,11 @@ CGate.prototype =
 
         this._clearFltrs.get(0).disabled = (!this._phoneFilter || !this._phoneFilter.isActive()) && (!this._mooseFilter || !this._mooseFilter.isActive());
 
-        $ajax('getGateData', param, this._c_onReRead);
+        $ajaxErr('getGateData', param, this._c_onReRead);
     },
 
     _onReRead: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         if (!this._table)
             return;
 
@@ -1617,17 +1583,11 @@ CGate.prototype =
         if ((id || '') == '' || !confirm(String.format("Вы действительно хотите удалить sms id='{0}'?\nДействие невозможно отменить.", id )))
             return;
 
-        $ajax('deleteSms', {'rawSmsId' :id}, this._c_onDeleteSms);
+        $ajaxErr('deleteSms', {'rawSmsId' :id}, this._c_onDeleteSms);
     },
 
     _onDeleteSms: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         this.reRead();
     },
 
@@ -1684,7 +1644,7 @@ CGate.prototype =
         if (!ms)
             this.reRead();
         else
-            $ajax('reassignSms', {moose: ms.value > 0 ? ms.value : null, smsIds:[ms._smsId]}, $cd(this, this.reRead));
+            $ajaxErr('reassignSms', {moose: ms.value > 0 ? ms.value : null, smsIds:[ms._smsId]}, $cd(this, this.reRead));
         //this.reRead();
     },
 
@@ -1782,16 +1742,11 @@ CProfile.prototype = {
 
     getProfile: function()
     {
-        $ajax('getProfile', null, this._cbOnGetProfile);
+        $ajaxErr('getProfile', null, this._cbOnGetProfile);
     },
 
     _onGetProfile: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
         var c = this._c;
         c.login.text(result.login || '');
         this._nameEd.setValue(result.name || '');

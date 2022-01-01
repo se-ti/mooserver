@@ -598,17 +598,11 @@ CProfileNameEdit.prototype =
 
     _onSave: function()
     {
-        $ajax('changeName', {name: this._c.input.val()}, this._cbOnChange);
+        $ajaxErr('changeName', {name: this._c.input.val()}, this._cbOnChange);
     },
 
     _onChange: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            CApp.single().error(result.error);
-            return;
-        }
-
         this._c.text.text(this._c.input.val() || '<не задано>');
         this._toggle(false);
 
@@ -2053,19 +2047,13 @@ CMooseMap.prototype = {
 
         var param = {time: ll._time, valid: !ll._valid};
         param[(ll.key || 'mooseId')] = ll.mId;
-        var jq = $ajax('togglePoint', param, this.ctx._d_onToggleValid);
+        var jq = $ajaxErr('togglePoint', param, this.ctx._d_onToggleValid);
         jq._latlng = ll;
         jq._llValid = !ll._valid;
     },
 
     _onToggleValid: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         var ll = jqXHR._latlng;
         var data = this.source;
         for (var i = 0; i < data.length; i++)
@@ -2100,19 +2088,13 @@ CMooseMap.prototype = {
 
         var param = { time: ll._time, comment: cmt };
         param[(ll.key || 'mooseId')] = ll.mId;
-        var jq = $ajax('commentPoint', param, this._d_onCommentPoint);
+        var jq = $ajaxErr('commentPoint', param, this._d_onCommentPoint);
         jq._latlng = ll;
         jq._comment = param.comment;
     },
 
     _onCommentPoint: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         var ll = jqXHR._latlng;
         var data = this.source;
         for (var i = 0; i < data.length; i++)
@@ -2415,19 +2397,13 @@ CMooseMapHelper.prototype =
         if (rawSmsId == null)
             return;
 
-        var r = $ajax('getSms', {'rawSmsId': rawSmsId}, this._d_onSuccess);
+        var r = $ajaxErr('getSms', {'rawSmsId': rawSmsId}, this._d_onSuccess);
         r.__rawId = rawSmsId;
         r.__mapControl = mapControl;
     },
 
     _onSuccess: function(result, text, jqXHR)
     {
-        if (result.error)
-        {
-            log('Ошибка Ajax: ' + result.error);
-            return;
-        }
-
         if (!result || !result.track || result.track.length == 0)
             return;
 
