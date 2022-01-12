@@ -22,7 +22,36 @@
           crossorigin=""/-->
 <link rel="stylesheet" href="css/leaflet.fullscreen.1.0.1.css" />
 
+<script>
+    (function(){
+        if (!XMLHttpRequest || window.___oldErr)
+            return;
 
+        window.___oldErr = window.onerror;
+        window.onerror = function(errorMsg, url, line, col, error) {
+
+            var logMessage = 'Error: '+ errorMsg + '; \nSource: ' + url + ' :' + line;
+            if (typeof col !== 'undefined')
+                logMessage += ':' + col;
+
+            if (error && error.stack )
+                logMessage += '; \nStack: ' + error.stack;
+
+            logMessage += '; \n\nUserAgent: ' + navigator.userAgent;
+            logMessage += '; \n\nLocation: ' + window.location;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'ajax.php?m=log', true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            var fd = new FormData();
+            fd.append('level', 3);
+            fd.append('message', logMessage);
+
+            xhr.send('level=3&message=' + encodeURIComponent(logMessage));
+        };
+
+    })();
+</script>
 <script src="js/common.js"></script>
     <script src="js/lineedit.js"></script>
 <script src="js/controls.js"></script>
