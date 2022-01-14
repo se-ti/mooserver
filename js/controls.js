@@ -1918,6 +1918,8 @@ CMooseMap.prototype = {
             var ll = [];
             var idx = 0;
             var src = data[i].data;
+            if (!src)
+                continue;
 
             var series = this._newPoly(i, data[i].id, data[i].key);
             for (var j = 0; j < src.length; j++)

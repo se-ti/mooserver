@@ -804,12 +804,17 @@ CMoose.prototype =
             stamp = cache.getMooseStamp(result[i].id, jqXHR.param.start, jqXHR.param.end);
             cache.addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, stamp, gtd);
 
+            var match = false;
             for (var j = 0; j < this.source.length; j++)
                 if (this.source[j].id == result[i].id)
                 {
                     this.source[j].data = gtd;
+                    match = true;
                     break;
                 }
+
+            if (!match || gtd == null)
+                trace(String.format('null data for: match: {0} gtd isNull: {1} for id={2}, st={3}, en={4}', match, gtd == null, result[i].id, jqXHR.param.start, jqXHR.param.end), true);
         }
 
         this.map.render(this.source);
