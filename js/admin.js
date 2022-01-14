@@ -273,7 +273,7 @@ CLogs.prototype =
 
     _init: function(after)
     {
-        this._elem = $(this._tpl).insertAfter(after).hide();
+        this._elem = $(this._tpl_fl).insertAfter(after).hide();
         var row = this._elem.find('.row');
         var je = $('<div class="col-xs-12"></div>')
             .appendTo(row);
