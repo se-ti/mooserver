@@ -258,7 +258,7 @@ function $ajaxErr(method, param, success, fail)
 {
     var succ = function(result, text, jqXHR)
     {
-        if (result.error)
+        if (result && result.error)
         {
             if (console)
                 console.log(result.error, jqXHR);
