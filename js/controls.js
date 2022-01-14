@@ -1108,7 +1108,7 @@ CUserProxy.prototype =
 
     getContext: function(item)
     {
-        return this._appendOrgs(this._html(item), item.orgs);
+        return this._appendOrgs(this._text(item), item.orgs);
     }
 }
 
@@ -1121,7 +1121,7 @@ CBeaconProxy.prototype =
 {
     getContext: function(item)
     {
-        var res = this._appendOrgs(this._html(item), item.orgs);
+        var res = this._appendOrgs(this._text(item), item.orgs);
         var moose = CApp.single().getMoose();
         for (var i = 0; i < moose.length; i++)
         {
@@ -1158,7 +1158,7 @@ COrgProxy.prototype =
 {
     getContext: function(item)
     {
-        return this._html(item);
+        return this._text(item);
     }
 }
 COrgProxy.inheritFrom(CUserProxy);
