@@ -1252,7 +1252,7 @@ CSingleBeacon.prototype =
 
     _onReRead: function(result, text, jqXHR)
     {
-        if (!this._table)
+        if (!this._table || result == null)
             return;
 
         this._render(result);
