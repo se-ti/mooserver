@@ -37,7 +37,7 @@ class CMooseSMS
 	const PointGrace = 43200;	// прощаем, если точки убегают на 12 часов в будущее от гейта или сервера
 
 	
-	function CMooseSMS($text, $time = null)
+	function __construct($text, $time = null)
 	{
 		$this->id = time();
 		
@@ -173,7 +173,7 @@ class CMooseSMS
 			$epochYear--;
 			$receivedOn++;
 			if ($dayOfYear < 365 - 14 || $receivedOn > 31)
-				$this->AddDiag("Точки из '$dayOfYear' дня получены в '$receivedOn' день года. Возможно ошибочно определен '$epochYear' год.");
+				$this->AddDiag("Точки из '$dayOfYear' дня получены в '$receivedOn' день года. Возможно, ошибочно определен '$epochYear' год.");
 		}
 
 		return $epochYear;
@@ -244,8 +244,24 @@ class CMooseSMS
 
     public static function GetActivityBaseDate($refDate, $activityDay)
     {
-       $r = gmmktime ( 0, 0, 0, gmdate('n', $refDate), $activityDay, gmdate('Y', $refDate)); // todo а что там с краями месяца / года?
-	//	echo date('c', $refDate) ." ad: $activityDay refdate day: ". gmdate('j', $refDate) ." m: " . gmdate('n', $refDate) . ' ' .  date('c', $r). '<br/>';
+    	$refDay = gmdate('j', $refDate);
+    	$refMon = gmdate('n', $refDate);
+    	$refYear = gmdate('Y', $refDate);
+
+		// а что там с краями месяца / года?
+    	if (abs($refDay - $activityDay) > 14) {
+
+			$step = $activityDay > $refDay ? -1 : 1;
+			$refMon2 = ($refMon + 11 + $step) % 12 + 1;
+
+			if (abs($refMon - $refMon2) > 1)
+				$refYear += $step;
+
+			$refMon = $refMon2;
+		}
+
+       	$r = gmmktime ( 0, 0, 0, $refMon, $activityDay, $refYear);
+		//	echo date('c', $refDate) ." ad: $activityDay refdate day: ". gmdate('j', $refDate) ." m: " . gmdate('n', $refDate) . ' ' .  date('c', $r). '<br/>';
 		return $r;
     }
 
@@ -352,7 +368,7 @@ class CMooseSMSv3 extends CMooseSMS
 		}	 
 		
 		$this->volt = $this->volt*0.01 + 3.20;
-		
+
 		if ( $this->temp > 30 )
 			$this->temp -= 65;
 	}
@@ -387,9 +403,11 @@ class CMooseSMSv3 extends CMooseSMS
 		
 		$NewPoint[0] = $LatDegree + $LatPartsOfDegree/65536;
 		$NewPoint[1] = $LongDegree + $LongPartsOfDegree/32768;
-		$NewPoint[2] = gmmktime ( 0, 0, 0, 1, 1, $this->GetEpochYear($DayOfYear)) +
-						($DayOfYear-1) * 24 * 60 * 60 +
-						$TimeOfDayIn10MinIntervals * 60 * 10;
+		$epochYear = $this->GetEpochYear($DayOfYear);
+		$sec = ($DayOfYear-1) * 24 * 60 * 60 +
+			$TimeOfDayIn10MinIntervals * 60 * 10;
+		$NewPoint[2] = gmmktime (0, 0, 0, 1, 1, $epochYear) +
+						$sec;
 		//$this->TestValue2 = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 35, 8 );
 
 		$this->points[] = $NewPoint;
@@ -423,7 +441,7 @@ class CMooseSMSv3 extends CMooseSMS
 
 		$XLimit = $XFieldCapacity/2 - $XFieldCapacity/80;
 		$YLimit = $YFieldCapacity/2 - $YFieldCapacity/80;
-		
+
 		//$this->TestValue2 .= " Kfactor=$Kfactor, XFieldCapacity=$XFieldCapacity, YFieldCapacity=$YFieldCapacity";
 
 		$refTime = time();
