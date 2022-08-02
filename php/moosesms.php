@@ -67,7 +67,7 @@ class CMooseSMS
 	}
 
 
-	public static function CreateFromText ($text, $time)
+	public static function CreateFromText ($text, $time, $diagnostic = 0)
 	{
 		if (strpos($text, self::Artificial) === 0 )
 			return self::artificialSms($time);
@@ -79,7 +79,7 @@ class CMooseSMS
 			//die ("does'nt match");
 			$res = new CMooseSMSv3 ($text, $time);
 		
-		$res->ProcessSMSText();
+		$res->ProcessSMSText($diagnostic);
 		
 		return $res;
 	}
@@ -114,7 +114,12 @@ class CMooseSMS
 		return $res;
 	}*/
 
-	protected function ProcessSMSText ()
+	/**
+	0 -- none,
+	1 -- slight
+	2 -- hardcore
+	*/
+	protected function ProcessSMSText ($diagLevel)
 	{
 	}
 	
@@ -321,7 +326,7 @@ class CMooseSMSv3 extends CMooseSMS
 	var $PointsHeaderText;
 	var $PointsArrayText;
 
-	protected function ProcessSMSText ()
+	protected function ProcessSMSText ($diagLevel)
 	{
 		$this->TestValue = "Process";
 		if ( strlen ( $this->text ) < self::TECH_HEADER_LENGTH + self::ACTIVITY_LENGTH + self::POINTS_HEADER_LENGTH )
@@ -342,17 +347,17 @@ class CMooseSMSv3 extends CMooseSMS
 		$this->PointsHeaderText = substr ( $this->text, self::TECH_HEADER_LENGTH + self::ACTIVITY_LENGTH, self::POINTS_HEADER_LENGTH );
 		$this->PointsArrayText = substr ( $this->text, self::TECH_HEADER_LENGTH + self::ACTIVITY_LENGTH + self::POINTS_HEADER_LENGTH );
 
-		$this->ProcessTechHeader ();
-		$this->ProcessPointsHeader ();
+		$this->ProcessTechHeader ($diagLevel);
+		$this->ProcessPointsHeader ($diagLevel);
 		if ( $this->IsOk )
-			$this->ProcessPointsArray ();
+			$this->ProcessPointsArray ($diagLevel);
 		if ( $this->IsOk )
-			$this->ProcessActivity ();
+			$this->ProcessActivity ($diagLevel);
 
 		$this->ProcessTimeDiagnostic();
 	}
 	
-	protected function ProcessTechHeader ()
+	protected function ProcessTechHeader ($diagLevel)
 	{
 		$this->id = CMooseSMS::a64bitstoi ( $this->TechHeaderText, 30, 6 );
 		$this->gsmTries = CMooseSMS::a64bitstoi ( $this->TechHeaderText, 24, 6 );
@@ -371,9 +376,12 @@ class CMooseSMSv3 extends CMooseSMS
 
 		if ( $this->temp > 30 )
 			$this->temp -= 65;
+
+		if ($diagLevel > 0)
+			$this->AddDiag("Header: $this->TechHeaderText, id: $this->id, gsm: $this->gsmTries, gps: $this->gpsOn, volt: $this->volt, t: $this->temp");
 	}
 	
-	protected function ProcessPointsHeader ()
+	protected function ProcessPointsHeader ($diagLevel)
 	{
 		$LatDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 59, 7 );
 		$LatPartsOfDegree = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 43, 16 );
@@ -410,10 +418,15 @@ class CMooseSMSv3 extends CMooseSMS
 						$sec;
 		//$this->TestValue2 = CMooseSMS::a64bitstoi ( $this->PointsHeaderText , 35, 8 );
 
+		if ($diagLevel > 0) {
+			$dtStr = gmdate('Y-m-d', $NewPoint[2]) .'T'. gmdate('H:i:s', $NewPoint[2]). 'Z';
+			$this->AddDiag("<br/>pts hdr: '$this->PointsHeaderText', doy: $DayOfYear, yr: $epochYear sec: $sec <br/>res: $NewPoint[2] ($dtStr) <br/>");
+		}
+		
 		$this->points[] = $NewPoint;
 	}
 	
-	protected function ProcessPointsArray ()
+	protected function ProcessPointsArray ($diagLevel)
 	{
 		if ( $this->CompressionType != 3 )
 		{
@@ -438,6 +451,10 @@ class CMooseSMSv3 extends CMooseSMS
 			
 		$XFieldCapacity = 1<<$XFieldLength;
 		$YFieldCapacity = 1<<$YFieldLength;
+
+		if ($diagLevel > 0)
+			$this->AddDiag("pts: $this->PointsArrayText <br/> kFact: $Kfactor, x: $XFieldLength, $XFieldCapacity, y: $YFieldLength, $YFieldCapacity");
+
 
 		$XLimit = $XFieldCapacity/2 - $XFieldCapacity/80;
 		$YLimit = $YFieldCapacity/2 - $YFieldCapacity/80;
@@ -487,7 +504,7 @@ class CMooseSMSv3 extends CMooseSMS
 			$this->ProcessSkippedDiagnostic ( $dSkip );
 	}
 	
-	protected function ProcessActivity ()
+	protected function ProcessActivity ($diagLevel)
 	{
 		$this->TestValue2 .= $this->ActivityText;
 		$this->TestValue2 .= '.';
@@ -533,6 +550,11 @@ class CMooseSMSv3 extends CMooseSMS
 				$this->TestValue2 .= $CurrentActivity[1];
 				$this->CheckDate($refTime, $CurrentActivity[0]);
 			}
+
+		if ($diagLevel > 0) {
+			$dtStr = gmdate('Y-m-d',$ActivityDate1) .'T'. gmdate('H:i:s', $ActivityDate1). 'Z';
+			$this->AddDiag("<br/> act: $this->ActivityText, ActDay: $ActivityDay, firstPointTime: $firstPointTime, actDate: $ActivityDate1 ($dtStr)");
+		}
 	}
 	
 	protected function ProcessReloadDiagnostic ()
@@ -572,7 +594,7 @@ class CMooseSMSv1 extends CMooseSMS
     const TYPE_ERIC = 2;
     const TYPE_COMMON = 3;
 
-    protected function ProcessSMSText()
+    protected function ProcessSMSText($diagLevel)
     {
         if (!mb_check_encoding($this->text, 'UTF-8'))
         {
