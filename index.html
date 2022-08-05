@@ -1331,7 +1331,7 @@ CSingleBeacon.prototype =
         var je = $(e.currentTarget);
         var rawSmsId = je.attr('data-id') || '';
         if (rawSmsId != '')
-            this._mapHelper.drawRawSms(this._map, rawSmsId);
+            this._mapHelper.drawRawSms(this._map, rawSmsId, e.altKey);
 
         this._table.find('tr').removeClass('success');
         if (rawSmsId != '')
@@ -1593,7 +1593,7 @@ CGate.prototype =
 
         var rows = $(e.target).parents('tr');
         if (rows.length > 0)
-            this._mapHelper.drawRawSms(this._map, this._getSmsId(e));
+            this._mapHelper.drawRawSms(this._map, this._getSmsId(e), e.altKey);
     },
 
     _chmooseClick: function(e)

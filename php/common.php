@@ -135,8 +135,13 @@ function getSms()
 
     $smsId = checkId(@$_POST['rawSmsId'], 'Недопустимый id sms', false);
 
-    return ['track' => $db->GetSmsTrack($auth, $smsId),
+    $res = ['track' => $db->GetSmsTrack($auth, $smsId),
         'activity' => $db->GetSmsActivity($auth, $smsId)];
+
+    if ($auth->canAdmin() && @$_POST['diag'] == 1 && ($sms = $db->GetSms($auth, $smsId)) != null && ($parsed = CMooseSMS::CreateFromText($sms['text'], $sms['stamp'], 1)) != null)
+        $res['diagnostics'] = $parsed->diag;
+
+    return $res;
 }
 
 function getActivity()

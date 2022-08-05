@@ -839,6 +839,29 @@ class CMooseDb extends CTinyDb
 
         return $res;
     }
+
+    function GetSms(CTinyAuth $auth, $rawSmsId)
+    {
+        $rawSmsId = $this->ValidateId($rawSmsId, "Недопустимый id sms", 1);
+        $pAccess = $this->CanSeeCond($auth, 'p', 'phone', 'rs.phone_id');
+        $mAccess = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
+
+        $query = "select text, UNIX_TIMESTAMP(rs.stamp) as ustamp 
+                from raw_sms rs 
+				inner join sms on rs.id = sms.raw_sms_id				
+				where rs.id = $rawSmsId and (sms.moose is null and {$pAccess['cond']} or {$mAccess['cond']}) ";
+
+        $result = $this->Query($query);
+
+        $res = null;
+        foreach ($result as $row)
+        {
+            $res = ['text' => $row['text'], 'stamp' => $row['ustamp']];
+            break;
+        }
+        $result->closeCursor();
+        return $res;
+    }
     // endregion
 
     private function GetBeacons(CTinyAuth $auth, $ids, $all)
@@ -1444,7 +1467,7 @@ class CMooseDb extends CTinyDb
 
             if ($tmp['sid'] == null || $r['ustamp'] + CMooseSMS::PointGrace < $r['umaxt'])
             {
-                $msg = CMooseSMS::CreateFromText ($tmp['text'], strtotime($tmp['stamp']));
+                $msg = CMooseSMS::CreateFromText ($tmp['text'], strtotime($tmp['stamp']), 0);
                 $tmp['error'] = $msg->GetErrorMessage();
                 if ($tmp['diagnose'] == '' && $msg->diag != '')
                     $tmp['diagnose'] = $msg->diag;

@@ -2394,12 +2394,12 @@ CMooseMapHelper._strToTime = function(arr, idx)
 
 CMooseMapHelper.prototype =
 {
-    drawRawSms: function(mapControl, rawSmsId)
+    drawRawSms: function(mapControl, rawSmsId, diagnostics)
     {
         if (rawSmsId == null)
             return;
 
-        var r = $ajaxErr('getSms', {'rawSmsId': rawSmsId}, this._d_onSuccess);
+        var r = $ajaxErr('getSms', {'rawSmsId': rawSmsId, 'diag': diagnostics ? 1 : 0}, this._d_onSuccess);
         r.__rawId = rawSmsId;
         r.__mapControl = mapControl;
     },
@@ -2412,7 +2412,9 @@ CMooseMapHelper.prototype =
         if (result.track.length == 1)
             result.track.push(result.track[0]);
 
-        jqXHR.__mapControl.render([{data:CMooseMapHelper.glueTrackData(result, CMooseMapHelper.makeUserHash()), id: jqXHR.__rawId, key: 'rawSmsId'}]);
+        jqXHR.__mapControl.render([{data: CMooseMapHelper.glueTrackData(result, CMooseMapHelper.makeUserHash()), id: jqXHR.__rawId, key: 'rawSmsId'}]);
+        if (result.diagnostics)
+            ;   // show diagnostics
     }
 }
 
