@@ -1369,10 +1369,11 @@ class CMooseDb extends CTinyDb
 		foreach ($points as $pt)
 		{
 			$stamp = $this->ToSqlTime(isset($pt[2]) ? $pt[2] : $tm);
-			$values[] = "({$pt[0]}, {$pt[1]}, $stamp, $smsId)";
+			$valid = isset($pt[3]) && (!$pt[3]) ? 0 : 1;
+			$values[] = "({$pt[0]}, {$pt[1]}, $valid, $stamp, $smsId)";
 			$tm++;
 		}
-		$query = "insert into position (lat, lon, stamp, sms_id) values ". implode($values, ', ');
+		$query = "insert into position (lat, lon, valid, stamp, sms_id) values ". implode($values, ', ');
 
 		$this->Query($query);
     }
