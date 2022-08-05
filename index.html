@@ -1503,7 +1503,7 @@ CGate.prototype =
         var phones = CApp.single().getPhones();
         if (phones && !this._phoneFilter)
         {
-            this._phoneFilter = new CColumnFilter(this._head.find('th').get(4), 'phone', {selectAll: true})
+            this._phoneFilter = new CColumnFilter(this._head.find('th').get(4), 'phone', {selectAll: true, body: this._body})
                 .on_dataChanged(this._c_reRead);
             this._phoneFilter.setItems(phones.map(function(p) { return {caption: p.phone, value: p.id}; }));
         }

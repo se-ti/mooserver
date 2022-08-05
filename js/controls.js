@@ -3018,7 +3018,7 @@ CColumnFilter.prototype =
             if (domElement.childNodes[i].nodeType == 3)// textNode
                 res += domElement.childNodes[i].textContent;
 
-        return res;
+        return res != '' ? res : domElement.textContent;
     }
 }
 CColumnFilter.inheritFrom(CControl).addEvent('dataChanged');
