@@ -236,6 +236,11 @@ class CMooseSMS
 	{
 		return $this->IsOk;
 	}
+
+	public function HasData ()
+	{
+		return $this->activity != null && count($this->activity) > 0 || $this->points != null && count($this->points) > 0;
+	}
 	
 	public function GetErrorMessage ()
 	{
@@ -247,25 +252,48 @@ class CMooseSMS
         return $this->WarningMessage;
     }
 
-    public static function GetActivityBaseDate($refDate, $activityDay)
+    private static function AlterTime($year, $month, $day, $monthStep = 0)
+	{
+		if ($monthStep != 0)
+		{
+			$mon2 = ($month + 11 + $monthStep) % 12 + 1;
+
+			if (abs($month - $mon2) > 1)
+				$year += $monthStep / abs($monthStep);
+
+			$month = $mon2;
+		}
+
+		return gmmktime(0, 0, 0, $month, $day, $year);
+	}
+
+    public static function GetActivityBaseDate($receivedOn, $refDate, $activityDay)
     {
     	$refDay = gmdate('j', $refDate);
     	$refMon = gmdate('n', $refDate);
     	$refYear = gmdate('Y', $refDate);
 
+    	$notLater = min($receivedOn, time());
+		$r = self::AlterTime($refYear, $refMon, $activityDay, 0);
+
+		/*	ref 	Act  	now
+	 	 *	10.08	8       10.08  ok
+		 *  10.08   12      10.08  step = -1    $r > notLater
+		 * 	10.08	31      10.08  step = -1    $r > notLater
+		 *  10.08   28      29.08  step = 0 ?
+		 *  28.08   2       31.08  step = 0
+		 *  28.08   2        3.09  step = +1		*/
+
 		// а что там с краями месяца / года?
-    	if (abs($refDay - $activityDay) > 14) {
+    	if (abs($refDay - $activityDay) > 14 || $r > $notLater) {
 
-			$step = $activityDay > $refDay ? -1 : 1;
-			$refMon2 = ($refMon + 11 + $step) % 12 + 1;
-
-			if (abs($refMon - $refMon2) > 1)
-				$refYear += $step;
-
-			$refMon = $refMon2;
+			$step = $activityDay > $refDay || $r > $notLater ? -1 : 1;
+			$r = self::AlterTime($refYear, $refMon, $activityDay, $step);
+			if ($step > 0 && $r > $notLater)	// activity действительно сильно отстает и от now и от точек
+				$r = self::AlterTime($refYear, $refMon, $activityDay, 0);
 		}
 
-       	$r = gmmktime ( 0, 0, 0, $refMon, $activityDay, $refYear);
+
 		//	echo date('c', $refDate) ." ad: $activityDay refdate day: ". gmdate('j', $refDate) ." m: " . gmdate('n', $refDate) . ' ' .  date('c', $r). '<br/>';
 		return $r;
     }
@@ -291,13 +319,13 @@ class CMooseSMS
 			$this->AddDiag('Gate timestamp is later than server one!');
 
 		$cn = count($this->points);
-		if ($cn <= 0)
-			return;
-
-		if ($this->points[0][2] > $this->time + self::PointGrace || $this->points[$cn-1][2] > $this->time + self::PointGrace)
-			$this->AddDiag('point timestamp is later than gateway one!');
-		else if ($this->points[0][2] > $now + self::PointGrace || $this->points[$cn-1][2] > $now + self::PointGrace)
-			$this->AddDiag('point timestamp is later than server one!');
+		if ($cn > 0)
+		{
+			if ($this->points[0][2] > $this->time + self::PointGrace || $this->points[$cn - 1][2] > $this->time + self::PointGrace)
+				$this->AddDiag('point timestamp is later than gateway one!');
+			else if ($this->points[0][2] > $now + self::PointGrace || $this->points[$cn - 1][2] > $now + self::PointGrace)
+				$this->AddDiag('point timestamp is later than server one!');
+		}
 	}
 
 	protected function AddDiag ($msg)
@@ -351,8 +379,8 @@ class CMooseSMSv3 extends CMooseSMS
 		$this->ProcessPointsHeader ($diagLevel);
 		if ( $this->IsOk )
 			$this->ProcessPointsArray ($diagLevel);
-		if ( $this->IsOk )
-			$this->ProcessActivity ($diagLevel);
+
+		$this->ProcessActivity ($diagLevel);
 
 		$this->ProcessTimeDiagnostic();
 	}
@@ -365,10 +393,10 @@ class CMooseSMSv3 extends CMooseSMS
 		$this->volt = CMooseSMS::a64bitstoi ( $this->TechHeaderText, 6, 6 );
 		$this->temp = CMooseSMS::a64bitstoi ( $this->TechHeaderText, 0, 6 );
 		
-		if ( $this->id === FALSE || $this->gsmTries === FALSE || $this->gpsOn ===FALSE ||
+		if ( $this->id === FALSE || $this->gsmTries === FALSE || $this->gpsOn === FALSE ||
 			 $this->volt === FALSE || $this->temp === FALSE )
 		{
-			$this->SetError ( 'Message processing failed (internal error in tech header routine)!' );
+			$this->SetError ( "Message processing failed (internal error in tech header routine)! header: '$this->TechHeaderText'" );
 			return;
 		}	 
 		
@@ -392,7 +420,9 @@ class CMooseSMSv3 extends CMooseSMS
 		$TimeOfDayIn10MinIntervals = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 3, 8 );
 		$this->CompressionFactor = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 66, 4 );
 		$this->CompressionType = CMooseSMS::a64bitstoi ( $this->PointsHeaderText, 70, 2 );
-		
+
+		if ($diagLevel > 0)
+			$this->AddDiag("<br/>pts hdr: '$this->PointsHeaderText', doy: $DayOfYear, minutesOfDay: " . $TimeOfDayIn10MinIntervals * 60 . " ct: $this->CompressionType, cf: $this->CompressionFactor");
 		
 		if ( $LatDegree === NULL || $LatPartsOfDegree === NULL || $LongDegree === NULL ||
 			 $LongPartsOfDegree === NULL || $DayOfYear === NULL || $TimeOfDayIn10MinIntervals === NULL ||
@@ -420,7 +450,7 @@ class CMooseSMSv3 extends CMooseSMS
 
 		if ($diagLevel > 0) {
 			$dtStr = gmdate('Y-m-d', $NewPoint[2]) .'T'. gmdate('H:i:s', $NewPoint[2]). 'Z';
-			$this->AddDiag("<br/>pts hdr: '$this->PointsHeaderText', doy: $DayOfYear, yr: $epochYear sec: $sec <br/>res: $NewPoint[2] ($dtStr) <br/>");
+			$this->AddDiag(" yr: $epochYear sec: $sec <br/>res: $NewPoint[2] ($dtStr) <br/>");
 		}
 		
 		$this->points[] = $NewPoint;
@@ -470,7 +500,7 @@ class CMooseSMSv3 extends CMooseSMS
 			$Y = CMooseSMS::a64bitstoi ( $PointText, $dTimeLength, $YFieldLength );
 			$dTime = CMooseSMS::a64bitstoi ( $PointText, 0, $dTimeLength );
 			
-			if ( $X === NULL || $Y===NULL || $dTime===NULL)
+			if ($X === NULL || $Y === NULL || $dTime === NULL)
 				{
 					$this->SetError ( "Message processing failed (internal error in points routine)!" );
 					return;
@@ -487,17 +517,19 @@ class CMooseSMSv3 extends CMooseSMS
 					
 			if ( $X > -$XLimit && $X < $XLimit &&
 				 $Y > -$YLimit && $Y < $YLimit )
-			{	// If the value is close to the range edge, it's most probably invalid.
+			{
+				// If the value is close to the range edge, it's most probably invalid.
 				$Point[0]=$this->points[0][0] + $dLat;
 				$Point[1]=$this->points[0][1] + $dLong;
 				$Point[2]=$this->points[0][2] + $dTime*$dTimeTick;
-				$this->CheckDate($refTime, $Point[2]);
+				$this->CheckDate($refTime, $Point[2], "point");
 			
 				$this->points[] = $Point;
 			}
 			else
+			{
 				$dSkip++;
-
+			}
 		}
 
 		if ( $dSkip > 0 )
@@ -513,29 +545,39 @@ class CMooseSMSv3 extends CMooseSMS
 		
 		if ( $ActivityDay === NULL )
 		{
-			$this->SetError ( "Message processing failed (internal error in activity routine)!" );
+			$this->SetError ( "Message processing failed (internal error in activity routine)! Activity text: '$this->ActivityText'" );
 			return;
 		}
+
+		if ($diagLevel > 0)
+			$this->AddDiag("<br/> act: $this->ActivityText, ActDay: $ActivityDay");
 		
 		if ( $ActivityDay >= 32 ) //These values are reserved for special usage (tests etc.)
 		{
 			if ( $ActivityDay == 32 )
 				$this->ProcessReloadDiagnostic ();
+			else
+				$this->AddDiag("incorrect ActivityDay: $ActivityDay");
+
 			return;
 		}
 
-		$firstPointTime = $this->points[0][2];
-		if ($firstPointTime == null || $firstPointTime == 0)
+		$hasPoints = count($this->points) > 0;
+		$refTime = $hasPoints ? $this->points[0][2] : time();
+		if ($hasPoints && ($refTime === null || $refTime == 0))
 		{
             $this->SetError ( "Message has no valid date" );
             return;
         }
 
-        $refTime = time();
-        $ActivityDate1 = self::GetActivityBaseDate($firstPointTime, $ActivityDay);
+        $now = time();
+        $ActivityDate1 = self::GetActivityBaseDate($this->time, $refTime, $ActivityDay);
+        if (gmdate('j', $ActivityDate1) != $ActivityDay)
+        	$this->AddDiag("Sms ActivityDay $ActivityDay doesn't match decoded date" . gmdate('Y-m-d',$ActivityDate1));
+
         $ActivityDate2 =  $ActivityDate1 + 24 * 60 * 60;
 
-		
+
 		for ( $i=0 ; $i<24 ; $i++ )
 			for ( $j=0 ; $j<6 ; $j++ )
 			{
@@ -548,12 +590,12 @@ class CMooseSMSv3 extends CMooseSMS
 				}
 				$this->activity[] = $CurrentActivity;
 				$this->TestValue2 .= $CurrentActivity[1];
-				$this->CheckDate($refTime, $CurrentActivity[0]);
+				$this->CheckDate($now, $CurrentActivity[0], 'activity');
 			}
 
 		if ($diagLevel > 0) {
 			$dtStr = gmdate('Y-m-d',$ActivityDate1) .'T'. gmdate('H:i:s', $ActivityDate1). 'Z';
-			$this->AddDiag("<br/> act: $this->ActivityText, ActDay: $ActivityDay, firstPointTime: $firstPointTime, actDate: $ActivityDate1 ($dtStr)");
+			$this->AddDiag("refTime: $refTime,  hasPoints: " . ($hasPoints ? 1 : 0) . ", actDate: $ActivityDate1 ($dtStr)");
 		}
 	}
 	
@@ -832,7 +874,7 @@ class CMooseSMSv1 extends CMooseSMS
         }*/
 
         $refTime = time();
-        $tm = self::GetActivityBaseDate($refDay, $day);
+        $tm = self::GetActivityBaseDate($this->time, $refDay, $day);
         echo date('c', $tm) . " ref: " . date('c', $refDay). "day: $day, dtext: '$dText'<br/>";
         for ($hour = 0; $hour < 24; $hour++)
         {
@@ -843,7 +885,7 @@ class CMooseSMSv1 extends CMooseSMS
             for ($i = 5; $i >= 0; $i--)
             {
                 $pTime = $tm + $hour * 3600 + $i * 10 * 60 + $shift;
-                $this->CheckDate($refTime, $pTime);
+                $this->CheckDate($refTime, $pTime, 'activity');
                 $this->activity[] = [$pTime, $hourActivity % 2]; // todo: так, или развернуть
                 $hourActivity /= 2;
             }

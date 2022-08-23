@@ -1233,9 +1233,10 @@ class CMooseDb extends CTinyDb
 
 		$res = ['rawSms' => $rawSmsId, 'moose' => $prop['mooseId']];
 
-		if (!$msg->IsValid()) // не смогли разобрать SMS
+		if (!$msg->HasData()) // не смогли разобрать SMS
 		{
-			$res['error'] = $msg->GetErrorMessage();
+            if (!$msg->IsValid())
+                $res['error'] = $msg->GetErrorMessage();
             $this->commit();
 			return $res;
 		}
@@ -1266,6 +1267,9 @@ class CMooseDb extends CTinyDb
         $this->commit();
 		$res['sms'] = $smsId;
 		$res['temp'] = $msg->temp;
+
+		if (!$msg->IsValid())
+            $res['error'] = $msg->GetErrorMessage();
 		return $res;
 	}
 
@@ -1364,8 +1368,12 @@ class CMooseDb extends CTinyDb
 
 	protected function AddPoints($smsId, $points)
 	{
+	    $cn = count($points);
+	    if ($cn == 0)
+	        return;
+
 		$values = [];
-		$tm = time() - count($points) - 10000; //
+		$tm = time() - $cn - 10000; //
 		foreach ($points as $pt)
 		{
 			$stamp = $this->ToSqlTime(isset($pt[2]) ? $pt[2] : $tm);
@@ -1380,8 +1388,12 @@ class CMooseDb extends CTinyDb
 
 	protected function AddActivity($smsId, $activity)
 	{
+        $cn = count($activity);
+        if ($cn == 0)
+            return;
+
 		$values = [];
-		$tm = time() - count($activity) - 10000; //
+		$tm = time() - $cn - 10000; //
 		foreach ($activity as $pt)
 		{
 			$stamp = $this->ToSqlTime(isset($pt[0]) ? $pt[0] : $tm);

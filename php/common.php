@@ -213,8 +213,11 @@ class CMooseTools
 
     public static function addSmsMessage($res)
     {
-        $msg = "sms added. Raw sms id: {$res['rawSms']}. ";
-        $msg .= (@$res['error'] != null) ? "Message parse error: {$res['error']}" : "Sms id: {$res['sms']}";
+        $msg = "sms added. Raw sms id: {$res['rawSms']}.";
+        if (isset($res['sms']))
+            $msg .= " Sms id: {$res['sms']}";
+        if (isset($res['error']))
+            $msg .= " Message parse error: {$res['error']}";
 
         return $msg;
     }
