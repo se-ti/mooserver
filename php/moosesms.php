@@ -519,11 +519,12 @@ class CMooseSMSv3 extends CMooseSMS
 				 $Y > -$YLimit && $Y < $YLimit )
 			{
 				// If the value is close to the range edge, it's most probably invalid.
-				$Point[0]=$this->points[0][0] + $dLat;
-				$Point[1]=$this->points[0][1] + $dLong;
-				$Point[2]=$this->points[0][2] + $dTime*$dTimeTick;
+				$Point[0] = $this->points[0][0] + $dLat;
+				$Point[1] = $this->points[0][1] + $dLong;
+				$Point[2] = $this->points[0][2] + $dTime*$dTimeTick;
 				$this->CheckDate($refTime, $Point[2], "point");
-			
+				$Point[3] = 1;
+
 				$this->points[] = $Point;
 			}
 			else
