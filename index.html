@@ -793,31 +793,33 @@ CMoose.prototype =
         var stamp;
         var cache = CApp.single();
         var uHash = CMooseMapHelper.makeUserHash();
+        var needUpdate = false;                     // пока бегали за доп. активностью, показываемые треки могли и смениться -- рендерить нечего
         for (var i = 0; i < result.length; i++)
         {
+            var trk = cache.getMooseData(result[i].id);
             data = {
-                track: cache.getMooseData(result[i].id),  // если он был, то полный, если нет
+                track: trk,  // если он был, то полный, если нет
                 activity: result[i].activity
             };
 
             gtd = CMooseMapHelper.glueTrackData(data, uHash);
+            if (gtd == null)
+                trace(String.format('delayLoad: gtd is null, track from cache isNull: {0} for id={1}, st={2}, en={3}', trk == null, result[i].id, jqXHR.param.start, jqXHR.param.end), true);
+
             stamp = cache.getMooseStamp(result[i].id, jqXHR.param.start, jqXHR.param.end);
             cache.addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, stamp, gtd);
 
-            var match = false;
             for (var j = 0; j < this.source.length; j++)
                 if (this.source[j].id == result[i].id)
                 {
                     this.source[j].data = gtd;
-                    match = true;
+                    needUpdate = true;
                     break;
                 }
-
-            if (!match || gtd == null)
-                trace(String.format('null data for: match: {0} gtd isNull: {1} for id={2}, st={3}, en={4}', match, gtd == null, result[i].id, jqXHR.param.start, jqXHR.param.end), true);
         }
 
-        this.map.render(this.source);
+        if (needUpdate)
+            this.map.render(this.source);
     }
 }
 CMoose.inheritFrom(CPage);
