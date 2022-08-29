@@ -157,8 +157,8 @@ class CMooseSMS
 			$Result+= $NextCharDecoded;
 		}
 	
-		$Result >>= $aStartBit%6;
-		$Result &= (1<<($aNBits))-1;
+		$Result >>= $aStartBit % 6;
+		$Result &= (1 << $aNBits) - 1;
 		
 		return $Result;
 	}
@@ -574,7 +574,7 @@ class CMooseSMSv3 extends CMooseSMS
         $now = time();
         $ActivityDate1 = self::GetActivityBaseDate($this->time, $refTime, $ActivityDay);
         if (gmdate('j', $ActivityDate1) != $ActivityDay)
-        	$this->AddDiag("Sms ActivityDay $ActivityDay doesn't match decoded date" . gmdate('Y-m-d',$ActivityDate1));
+        	$this->AddDiag("Sms ActivityDay $ActivityDay doesn't match decoded date " . gmdate('Y-m-d',$ActivityDate1));
 
         $ActivityDate2 =  $ActivityDate1 + 24 * 60 * 60;
 
@@ -582,7 +582,7 @@ class CMooseSMSv3 extends CMooseSMS
 		for ( $i=0 ; $i<24 ; $i++ )
 			for ( $j=0 ; $j<6 ; $j++ )
 			{
-				$CurrentActivity[1] = CMooseSMS::a64bitstoi ( $this->ActivityText, (23-$i)*6+$j , 1 );
+				$CurrentActivity[1] = CMooseSMS::a64bitstoi ( $this->ActivityText, (23-$i)*6 + $j, 1 );
 				$CurrentActivity[0] = (($i < $this->RotateHour ) ? $ActivityDate2 : $ActivityDate1 ) + $i*60*60 + $j*10*60;
 				if ( $CurrentActivity[1] === NULL )
 				{
@@ -602,8 +602,81 @@ class CMooseSMSv3 extends CMooseSMS
 	
 	protected function ProcessReloadDiagnostic ()
 	{
-		$this->AddDiag('Reload');
-		//echo ("Reload!");
+		$text = substr($this->ActivityText, 0, 12);
+
+		$day = CMooseSMS::a64bitstoi($text, 60, 6);
+		$hour = CMooseSMS::a64bitstoi($text, 54, 6);
+		$minute = CMooseSMS::a64bitstoi($text, 48, 6);
+		$second = CMooseSMS::a64bitstoi($text, 42, 6);
+
+		$reloadsCounter = CMooseSMS::a64bitstoi($text, 10, 8);
+		$this->AddDiag("Reload on day $day at $hour:$minute:$second, reloads: $reloadsCounter");
+
+		$rCon = CMooseSMS::a64bitstoi($text, 26, 16);
+		$runPoint = CMooseSMS::a64bitstoi($text, 2, 8);
+		$sysState = CMooseSMS::a64bitstoi($text, 18, 8);
+
+		$reasons = ["Power-on reset", "Brown-out Reset", "Idle mode", "Sleep mode", "Watchdog timeout", "WDT is enabled", "Software Reset", "Master Clear (pin) Reset",
+					"Program memory bias voltage remains powered during Sleep", "A Configuration Word Mismatch Reset", "Deep Sleep mode", "Unimplemented 11", "Retention mode is enabled while device is in Sleep modes", "Unimplemented", "An illegal opcode detection, an illegal address mode or Uninitialized W register is used as an
+Address Pointer", "Trap Conflict Reset"];
+
+		$occured = [];
+		foreach ($reasons as $k => $v)
+			if ((($rCon >> $k) & 1) != 0)
+				$occured[] = $v;
+
+		$this->AddDiag("RCON: $rCon " . implode(", ", $occured));
+
+		$runpoints = ["Default", "NotValid", "StateMachine", "putcUART2", "putStrUART2", "PowerSM", "U2RXInt", "MainSM",
+			"CHalt", "ReadEEPROM", "WriteEEPROM", "RFSM", "CHalt2", "SendSMS", "SendSMS2", "TX7021", "RX7021"];
+
+		$states = [-1 => "Just turned on",
+			0 => "MAIN",
+			2 => "EVENT_ACQ",
+			3 => "EVENT_SND",
+			4 => "INITTIMEOUT",
+			5 => "TURNONPHONE",
+			6 => "TURNOFFPHONE",
+			7 => "GETPOSITION",
+			8 => "INITGPS",
+			9 => "WAITAQ",
+			10 => "EXITGPS",
+			11 => "SENDPOSITION",
+			12 => "WAITSENDOK",
+			13 => "WAITGOODSIGNAL",
+			14 => "SENDPOSSMS",
+			15 => "WAITSMSANSWERPHONE",
+			16 => "TURNOFFGPS",
+			17 => "SENDOK",
+			18 => "GETSCANUMBER",
+			19 => "WAITSCANUMBER",
+			33 => "TRACKGPS",
+			34 => "GPSDONE",
+			35 => "RETURNTOMAIN",
+			36 => "TRYTOSENDPOSITION",
+			37 => "CHECKEXITGPS",
+			38 => "WAITEXITGPS",
+			39 => "WAITPHONEON",
+			40 => "SENDATTURNON",
+			41 => "CHECKREG",
+			42 => "ASKREG",
+			43 => "WAITREG",
+			46 => "FIXUNSUCCESSFUL",
+			47 => "DELAYAQ",
+			49 => "FIXPOS",
+			50 => "SAVEPOS",
+			51 => "INITIALSEQENCE",
+			52 => "RETURNTOMAIN2",
+			53 => "KILLSPAM",
+			54 => "WAITKILLSPAM",
+			55 => "WAIT_FOR_ACTIVE",
+			56 => "WAIT_FOR_NOT_ACTIVE",
+			57 => "SENDPHASE2",
+			58 => "TURNOFF",
+			59 => "TURNOFF_PHASE2",
+			60 => "SKIP",
+			61 => "TURNOFF_PHASE3"];
+		$this->AddDiag("SysState: $sysState: ". @$states[$sysState]. ",  Runpoint: $runPoint: " . @$runpoints[$runPoint]);
 	}
 
 	protected function ProcessSkippedDiagnostic ($numSkipped)
