@@ -1519,7 +1519,7 @@ class CMooseDb extends CTinyDb
         $query = "select rs.id, rs.text, stamp, diagnose
             from raw_sms rs
             inner join sms s on s.raw_sms_id = rs.id
-            where rs.id >= $min
+            where rs.id >= $min and diagnose like '%Reload%'
             limit 15000";
 
         $i = 0;

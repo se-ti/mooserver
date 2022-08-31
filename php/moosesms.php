@@ -354,6 +354,62 @@ class CMooseSMSv3 extends CMooseSMS
 	var $PointsHeaderText;
 	var $PointsArrayText;
 
+	// region reload diagnostics
+	static $RunPoints = ["Default", "NotValid", "StateMachine", "putcUART2", "putStrUART2", "PowerSM", "U2RXInt", "MainSM",
+		"CHalt", "ReadEEPROM", "WriteEEPROM", "RFSM", "CHalt2", "SendSMS", "SendSMS2", "TX7021", "RX7021"];
+	static $ReloadReasons = ["Power-on reset", "Brown-out Reset", "Idle mode", "Sleep mode", "Watchdog timeout", "WDT is enabled", "Software Reset",
+		"Master Clear (pin) Reset", "Program memory bias voltage remains powered during Sleep", "A Configuration Word Mismatch Reset", "Deep Sleep mode",
+		"Unimplemented 11", "Retention mode is enabled while device is in Sleep modes", "Unimplemented",
+		"An illegal opcode detection, an illegal address mode or Uninitialized W register is used as an Address Pointer", "Trap Conflict Reset"];
+
+	static $BeaconStates = [255 => "Just turned on", // it was -1
+		0 => "MAIN",
+		2 => "EVENT_ACQ",
+		3 => "EVENT_SND",
+		4 => "INITTIMEOUT",
+		5 => "TURNONPHONE",
+		6 => "TURNOFFPHONE",
+		7 => "GETPOSITION",
+		8 => "INITGPS",
+		9 => "WAITAQ",
+		10 => "EXITGPS",
+		11 => "SENDPOSITION",
+		12 => "WAITSENDOK",
+		13 => "WAITGOODSIGNAL",
+		14 => "SENDPOSSMS",
+		15 => "WAITSMSANSWERPHONE",
+		16 => "TURNOFFGPS",
+		17 => "SENDOK",
+		18 => "GETSCANUMBER",
+		19 => "WAITSCANUMBER",
+		33 => "TRACKGPS",
+		34 => "GPSDONE",
+		35 => "RETURNTOMAIN",
+		36 => "TRYTOSENDPOSITION",
+		37 => "CHECKEXITGPS",
+		38 => "WAITEXITGPS",
+		39 => "WAITPHONEON",
+		40 => "SENDATTURNON",
+		41 => "CHECKREG",
+		42 => "ASKREG",
+		43 => "WAITREG",
+		46 => "FIXUNSUCCESSFUL",
+		47 => "DELAYAQ",
+		49 => "FIXPOS",
+		50 => "SAVEPOS",
+		51 => "INITIALSEQENCE",
+		52 => "RETURNTOMAIN2",
+		53 => "KILLSPAM",
+		54 => "WAITKILLSPAM",
+		55 => "WAIT_FOR_ACTIVE",
+		56 => "WAIT_FOR_NOT_ACTIVE",
+		57 => "SENDPHASE2",
+		58 => "TURNOFF",
+		59 => "TURNOFF_PHASE2",
+		60 => "SKIP",
+		61 => "TURNOFF_PHASE3"];
+	// endregion
+
 	protected function ProcessSMSText ($diagLevel)
 	{
 		$this->TestValue = "Process";
@@ -610,73 +666,19 @@ class CMooseSMSv3 extends CMooseSMS
 		$second = CMooseSMS::a64bitstoi($text, 42, 6);
 
 		$reloadsCounter = CMooseSMS::a64bitstoi($text, 10, 8);
-		$this->AddDiag("Reload on day $day at $hour:$minute:$second, reloads: $reloadsCounter");
+		$this->AddDiag("Reload on day $day at $hour:$minute:$second GMT, reloads: $reloadsCounter");
 
 		$rCon = CMooseSMS::a64bitstoi($text, 26, 16);
 		$runPoint = CMooseSMS::a64bitstoi($text, 2, 8);
 		$sysState = CMooseSMS::a64bitstoi($text, 18, 8);
 
-		$reasons = ["Power-on reset", "Brown-out Reset", "Idle mode", "Sleep mode", "Watchdog timeout", "WDT is enabled", "Software Reset", "Master Clear (pin) Reset",
-					"Program memory bias voltage remains powered during Sleep", "A Configuration Word Mismatch Reset", "Deep Sleep mode", "Unimplemented 11", "Retention mode is enabled while device is in Sleep modes", "Unimplemented", "An illegal opcode detection, an illegal address mode or Uninitialized W register is used as an
-Address Pointer", "Trap Conflict Reset"];
-
 		$occured = [];
-		foreach ($reasons as $k => $v)
+		foreach (self::$ReloadReasons as $k => $v)
 			if ((($rCon >> $k) & 1) != 0)
 				$occured[] = $v;
-
 		$this->AddDiag("RCON: $rCon " . implode(", ", $occured));
 
-		$runpoints = ["Default", "NotValid", "StateMachine", "putcUART2", "putStrUART2", "PowerSM", "U2RXInt", "MainSM",
-			"CHalt", "ReadEEPROM", "WriteEEPROM", "RFSM", "CHalt2", "SendSMS", "SendSMS2", "TX7021", "RX7021"];
-
-		$states = [-1 => "Just turned on",
-			0 => "MAIN",
-			2 => "EVENT_ACQ",
-			3 => "EVENT_SND",
-			4 => "INITTIMEOUT",
-			5 => "TURNONPHONE",
-			6 => "TURNOFFPHONE",
-			7 => "GETPOSITION",
-			8 => "INITGPS",
-			9 => "WAITAQ",
-			10 => "EXITGPS",
-			11 => "SENDPOSITION",
-			12 => "WAITSENDOK",
-			13 => "WAITGOODSIGNAL",
-			14 => "SENDPOSSMS",
-			15 => "WAITSMSANSWERPHONE",
-			16 => "TURNOFFGPS",
-			17 => "SENDOK",
-			18 => "GETSCANUMBER",
-			19 => "WAITSCANUMBER",
-			33 => "TRACKGPS",
-			34 => "GPSDONE",
-			35 => "RETURNTOMAIN",
-			36 => "TRYTOSENDPOSITION",
-			37 => "CHECKEXITGPS",
-			38 => "WAITEXITGPS",
-			39 => "WAITPHONEON",
-			40 => "SENDATTURNON",
-			41 => "CHECKREG",
-			42 => "ASKREG",
-			43 => "WAITREG",
-			46 => "FIXUNSUCCESSFUL",
-			47 => "DELAYAQ",
-			49 => "FIXPOS",
-			50 => "SAVEPOS",
-			51 => "INITIALSEQENCE",
-			52 => "RETURNTOMAIN2",
-			53 => "KILLSPAM",
-			54 => "WAITKILLSPAM",
-			55 => "WAIT_FOR_ACTIVE",
-			56 => "WAIT_FOR_NOT_ACTIVE",
-			57 => "SENDPHASE2",
-			58 => "TURNOFF",
-			59 => "TURNOFF_PHASE2",
-			60 => "SKIP",
-			61 => "TURNOFF_PHASE3"];
-		$this->AddDiag("SysState: $sysState: ". @$states[$sysState]. ",  Runpoint: $runPoint: " . @$runpoints[$runPoint]);
+		$this->AddDiag("SysState: $sysState: ". @self::$BeaconStates[$sysState]. ", Runpoint: $runPoint: " . @self::$RunPoints[$runPoint]);
 	}
 
 	protected function ProcessSkippedDiagnostic ($numSkipped)
