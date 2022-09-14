@@ -797,6 +797,8 @@ CMoose.prototype =
         for (var i = 0; i < result.length; i++)
         {
             var trk = cache.getMooseData(result[i].id);
+            if (trk == null)    // пока ходили за активностью треки в кеше очистились. Например из-за перелогина.
+                continue;
             data = {
                 track: trk,  // если он был, то полный, если нет
                 activity: result[i].activity
@@ -804,7 +806,7 @@ CMoose.prototype =
 
             gtd = CMooseMapHelper.glueTrackData(data, uHash);
             if (gtd == null)
-                trace(String.format('delayLoad: gtd is null, track from cache isNull: {0} for id={1}, st={2}, en={3}', trk == null, result[i].id, jqXHR.param.start, jqXHR.param.end), true);
+                trace(String.format('delayLoad: gtd is null, track from cache is NOT null for id={0}, st={1}, en={2}', result[i].id, jqXHR.param.start, jqXHR.param.end), true);
 
             stamp = cache.getMooseStamp(result[i].id, jqXHR.param.start, jqXHR.param.end);
             cache.addMooseData(result[i].id, jqXHR.param.start, jqXHR.param.end, stamp, gtd);
