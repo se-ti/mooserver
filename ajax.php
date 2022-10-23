@@ -74,8 +74,11 @@ ini_set("memory_limit","192M");
 try {
     if ($needComp)
         ob_start('ob_gzhandler');
-    
-    echo json_encode(call_user_func($method));
+
+    $json = json_encode(call_user_func($method));
+    if ($json === false)
+        Log::e($db, $auth, $mName, 'error encoding json: ' . json_last_error_msg() . ' for ' . print_r($_REQUEST, 1));
+    echo $json;
     
     if ($needComp)
         ob_end_flush();
