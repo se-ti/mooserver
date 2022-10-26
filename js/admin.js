@@ -168,7 +168,7 @@ CAdmin.prototype = {
         if (!this._iframe)
             this._iframe = $('<iframe name="fileTarget" class="hidden">empty in iframe</iframe>')
                 .appendTo(this._rm)
-                .load($cd(this, this._load));
+                .on('load', $cd(this, this._load));
 
         var form = this._rm.find('form');
         form.get(0).submit();
@@ -185,13 +185,14 @@ CAdmin.prototype = {
 
         if (!result)
         {
-            alert(doc);
+            if (doc != '')
+                alert(doc);
             if (console.log)
                 console.log(doc);
         }
         else
         {
-			var s="";
+			var s = '';
             if (result.log && result.log.length > 0)
             {
                 s = result.log.join("\n");
@@ -203,8 +204,9 @@ CAdmin.prototype = {
 						s+="\n";
 					s+=result.status;
 				}
-				
-			alert(s);
+
+			if (s != '')
+			    alert(s);
 			
             if (console.log)
                 console.log(s);

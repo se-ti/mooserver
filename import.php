@@ -9,6 +9,7 @@ require_once "config.php";
 require_once "php/auth.php";
 require_once "php/dbase.php";
 require_once "php/moosesms.php";
+require_once "php/common.php";
 
 global $auth;
 global $db;
@@ -18,7 +19,7 @@ $auth = new CMooseAuth($db);
 
 $errcode = $_FILES['import']['error'][0];   // check all errors!
 if ($errcode != 0)
-	dieError("Error: $errcode");
+    dieError("Error: $errcode Message: " . CMooseTools::uploadErrors($errcode));
 
 $names = $_FILES['import']['tmp_name'];
 $upload = $_FILES['import']['name'];
