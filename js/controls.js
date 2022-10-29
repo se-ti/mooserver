@@ -2268,6 +2268,7 @@ CMooseMap.inheritFrom(CControl);
 
 CMooseMapHelper = function()
 {
+    this._d_defaultSuccess = $cd(this, this._defaultSuccess);
     this._d_onSuccess = $cd(this, this._onSuccess);
 }
 
@@ -2397,22 +2398,39 @@ CMooseMapHelper.prototype =
     drawRawSms: function(mapControl, rawSmsId, diagnostics)
     {
         if (rawSmsId == null)
-            return;
+            return null;
 
-        var r = $ajaxErr('getSms', {'rawSmsId': rawSmsId, 'diag': diagnostics ? 1 : 0}, this._d_onSuccess);
+        var r = this.getRawSms(rawSmsId, diagnostics, this._onSuccess);
         r.__rawId = rawSmsId;
         r.__mapControl = mapControl;
+        return r;
     },
 
-    _onSuccess: function(result, text, jqXHR)
-    {
+    getRawSms: function(rawSmsId, diagnostics, callback) {
+        var r = $ajaxErr('getSms', {'rawSmsId': rawSmsId, 'diag': diagnostics ? 1 : 0}, this._defaultSuccess);
+        r.___callback = callback;
+        return r;
+    },
+
+    _defaultSuccess: function(result, text, jqXHR) {
         if (!result || !result.track || result.track.length == 0)
             return;
 
         if (result.track.length == 1)
             result.track.push(result.track[0]);
 
-        jqXHR.__mapControl.render([{data: CMooseMapHelper.glueTrackData(result, CMooseMapHelper.makeUserHash()), id: jqXHR.__rawId, key: 'rawSmsId'}]);
+        var data = {data: CMooseMapHelper.glueTrackData(result, CMooseMapHelper.makeUserHash()) };
+
+        if (jqXHR.___callback)
+            jqXHR.___callback(data, jqXHR, result)
+    },
+
+    _onSuccess: function(data, jqXHR, result)
+    {
+        data.id = jqXHR.__rawId;
+        data.key = 'rawSmsId';
+
+        jqXHR.__mapControl.render([data]);
         if (result.diagnostics)
             ;   // show diagnostics
     }

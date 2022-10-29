@@ -1621,9 +1621,42 @@ CGate.prototype =
     {
         this._selectRow(e, forceSelect);
 
-        var rows = $(e.target).parents('tr');
-        if (rows.length > 0)
-            this._mapHelper.drawRawSms(this._map, this._getSmsId(e), e.altKey);
+        var rawId = this._getSmsId(e);
+        if (rawId == null)
+            return;
+
+        if (this._smsData[rawId] && this._smsData[rawId].data)
+        {
+            this._drawSelectedSmses();
+            return;
+        }
+
+        var r = this._mapHelper.getRawSms(rawId, e.altKey, $cd(this, this._onGetSms));
+        r.__rawId = rawId;
+        this._smsData[rawId] = {};
+    },
+
+    _onGetSms: function(data, req)
+    {
+        var rawId = req.__rawId;
+        if (this._smsData[rawId] == null) // всё сильно поменялось с момента вызова
+            return;
+
+        data.id = rawId;
+        data.key = 'rawSmsId';
+
+        this._smsData[rawId] = {data: data };
+
+        this._drawSelectedSmses();
+    },
+
+    _drawSelectedSmses: function()
+    {
+        var tracks = this._getSelectedSmsIds(null)
+            .map(function(v) { return this._smsData[v] ? this._smsData[v].data : null; }, this)
+            .filter(function (v) { return v != null; });
+
+        this._map.render(tracks);
     },
 
     _chmooseClick: function(e)
