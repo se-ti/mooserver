@@ -1594,7 +1594,7 @@ CGate.prototype =
         return rv;
     },
 
-    _selectRow: function(e, forceSelect)
+    _selectRow: function(e)
     {
         if (!e || !e.target || this._table.hasClass('hideControls'))
             return;
@@ -1604,7 +1604,7 @@ CGate.prototype =
             this._body.find('tr.success').removeClass('success');
         var id = this._getSmsId(e);
         if ((id || '') != '')
-            this._body.find('tr[data-id="' + id + '"]').toggleClass('success', multi && !forceSelect ? undefined : true);
+            this._body.find('tr[data-id="' + id + '"]').toggleClass('success', multi ? undefined : true);
     },
 
     _deselectRows: function(predicate)
@@ -1617,9 +1617,9 @@ CGate.prototype =
             .removeClass('success');
     },
 
-    _rowClick: function(e, forceSelect)
+    _rowClick: function(e)
     {
-        this._selectRow(e, forceSelect);
+        this._selectRow(e);
 
         var rawId = this._getSmsId(e);
         if (rawId == null)
@@ -1659,12 +1659,6 @@ CGate.prototype =
         this._map.render(tracks);
     },
 
-    _chmooseClick: function(e)
-    {
-        this._startChangeMoose(e);
-        this._rowClick(e, true);
-    },
-
     _delClick: function(e)
     {
         this._rowClick(e);
@@ -1689,6 +1683,13 @@ CGate.prototype =
     {
         this._justErr.get(0).disabled = !enable;
         this._table.toggleClass('hideControls', !enable);
+    },
+
+    _chmooseClick: function(e)
+    {
+        if (!$(e.target).parents('tr:first').hasClass('success'))
+            this._rowClick(e);
+        this._startChangeMoose(e);
     },
 
     _startChangeMoose: function(e)
@@ -1748,11 +1749,10 @@ CGate.prototype =
 
     _changeMoose: function()
     {
-        this._toggleControls(true);
-
         var ms = this._mooseSel;
         if (!ms)
         {
+            this._toggleControls(true);
             this.reRead();
             return;
         }
@@ -1760,9 +1760,12 @@ CGate.prototype =
         var ids = this._getSelectedSmsIds(ms._smsId);
         var val = $(ms.options[ms.selectedIndex]).text();
         if (ids.length == 1 || confirm(String.format("Вы действительно хотите перевесить {0} sms на животное '{1}'?\n\nДействие невозможно отменить.", ids.length, val)))
+        {
+            this._toggleControls(true);
             $ajaxErr('reassignSms', {moose: ms.value > 0 ? ms.value : null, smsIds: ids}, $cd(this, this.reRead));
-        else
-            this.reRead();
+        }
+//        else
+//            this.reRead();
     },
 
     _getSelectedSmsIds: function(curId)
