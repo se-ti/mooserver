@@ -120,7 +120,7 @@ class CMooseDb extends CTinyDb
     }
 
     // should be called only with verified $rawSmsIds
-    protected function GetRawSmsMooses(CMooseAuth $auth, $rawSmsIds)
+    protected function GetRawSmsMooses(CMooseAuth $auth, array $rawSmsIds)
     {
         if ($rawSmsIds == null || count($rawSmsIds) == 0)
             return [];
@@ -129,7 +129,7 @@ class CMooseDb extends CTinyDb
         $query = "select distinct s.moose
                     from raw_sms rs
                     left join sms s on s.raw_sms_id = rs.id
-                    where rs.id = ($ids) and s.moose is not null";
+                    where rs.id in ($ids) and s.moose is not null";
 
         $res = $this->Query($query);
         $result = [];
@@ -1043,7 +1043,7 @@ class CMooseDb extends CTinyDb
 
         $this->commit();
 
-        Log::t($this, $auth, 'reassignSms', "перевешиваем c животных '". implode(',', $old) ."' на животное '$moose', rawSmsIds: '".implode(", ", $ids) ."'");
+        Log::t($this, $auth, 'reassignSms', "перевешиваем c животных '". implode(', ', $old) ."' на животное '$moose', rawSmsIds: '".implode(", ", $ids) ."'");
         return ['res' => true, 'rc' => $result->rowCount()];
     }
 

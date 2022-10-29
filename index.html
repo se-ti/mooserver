@@ -29,6 +29,8 @@
 
         window.___oldErr = window.onerror;
         window.onerror = function(errorMsg, url, line, col, error) {
+            if (navigator.userAgent.indexOf('YandexBot') >= 0)
+                return true;
 
             var logMessage = 'Error: '+ errorMsg + '; \nSource: ' + url + ' :' + line;
             if (typeof col !== 'undefined')
@@ -1382,6 +1384,9 @@ CGate = function(after)
     this._phoneFilter = null;
     this._mooseFilter = null;
 
+    this._result = null;
+    this._smsData = {};
+
     this._c_reRead = $cd(this, this.reRead);
     this._c_onReRead = $cd(this, this._onReRead);
     this._c_rowClick = $cd(this, this._rowClick);
@@ -1450,7 +1455,8 @@ CGate.prototype =
 
     reRead: function()
     {
-        var param = {limit: this._rowLimit.val(),
+        var param = {
+            limit: this._rowLimit.val(),
             errors: this._justErr.get(0).checked
         };
 
@@ -1469,6 +1475,9 @@ CGate.prototype =
     {
         if (!this._table)
             return;
+
+        this._result = result;
+        this._smsData = {};
 
         this._render(result);
     },
@@ -1494,7 +1503,7 @@ CGate.prototype =
             var d = new Date(it.stamp);
             var stat = this._itemStatus(it);
             var diagnose = it.diagnose ? ('<br/>' + String.makeBreakable(it.diagnose)): '';
-            body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), CSingleBeacon.beaconHref(it.phoneId, it.phone), String.toHTML(it.moose) + this._renderChmooseBtn(it), stat.html, this._renderButtons(it, stat))
+            body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), CSingleBeacon.beaconHref(it.phoneId, it.phone), this._renderMoose(it), stat.html, this._renderButtons(it, stat))
                     + String.format('<tr data-id="{0}"><td colspan="8" class="smsText {2}"><small><small class="text-danger">{1}{3}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText', diagnose); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
         }
 
@@ -1536,12 +1545,13 @@ CGate.prototype =
         this.reRead();
     },
 
-    _renderChmooseBtn: function(item)
+    _renderMoose: function(item)
     {
+        var res = String.toHTML(item.moose);
         if (!this._isSuper || !item.sid)
-            return '';
+            return res;
 
-        return '<button style="margin-left: 1.5em;" class="btn btn-default btn-xs chmoose note"><span class="glyphicon glyphicon-pencil"></span></button>';
+        return res + '<button style="margin-left: 1.5em;" class="btn btn-default btn-xs chmoose note"><span class="glyphicon glyphicon-pencil"></span></button>';
     },
 
     _renderButtons: function(item, stat)
@@ -1584,20 +1594,32 @@ CGate.prototype =
         return rv;
     },
 
-    _selectRow: function(e)
+    _selectRow: function(e, forceSelect)
     {
-        if (!e || !e.target)
+        if (!e || !e.target || this._table.hasClass('hideControls'))
             return;
 
-        this._body.find('tr').removeClass('success');
+        var multi = e.ctrlKey;
+        if (!multi)
+            this._body.find('tr.success').removeClass('success');
         var id = this._getSmsId(e);
         if ((id || '') != '')
-            this._body.find('tr[data-id="' + id + '"]').addClass('success');
+            this._body.find('tr[data-id="' + id + '"]').toggleClass('success', multi && !forceSelect ? undefined : true);
     },
 
-    _rowClick: function(e)
+    _deselectRows: function(predicate)
     {
-        this._selectRow(e);
+        if (!(predicate instanceof Function))
+            return;
+
+        this._body.find('tr.success')
+            .filter(predicate)
+            .removeClass('success');
+    },
+
+    _rowClick: function(e, forceSelect)
+    {
+        this._selectRow(e, forceSelect);
 
         var rows = $(e.target).parents('tr');
         if (rows.length > 0)
@@ -1606,9 +1628,8 @@ CGate.prototype =
 
     _chmooseClick: function(e)
     {
-        this._rowClick(e);
-
         this._startChangeMoose(e);
+        this._rowClick(e, true);
     },
 
     _delClick: function(e)
@@ -1618,11 +1639,12 @@ CGate.prototype =
         e.preventDefault();
         e.stopPropagation();
 
+        var self = this;
         var id = this._getSmsId(e);
-        if ((id || '') == '' || !confirm(String.format("Вы действительно хотите удалить sms id='{0}'?\nДействие невозможно отменить.", id )))
-            return;
-
-        $ajaxErr('deleteSms', {'rawSmsId' :id}, this._c_onDeleteSms);
+        window.setTimeout(function() {  // чтобы rowClick хоть успел подсветить строку
+            if ((id || '') != '' && confirm(String.format("Вы действительно хотите удалить sms id='{0}'?\nДействие невозможно отменить.", id )))
+                $ajaxErr('deleteSms', {'rawSmsId': id}, self._c_onDeleteSms);
+        }, 0);
     },
 
     _onDeleteSms: function(result, text, jqXHR)
@@ -1645,6 +1667,10 @@ CGate.prototype =
 
         if (!m || smsId == null)
             return;
+
+        var hash = {};
+        (this._result || []).forEach(function(it) {if (it.sid) hash[it.id] = true;})
+        this._deselectRows(function(idx, el) { return !hash[$(el).attr('data-id')]; });
 
         cell.get(0).innerHTML = '';
         this._mooseSel = $('<select class="form-control"/>')
@@ -1672,6 +1698,18 @@ CGate.prototype =
     _cancelChangeMoose: function()
     {
         this._toggleControls(true);
+        var ms = this._mooseSel;
+        this._mooseSel = null;
+        if (ms && ms._smsId != null)
+        {
+            var cell = $(ms).parents('td:first');
+            var row = (this._result || []).find(function (it) { return it && it.id == ms._smsId; })
+            if (row != null)
+            {
+                cell.html(this._renderMoose(row));
+                return;
+            }
+        }
         this.reRead();
     },
 
@@ -1681,10 +1719,37 @@ CGate.prototype =
 
         var ms = this._mooseSel;
         if (!ms)
+        {
             this.reRead();
+            return;
+        }
+
+        var ids = this._getSelectedSmsIds(ms._smsId);
+        var val = $(ms.options[ms.selectedIndex]).text();
+        if (ids.length == 1 || confirm(String.format("Вы действительно хотите перевесить {0} sms на животное '{1}'?\n\nДействие невозможно отменить.", ids.length, val)))
+            $ajaxErr('reassignSms', {moose: ms.value > 0 ? ms.value : null, smsIds: ids}, $cd(this, this.reRead));
         else
-            $ajaxErr('reassignSms', {moose: ms.value > 0 ? ms.value : null, smsIds:[ms._smsId]}, $cd(this, this.reRead));
-        //this.reRead();
+            this.reRead();
+    },
+
+    _getSelectedSmsIds: function(curId)
+    {
+        var res = [];
+        var hash = {};
+        (this._result || []).forEach(function(it) { if (!it.sid) hash[it.id] = true; });
+
+        this._body.find('tr.success').each(function (idx, el) {
+            var id =  $(el).attr('data-id');
+            if ((id || '') == '' || hash[id])
+                return;
+            hash[id] = true;
+            res.push(id);
+        });
+
+        if ((curId || '') != '' && !hash[curId])
+            res.push(curId);
+
+        return res;
     },
 
     _getSmsId: function(event)
