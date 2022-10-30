@@ -559,13 +559,27 @@ function addLog()
 {
     global $auth, $db;
 
-    $message = $title = varNotEmpty('message', true, "Не указано сообщение");
+    $message = varNotEmpty('message', true, "Не указано сообщение");
     $level = filter_var($_POST['level'], FILTER_VALIDATE_INT, ['options' => ['min_range' => CTinyDb::LogInfo, 'max_range' => CTinyDb::LogCritical]]);
     if ($level === false)
         dieError('недопустимый уровень логов');
     
-    $db->AddLogRecord($auth, $level, 'webClient', $message);
+    $db->AddLogRecord($auth, $level, 'webClient', $message . requestIpStat($level >= CTinyDb::LogError));
     return 'ok';
+}
+
+function requestIpStat($long = false)
+{
+    $headers = $long ? ['HTTP_USER_AGENT' => 'UA', 'HTTP_ACCEPT_LANGUAGE' => 'lang', 'HTTP_X_REAL_IP' => 'real IP', 'HTTP_X_FORWARDED_FOR' => 'xForwardFor', 'HTTP_REFERER' => 'referer'] :
+        ['HTTP_ACCEPT_LANGUAGE' => 'lang', 'HTTP_X_REAL_IP' => 'ip', 'HTTP_X_FORWARDED_FOR' => 'xfw'];
+
+    $sep = $long ? "\n": ', ';
+    $ext = [];
+    foreach($headers as $key => $val)
+        if (@$_SERVER[$key] != '' && ($key != 'HTTP_X_FORWARDED_FOR' || @$_SERVER[$key] != @$_SERVER['HTTP_X_REAL_IP']))
+            $ext[] = "$val: '" . @$_SERVER[$key] . "'";
+
+    return ($long ? ' ' : "\n")  . implode($sep, $ext);
 }
 
 /*function resetDb()
