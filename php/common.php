@@ -456,6 +456,9 @@ class CScheduler
         if ($data == false)
             throw new Exception("error opening file '$file'");
 
+        $tz = date_default_timezone_get();
+        date_default_timezone_set('UTC');
+
         $points = [];
         for ($line = 1; $tokens = fgetcsv($data, 300, ','); $line++)
         {
@@ -472,6 +475,7 @@ class CScheduler
                 sleep(1);
             }
         }
+        date_default_timezone_set($tz);
 
         if (count($points) != 0)
         {
