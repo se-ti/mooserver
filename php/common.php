@@ -488,7 +488,7 @@ class CScheduler
         $lat = floatval($line[0]);
         $lon = floatval($line[1]);
 
-        $search  = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сеп', 'окт', 'ноя', 'дек'];
+        $search  = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
         $rep = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         $str = str_ireplace($search, $rep, iconv('cp1251', 'utf8', $line[5] . $line[6]));
