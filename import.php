@@ -62,6 +62,12 @@ function parseFile($name, $uploadName)
         dieError("You have no rights to import csv files.");
 
     $putdata = fopen($name, "r");
+    if ($putdata === false) {
+        Log::e($db, $auth, "import", "Can't open file: '$name'");
+        $result['status'] = $result['error'] = "Error opening file '$name'";
+
+        return $result;
+    }
 
     for ( $StringCounter = 1; $StringArray = fgetcsv ( $putdata, 300, ';' ); $StringCounter++)
 		{
