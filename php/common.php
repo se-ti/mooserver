@@ -447,7 +447,7 @@ class CScheduler
         return strtotime(str_replace('.', '-', $tm)); // Change '.' to '-' to make strtotime think date is in american notation
     }
 
-    private static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $file, $phone, $moose)
+    public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $file, $phone, $moose)
     {
         if (!$auth->isSuper())
             return;
