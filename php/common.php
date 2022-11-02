@@ -496,8 +496,18 @@ class CScheduler
         $rep = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         $str = str_ireplace($search, $rep, iconv('cp1251', 'utf8', $line[5] . $line[6]));
+        if (trim($str) != '')
+            $time = strtotime($str);
+        else
+            $time = self::oziTmeFromFloat(floatval($line[4]));
 
-        return [$lat, $lon, strtotime($str)];
+        return [$lat, $lon, $time];
+    }
+
+    // see https://www.oziexplorer4.com/eng/help/fileformats.html
+    static function oziTmeFromFloat($val)
+    {
+        return round(($val - 25569) * 86400); // 25569 -- days between Unix Epoch 1/1/1970 and 12/30/1899 -- Delphi Epoch
     }
 }
 ?>
