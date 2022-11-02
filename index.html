@@ -110,6 +110,8 @@ td.smsText { overflow-x: hidden; text-overflow: ellipsis; }
 td.smsSmallText {font-size:13px}    /*здесь будут еще 2 вложенных <small>*/
 td.smsSmallText2 {font-size:9px}
 
+.keyboard tr:focus-visible {outline-width: 0;}
+
 .leaflet-control label {margin-bottom: inherit; font-weight: inherit;}
 .ll-extend input[type="checkbox"] {position: relative; top: 1px;}
 .ctxMenu .leaflet-popup-tip-container {display:none;}
@@ -1394,6 +1396,7 @@ CGate = function(after)
     this._c_chmooseClick = $cd(this, this._chmooseClick);
     this._c_onDeleteSms = $cd(this, this._onDeleteSms);
     this._c_clearFilters = $cd(this, this._clearFilters);
+    this._c_keydown = $cd(this, this._keydown);
     this._init(after);
 }
 
@@ -1428,12 +1431,13 @@ CGate.prototype =
         this._justErr = ctrl.find('input[type="checkbox"]')
                 .change(this._c_reRead);
 
-        this._table = $('<table class="hidden table table-moo-striped wide-content"><thead></thead><tbody></tbody></table>')
+        this._table = $('<table class="hidden table table-moo-striped wide-content"><thead></thead><tbody class="keyboard"></tbody></table>')
                 .appendTo(je);
         this._body = this._table.find('tbody')
             .on('click', 'button.del', this._c_delClick)
             .on('click', 'button.chmoose', this._c_chmooseClick)
-            .on('click', 'tr', this._c_rowClick);
+            .on('click', 'tr', this._c_rowClick)
+            .on('keydown', 'tr', this._c_keydown);
 
         var map = $('<div class="moo-affix col-xs-12 col-sm-3"></div>')
                 .appendTo(this._rm);
@@ -1495,7 +1499,7 @@ CGate.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr data-id="{1}"><td>{0}</td><td>{1}</td><td>{3}<br/>{2}</td><td>{4}</td><td>{5}</a></td><td>{6}</td><td>{7}</td>{8}</tr>';
+        var tpl = '<tr data-id="{1}" tabindex="-1"><td>{0}</td><td>{1}</td><td>{3}<br/>{2}</td><td>{4}</td><td>{5}</a></td><td>{6}</td><td>{7}</td>{8}</tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
@@ -1504,7 +1508,7 @@ CGate.prototype =
             var stat = this._itemStatus(it);
             var diagnose = it.diagnose ? ('<br/>' + String.makeBreakable(it.diagnose)): '';
             body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), CSingleBeacon.beaconHref(it.phoneId, it.phone), this._renderMoose(it), stat.html, this._renderButtons(it, stat))
-                    + String.format('<tr data-id="{0}"><td colspan="8" class="smsText {2}"><small><small class="text-danger">{1}{3}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText', diagnose); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
+                    + String.format('<tr data-id="{0}" tabindex="-1"><td colspan="8" class="smsText {2}"><small><small class="text-danger">{1}{3}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText', diagnose); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
         }
 
         this._table.removeClass('hidden');
@@ -1634,6 +1638,24 @@ CGate.prototype =
         var r = this._mapHelper.getRawSms(rawId, e.altKey, $cd(this, this._onGetSms));
         r.__rawId = rawId;
         this._smsData[rawId] = {};
+    },
+
+    _keydown: function(e)
+    {
+        if (!e || !e.target || this._table.hasClass('hideControls') || (e.keyCode != 38 && e.keyCode != 40))
+            return;
+
+        var ids = this._getSelectedSmsIds(null);
+        if (ids.length != 1)
+            return;
+
+        var rows = this._body.find('tr.success');
+        var el = (e.keyCode == 38 ? rows.first().prev().prev() : rows.last().next().next())
+            .find('td:first')
+            .click();
+
+        if (el.length > 0)
+            el.get(0).scrollIntoView({block: "nearest", inline: "nearest", behavior: 'auto'});
     },
 
     _onGetSms: function(data, req)
