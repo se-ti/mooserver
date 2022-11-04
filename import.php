@@ -17,6 +17,8 @@ global $db;
 $db = new CMooseDb();
 $auth = new CMooseAuth($db);
 
+die(uploadPlts($db, $auth));
+
 $errcode = $_FILES['import']['error'][0];   // check all errors!
 if ($errcode != 0)
     dieError("Error: $errcode Message: " . CMooseTools::uploadErrors($errcode));
@@ -43,6 +45,35 @@ echo json_encode($res);
 return;                     // that's all !
 
 
+function uploadPlts(CMooseDb $db, CMooseAuth $auth)
+{
+    $set = [];
+
+    $res = [
+        'ok' => true,
+        'log' => [],
+        'error' => null,
+        'status' => null
+    ];
+
+    $proc = [];
+    try {
+        foreach ($set as $v) {
+            CScheduler::uploadPlt($db, $auth, './data/', $v, '+7-916-212-85-06', 'Лимпа');
+            $proc[] = $v;
+        }
+    }
+    catch (Exception $e)
+    {
+        $db->rollback();
+
+        Log::e($db, $auth, "import plt", $e->getMessage());
+        dieError($e->getMessage());
+    }
+
+    $res['status'] = implode(', ', $proc);
+    return json_encode($res);
+}
 
 function parseFile($name, $uploadName)
 {
