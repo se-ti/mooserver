@@ -1132,6 +1132,7 @@ CSingleBeacon = function(after)
 
     this._c_rowClick = $cd(this, this._rowClick);
     this._c_onReRead = $cd(this, this._onReRead);
+    this._c_keydown = $cd(this, this._keydown);
     this._init(after);
 }
 
@@ -1181,8 +1182,9 @@ CSingleBeacon.prototype =
             .append('<h1><small></small></h1>')
             .appendTo(row);
         this._phone = je.find('h1 small');
-        this._table = $('<table class="hidden table table-moo-striped wide-content"></table>')
+        this._table = $('<table class="hidden table table-moo-striped wide-content keyboard"></table>')
             .on('click', 'tbody > tr', this._c_rowClick)
+            .on('keydown', 'tr', this._c_keydown)
             .appendTo(je);
 
 
@@ -1305,9 +1307,9 @@ CSingleBeacon.prototype =
                 var smsMoose = phd[j].length > 8 ? (mooseNames[phd[j][9]] || '') : '';
                 line += '<td' + cls + '>' + String.toHTML(smsMoose) + '</td>';
 
-                body += String.format('<tr data-id="{0}">{1}</tr>', phd[j][7], line);
+                body += String.format('<tr data-id="{0}" tabindex="-1">{1}</tr>', phd[j][7], line);
                 if (phd[j].length > 8 && (phd[j][8] || '') != '')
-                    body += String.format('<tr data-id="{0}"><td class="smsText smsSmallText2 text-danger" colspan="8">{1}</td></tr>', phd[j][7], String.makeBreakable(phd[j][8]));
+                    body += String.format('<tr data-id="{0}" tabindex="-1"><td class="smsText smsSmallText2 text-danger" colspan="8">{1}</td></tr>', phd[j][7], String.makeBreakable(phd[j][8]));
             }
         }
 
@@ -1348,6 +1350,28 @@ CSingleBeacon.prototype =
         this._table.find('tr').removeClass('success');
         if (rawSmsId != '')
             this._table.find('tr[data-id="' + rawSmsId + '"]').addClass('success');
+    },
+
+    _keydown: function (e)
+    {
+        if (!e || !e.target || this._table.hasClass('hideControls') || (e.keyCode != 38 && e.keyCode != 40))
+            return;
+
+        var rows = this._table.find('tr.success');
+        if (rows.length == 0)
+            return;
+
+        var up = e.keyCode == 38;
+        var next = up ? rows.first().prev() : rows.last().next();
+        var id = next.attr('data-id');
+        var el = up ? next.prev() : next.next();
+        if (el.attr('data-id') != id) // single-row markup
+            el = next;
+
+        el.click();
+
+        if (el.length > 0)
+            el.get(0).scrollIntoView({block: "nearest", inline: "nearest", behavior: 'smooth'});
     },
 
     setRights: function(rights)
@@ -1645,13 +1669,21 @@ CGate.prototype =
         if (!e || !e.target || this._table.hasClass('hideControls') || (e.keyCode != 38 && e.keyCode != 40))
             return;
 
-        var ids = this._getSelectedSmsIds(null);
-        if (ids.length != 1)
+        var rows = this._body.find('tr.success');
+        var cn = 0;
+        var hash = {};
+        rows.each(function(idx, el) {
+            var id = $(el).attr('data-id');
+            if (hash[id])
+                return;
+            if ((++cn) > 1)
+                return false;
+            hash[id] = true;
+        });
+        if (cn != 1)
             return;
 
-        var rows = this._body.find('tr.success');
         var el = (e.keyCode == 38 ? rows.first().prev().prev() : rows.last().next().next())
-            .find('td:first')
             .click();
 
         if (el.length > 0)
@@ -1814,7 +1846,9 @@ CGate.prototype =
     {
         if (!event || !event.target)
             return;
-        var je = $(event.target).parents('tr');
+        var je = $(event.target);
+        if (!je.is('tr'))
+            je = je.parents('tr');
         var id = je.attr('data-id');
         return (id || '') == '' ? null : id;
     },
