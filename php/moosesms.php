@@ -69,24 +69,30 @@ class CMooseSMS
 
 	public static function CreateFromText ($text, $time, $diagnostic = 0)
 	{
-		if (strpos($text, self::Artificial) === 0 )
+		if (strpos($text, self::Artificial) === 0)
 			return self::artificialSms($time);
 
 
 		if (CMooseSMSv1::matches($text))
 			$res = new CMooseSMSv1($text, $time);
 		else
-			//die ("does'nt match");
-			$res = new CMooseSMSv3 ($text, $time);
+			//die ("doesn't match");
+			$res = new CMooseSMSv3($text, $time);
 		
 		$res->ProcessSMSText($diagnostic);
 		
 		return $res;
 	}
 
-	public static function artificialSms($time)
+	// if you provide text for sms, it should be unique for the moose
+	public static function artificialSms($time, $text = null)
 	{
-		$res = new CMooseSMS(sprintf("%s %d %s", self::Artificial, $time, microtime()), $time);
+		if ($text == null)
+			$text = sprintf("%s %d %s", self::Artificial, $time, microtime());
+		else if (strpos($text, self::Artificial) !== 0)
+			$text = self::Artificial . ' ' . str_pad($text, 50 - 1 - strlen(self::Artificial), ' ', STR_PAD_LEFT);
+
+		$res = new CMooseSMS($text, $time);
 
 		$res->temp = 0;
 		$res->volt = 5;

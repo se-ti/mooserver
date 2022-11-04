@@ -273,7 +273,7 @@ class CScheduler
     {
         $db->SimplifyGateLogs($auth);
         // self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
-        // self::uploadPlt($db, $auth, './data/yaminga20121017-20121029a.plt', '+7-916-212-85-06', 'Яминга');
+        // self::uploadPlt($db, $auth, './data/', 'yaminga20121017-20121029a.plt', '+7-916-212-85-06', 'Яминга');
     }
 
     private static function canRun(CMooseAuth $auth)
@@ -292,7 +292,7 @@ class CScheduler
         else
             $flag = time() > $mtime + 30; //
 
-        return $flag ? true : false; // при массовых проверках выполнится столько действий, сколько будет запросов между этим if и отработкой первого markSuccess
+        return $flag; // при массовых проверках выполнится столько действий, сколько будет запросов между этим if и отработкой первого markSuccess
     }
 
     private static function markSuccess()
@@ -325,7 +325,7 @@ class CScheduler
 
             if ($tm == false)
             {
-                Log::e($db, $auth, 'importFile', "can't parse time '{$tokens[5]}' at line: $line");
+                Log::e($db, $auth, 'importFile', "can't parse time '$tokens[5]' at line: $line");
                 continue;
             }
 
@@ -370,7 +370,7 @@ class CScheduler
 
             if ($addHead !== false && $tm < $ref['start'])
             {
-                $addHead = $addHead or self::addTextSms($db, $auth, $phone, $tm + $ref['delay'], $fMoose, $msg, true);
+                $addHead = $addHead || self::addTextSms($db, $auth, $phone, $tm + $ref['delay'], $fMoose, $msg, true);
                 continue;
             }
 
@@ -447,30 +447,38 @@ class CScheduler
         return strtotime(str_replace('.', '-', $tm)); // Change '.' to '-' to make strtotime think date is in american notation
     }
 
-    public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $file, $phone, $moose)
+    public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $path, $file, $phone, $moose)
     {
         if (!$auth->isSuper())
             return;
 
-        $data = fopen($file, "r");
+        $path .= $file;
+        $data = fopen($path, "r");
         if ($data == false)
-            throw new Exception("error opening file '$file'");
+            throw new Exception("error opening file '$path'");
 
         $tz = date_default_timezone_get();
         date_default_timezone_set('UTC');
 
+        $last = null;
+        $quant = 100;
         $points = [];
         for ($line = 1; $tokens = fgetcsv($data, 300, ','); $line++)
         {
             if (count($tokens) < 7 || $tokens[0] == 0 )
                 continue;
 
-            $points[] = self::lineFromPlt($tokens);
-            if ($line %100 == 0)
+            $points[] = $pt = self::lineFromPlt($tokens);
+            if ($last != null && $pt[2] < $last[2])
+                throw new Exception("время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: '$file', строка $line");
+            $last = $pt;
+
+            if ($line % $quant == 0)
             {
-                $sms = CMooseSMS::artificialSms(time());
+                $sms = CMooseSMS::artificialSms(time(), "$file - " . $line / $quant);
                 $sms->points = $points;
-                self::addSms($db, $auth, $phone, $moose, $sms, false);
+                if (!self::addSms($db, $auth, $phone, $moose, $sms, false))
+                    throw new Exception("Error adding sms: '$file', line $line");
                 $points = [];
                 sleep(1);
             }
@@ -479,9 +487,10 @@ class CScheduler
 
         if (count($points) != 0)
         {
-            $sms = CMooseSMS::artificialSms(time());
+            $sms = CMooseSMS::artificialSms(time(), "$file - " . ceil($line / $quant));
             $sms->points = $points;
-            self::addSms($db, $auth, $phone, $moose, $sms, false);
+            if (!self::addSms($db, $auth, $phone, $moose, $sms, false))
+                throw new Exception("Error adding sms: '$file', line $line");
         }
 
         fclose($data);
@@ -510,4 +519,3 @@ class CScheduler
         return round(($val - 25569) * 86400); // 25569 -- days between Unix Epoch 1/1/1970 and 12/30/1899 -- Delphi Epoch
     }
 }
-?>

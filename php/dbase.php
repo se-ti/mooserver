@@ -1480,7 +1480,7 @@ class CMooseDb extends CTinyDb
 
             if ($tmp['sid'] == null || $r['ustamp'] + CMooseSMS::PointGrace < $r['umaxt'])
             {
-                $msg = CMooseSMS::CreateFromText ($tmp['text'], strtotime($tmp['stamp']), 0);
+                $msg = CMooseSMS::CreateFromText($tmp['text'], strtotime($tmp['stamp']), 0);
                 $tmp['error'] = $msg->GetErrorMessage();
                 if ($tmp['diagnose'] == '' && $msg->diag != '')
                     $tmp['diagnose'] = $msg->diag;
