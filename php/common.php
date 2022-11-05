@@ -450,50 +450,63 @@ class CScheduler
     public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $path, $file, $phone, $moose)
     {
         if (!$auth->isSuper())
-            return;
+            throw new Exception(CTinyDb::ErrCRights);
 
         $path .= $file;
         $data = fopen($path, "r");
-        if ($data == false)
+        if ($data === false)
             throw new Exception("error opening file '$path'");
 
         $tz = date_default_timezone_get();
         date_default_timezone_set('UTC');
 
+        $cn = 1;
         $last = null;
         $quant = 100;
+        $warn = [];
         $points = [];
-        for ($line = 1; $tokens = fgetcsv($data, 300, ','); $line++)
+        try
         {
-            if (count($tokens) < 7 || $tokens[0] == 0 )
-                continue;
-
-            $points[] = $pt = self::lineFromPlt($tokens);
-            if ($last != null && $pt[2] < $last[2])
-                throw new Exception("время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: '$file', строка $line");
-            $last = $pt;
-
-            if ($line % $quant == 0)
+            for ($line = 1; $tokens = fgetcsv($data, 300, ','); $line++, $cn++)
             {
-                $sms = CMooseSMS::artificialSms(time(), "$file - " . $line / $quant);
-                $sms->points = $points;
-                if (!self::addSms($db, $auth, $phone, $moose, $sms, false))
-                    throw new Exception("Error adding sms: '$file', line $line");
-                $points = [];
-                sleep(1);
+                if (count($tokens) < 7 || $tokens[0] == 0)
+                    continue;
+
+                $points[] = $pt = self::lineFromPlt($tokens);
+                if ($last != null && $pt[2] < $last[2])
+                {
+                    $warn[] = "Время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: '$file', строка $line";
+                    continue;
+                }
+                else
+                    $last = $pt;
+
+                if ($cn % $quant == 0)
+                {
+                    $sms = CMooseSMS::artificialSms(time(), "$file - " . $cn / $quant);
+                    $sms->points = $points;
+                    if (!self::addSms($db, $auth, $phone, $moose, $sms, false))
+                        throw new Exception("Error adding sms: '$file', line $line");
+                    $points = [];
+                    sleep(1);
+                }
             }
         }
-        date_default_timezone_set($tz);
+        finally
+        {
+            date_default_timezone_set($tz);
+            fclose($data);
+        }
 
         if (count($points) != 0)
         {
-            $sms = CMooseSMS::artificialSms(time(), "$file - " . ceil($line / $quant));
+            $sms = CMooseSMS::artificialSms(time(), "$file - " . ceil($cn / $quant));
             $sms->points = $points;
             if (!self::addSms($db, $auth, $phone, $moose, $sms, false))
                 throw new Exception("Error adding sms: '$file', line $line");
         }
 
-        fclose($data);
+        return $warn;
     }
 
     private static function lineFromPlt($line)
@@ -501,20 +514,20 @@ class CScheduler
         $lat = floatval($line[0]);
         $lon = floatval($line[1]);
 
-        $search  = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        $search = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
         $rep = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         $str = str_ireplace($search, $rep, iconv('cp1251', 'utf8', $line[5] . $line[6]));
         if (trim($str) != '')
             $time = strtotime($str);
         else
-            $time = self::oziTmeFromFloat(floatval($line[4]));
+            $time = self::oziToUnixTime(floatval($line[4]));
 
         return [$lat, $lon, $time];
     }
 
     // see https://www.oziexplorer4.com/eng/help/fileformats.html
-    static function oziTmeFromFloat($val)
+    static function oziToUnixTime($val)
     {
         return round(($val - 25569) * 86400); // 25569 -- days between Unix Epoch 1/1/1970 and 12/30/1899 -- Delphi Epoch
     }

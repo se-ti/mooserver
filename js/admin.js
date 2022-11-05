@@ -187,8 +187,7 @@ CAdmin.prototype = {
         {
             if (doc != '')
                 alert(doc);
-            if (console.log)
-                console.log(doc);
+            console.error(doc);
         }
         else
         {
@@ -196,26 +195,29 @@ CAdmin.prototype = {
             if (result.log && result.log.length > 0)
             {
                 s = result.log.join("\n");
+                console.log('log', s);
+                console.log(result.log);
             }
 			
 			if (result.status && result.status.length > 0)
-				{
-					if (s.length > 0 )
-						s+="\n";
-					s+=result.status;
-				}
+			{
+                console.log('status', result.status);
+                if (s.length > 0 )
+                    s += "\n";
+                s += result.status;
+            }
 
 			if (s != '')
 			    alert(s);
 			
-            if (console.log)
-                console.log(s);
-
             if ((result.error || '') != '')
-                alert(result.error);
+            {
+                console.error(result.error);
+                CApp.single().error(String.toHTML(result.error));
+            }
 
             if (result.status)
-                CApp.single().message(result.status, 10);
+                CApp.single().message(String.toHTML(result.status), 10);
         }
     },    
 

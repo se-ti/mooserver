@@ -59,16 +59,19 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth)
     $proc = [];
     try {
         foreach ($set as $v) {
-            CScheduler::uploadPlt($db, $auth, './data/', $v, '+7-916-212-85-06', 'Лимпа');
+            $warn = CScheduler::uploadPlt($db, $auth, './data/', $v, '+7-916-212-85-06', 'Лимпа');
+            $res['log'] = array_merge($res['log'], $warn);
             $proc[] = $v;
         }
     }
     catch (Exception $e)
     {
-        $db->rollback();
+        $db->rollback();        // todo фигня :( -- addSMS уже закоммитила всё, что могла
 
         Log::e($db, $auth, "import plt", $e->getMessage());
-        dieError($e->getMessage());
+        $res['ok'] = false;
+        $res['error'] = $e->getMessage();
+        die(json_encode($res));
     }
 
     $res['status'] = implode(', ', $proc);
