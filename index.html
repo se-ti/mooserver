@@ -1155,6 +1155,38 @@ CSingleBeacon.beaconHref = function(id, text)
     return String.format('<a href="#beacon/{0}">{1}</a>', id, String.toHTML(text));
 }
 
+CSingleBeacon.ensureVisible = function(el)
+{
+    if (el.length <= 0)
+        return;
+
+    var menuHgt = 50;
+    var pos = el.offset();
+    var clH = window.innerHeight;
+    var scrY = window.scrollY;
+
+    var dTop = pos.top - (scrY + menuHgt);
+    var last = el.last();
+    var bot = last.offset().top + last.height();
+    var dBot = bot - (scrY + clH);
+
+    if (dTop >= 0 && dBot <= 0)
+    {
+        el.get(0).scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'smooth'});
+        return;
+    }
+
+    var dY = dTop < 0 ? dTop : dBot;
+    var lim = Math.max(5 * clH, 500);
+    if (Math.abs(dY) > lim) {
+        var sgn = dY > 0 ? 1 : -1;
+        window.scrollBy({top: sgn * (Math.abs(dY) - 500), left: 0, behavior: 'instant'});
+        dY = sgn * 500;
+    }
+
+    window.scrollBy({top: dY, left: 0, behavior: 'smooth'})
+}
+
 CSingleBeacon.prototype =
 {
     cold: -11.5,
@@ -1361,17 +1393,11 @@ CSingleBeacon.prototype =
         if (rows.length == 0)
             return;
 
-        var up = e.keyCode == 38;
-        var next = up ? rows.first().prev() : rows.last().next();
-        var id = next.attr('data-id');
-        var el = up ? next.prev() : next.next();
-        if (el.attr('data-id') != id) // single-row markup
-            el = next;
+        (e.keyCode == 38 ? rows.first().prev() : rows.last().next())
+            .click();
 
-        el.click();
-
-        if (el.length > 0)
-            el.get(0).scrollIntoView({block: "nearest", inline: "nearest", behavior: 'smooth'});
+        e.preventDefault();
+        CSingleBeacon.ensureVisible(this._table.find('tr.success'));
     },
 
     setRights: function(rights)
@@ -1683,11 +1709,11 @@ CGate.prototype =
         if (cn != 1)
             return;
 
-        var el = (e.keyCode == 38 ? rows.first().prev().prev() : rows.last().next().next())
+        (e.keyCode == 38 ? rows.first().prev() : rows.last().next())
             .click();
 
-        if (el.length > 0)
-            el.get(0).scrollIntoView({block: "nearest", inline: "nearest", behavior: 'auto'});
+        e.preventDefault();
+        CSingleBeacon.ensureVisible(this._body.find('tr.success'));
     },
 
     _onGetSms: function(data, req)
