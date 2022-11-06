@@ -16,12 +16,13 @@ global $db;
 
 $db = new CMooseDb();
 $auth = new CMooseAuth($db);
+$test = true;
 
 $errcode = $_FILES['import']['error'][0];   // check all errors!
 if ($errcode != 0)
 {
     if ($errcode == UPLOAD_ERR_NO_FILE && $auth->isSuper())
-        die(json_encode(uploadPlts($db, $auth)));
+        die(json_encode(uploadPlts($db, $auth, $test)));
 
     dieError("Error: $errcode Message: " . CMooseTools::uploadErrors($errcode));
 }
@@ -49,13 +50,13 @@ if (count($names) > 1)
         $i++;
     }
 
-    $res = uploadPlts($db, $auth, $set);
+    $res = uploadPlts($db, $auth, $test, $set);
 }
 else
     foreach ($names as $name)
     {
         $isPlt = 'plt' == strtolower(pathinfo($upload[$i], PATHINFO_EXTENSION));
-        $res = $isPlt ? uploadPlts($db, $auth, [$name => $upload[0]]) : parseFile($name, $upload[$i], $i);
+        $res = $isPlt ? uploadPlts($db, $auth, $test, [$name => $upload[0]]) : parseFile($name, $upload[$i], $test);
         $i++;
     }
 
@@ -63,7 +64,7 @@ echo json_encode($res);
 return;                     // that's all !
 
 
-function uploadPlts(CMooseDb $db, CMooseAuth $auth, array $set = null)
+function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
 {
     $defaultPath = './data/current/';
     $phone = '+7-000-212-85-06';
@@ -87,7 +88,7 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, array $set = null)
             if (is_int($path))
                 $path = $defaultPath . $v;
 
-            $warn = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose);
+            $warn = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose, $test);
             if ($warn != null && count($warn) > 0)
             {
                 Log::t($db, $auth, "import plt", "$v\n" . implode("\n", $warn));
@@ -96,6 +97,7 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, array $set = null)
             }
             $proc[] = $v;
         }
+        Log::t($db, $auth, "import plt",  "Импорт из " . implode(', ', $proc) . "\nПредупреждений: " . count($res['log']));
     }
     catch (Exception $e)
     {
@@ -111,7 +113,7 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, array $set = null)
     return $res;
 }
 
-function parseFile($name, $uploadName)
+function parseFile($name, $uploadName, $test)
 {
 	global $auth, $db;
 	$SuccessCounter = 0;
@@ -176,7 +178,9 @@ function parseFile($name, $uploadName)
 				$Log [ 'Moose name empty'][] = $StringCounter;*/
 			if ( $Moose == '' )
                 $Moose = null;
-            $DBResult = $db->AddData($auth, $StringArray[2]/*$from*/, $msg, $Moose);
+
+			if (!$test)
+                $DBResult = $db->AddData($auth, $StringArray[2]/*$from*/, $msg, $Moose);
 
 			//$DBResult = $db->AddData($auth, $StringArray[2]/*$from*/, $msg, 'Moose5');
 			}
