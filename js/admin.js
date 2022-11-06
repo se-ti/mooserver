@@ -393,19 +393,30 @@ CLogs.prototype =
             return;
         }
 
-        var it;
-        var len = result.length;
-        var body = '';
+        var self = this;
         var tpl = '<tr><td>{0}</td><td>{1}</td><td style="white-space: nowrap;">{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>';
-        for (var i = 0; i < len; i++)
-        {
-            it = result[i];
-
-            body += String.format(tpl, i+1, it.id, new Date(it.stamp).toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), String.toHTML(it.message));
-        }
-
-        this._body.html(body);
+        var body = result.map(function(it, idx) {
+            return String.format(tpl, idx + 1, it.id, new Date(it.stamp).toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), self._ip2hrefs(String.toHTML(it.message)));
+        });
+        this._body.html(body.join(''));
         this._table.removeClass('hidden');
+    },
+
+    _ip2hrefs: function(html)
+    {
+        html = html || '';
+
+        var re0 = /(real IP|xForwardFor|ip|xfw): &apos;(\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3})&apos;/gi;
+        var re1 = /(real IP|xForwardFor|ip|xfw): &apos;(\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3})&apos;/gi;
+
+        var m = re0.exec(html);
+        if (!m)
+            return html;
+
+        //var cached = CLogs._ipCache[m[2]];
+        //var attr = cached && cached._title ? String.format(' title="{0}"', String.toHTML(cached._title)): '';
+        var replace = String.format('$1: \'<a href="https://ipinfo.io/$2" target="_ip_info_">$2</a>\'');
+        return html.replace(re1, replace);
     },
 
     setRights: function(rights)
