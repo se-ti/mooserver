@@ -17,37 +17,60 @@ global $db;
 $db = new CMooseDb();
 $auth = new CMooseAuth($db);
 
-die(uploadPlts($db, $auth));
-
 $errcode = $_FILES['import']['error'][0];   // check all errors!
 if ($errcode != 0)
+{
+    if ($errcode == UPLOAD_ERR_NO_FILE && $auth->isSuper())
+        die(json_encode(uploadPlts($db, $auth)));
+
     dieError("Error: $errcode Message: " . CMooseTools::uploadErrors($errcode));
+}
 
 $names = $_FILES['import']['tmp_name'];
 $upload = $_FILES['import']['name'];
 
-$i = 0;
-if (is_array($names))
+
+if (!is_array($names))
 {
-    if (count($names) > 1)
+    $names = [$names];
+    $upload = [$upload];
+}
+
+$i = 0;
+if (count($names) > 1)
+{
+    if ('plt' != strtolower(pathinfo($upload[0], PATHINFO_EXTENSION)))
         dieError("Импорт нескольких файлов пока не поддерживается"); // чтобы не склеивать результаты
-    else
-        foreach ($names as $name)
-        {
-            $res = parseFile($name, $upload[$i], $i);
-            $i++;
-        }
+
+    $set = [];
+    foreach ($names as $name)
+    {
+        $set[$name] = $upload[$i];
+        $i++;
+    }
+
+    $res = uploadPlts($db, $auth, $set);
 }
 else
-    $res = parseFile($names, -1);
+    foreach ($names as $name)
+    {
+        $isPlt = 'plt' == strtolower(pathinfo($upload[$i], PATHINFO_EXTENSION));
+        $res = $isPlt ? uploadPlts($db, $auth, [$name => $upload[0]]) : parseFile($name, $upload[$i], $i);
+        $i++;
+    }
 
 echo json_encode($res);
 return;                     // that's all !
 
 
-function uploadPlts(CMooseDb $db, CMooseAuth $auth)
+function uploadPlts(CMooseDb $db, CMooseAuth $auth, array $set = null)
 {
-    $set = [];
+    $defaultPath = './data/current/';
+    $phone = '+7-000-212-85-06';
+    $moose = 'Лимпа';
+
+    if ($set == null)
+        $set = [];
 
     $res = [
         'ok' => true,
@@ -57,10 +80,20 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth)
     ];
 
     $proc = [];
-    try {
-        foreach ($set as $v) {
-            $warn = CScheduler::uploadPlt($db, $auth, './data/', $v, '+7-916-212-85-06', 'Лимпа');
-            $res['log'] = array_merge($res['log'], $warn);
+    try
+    {
+        foreach ($set as $path => $v)
+        {
+            if (is_int($path))
+                $path = $defaultPath . $v;
+
+            $warn = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose);
+            if ($warn != null && count($warn) > 0)
+            {
+                Log::t($db, $auth, "import plt", "$v\n" . implode("\n", $warn));
+                $warn[0] = (count($res['log']) > 0 ? "\n" : '') . "файл: $v\n" . $warn[0];
+                $res['log'] = array_merge($res['log'], $warn);
+            }
             $proc[] = $v;
         }
     }
@@ -71,11 +104,11 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth)
         Log::e($db, $auth, "import plt", $e->getMessage());
         $res['ok'] = false;
         $res['error'] = $e->getMessage();
-        die(json_encode($res));
+        return $res;
     }
 
     $res['status'] = implode(', ', $proc);
-    return json_encode($res);
+    return $res;
 }
 
 function parseFile($name, $uploadName)

@@ -273,7 +273,7 @@ class CScheduler
     {
         $db->SimplifyGateLogs($auth);
         // self::addSampleSms($db, $auth, './data/assy20120604-20130111.csv');
-        // self::uploadPlt($db, $auth, './data/', 'yaminga20121017-20121029a.plt', '+7-916-212-85-06', 'Яминга');
+        // self::uploadPlt($db, $auth, './data/yaminga20121017-20121029a.plt', 'yaminga20121017-20121029a.plt', '+7-916-212-85-06', 'Яминга', false);
     }
 
     private static function canRun(CMooseAuth $auth)
@@ -447,15 +447,14 @@ class CScheduler
         return strtotime(str_replace('.', '-', $tm)); // Change '.' to '-' to make strtotime think date is in american notation
     }
 
-    public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $path, $file, $phone, $moose)
+    public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $path, $file, $phone, $moose, $test = true)
     {
         if (!$auth->isSuper())
             throw new Exception(CTinyDb::ErrCRights);
 
-        $path .= $file;
         $data = fopen($path, "r");
         if ($data === false)
-            throw new Exception("error opening file '$path'");
+            throw new Exception("error opening file '$path' for $file");
 
         $tz = date_default_timezone_get();
         date_default_timezone_set('UTC');
@@ -475,13 +474,13 @@ class CScheduler
                 $points[] = $pt = self::lineFromPlt($tokens);
                 if ($last != null && $pt[2] < $last[2])
                 {
-                    $warn[] = "Время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: '$file', строка $line";
+                    $warn[] = "Время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: строка $line";
                     continue;
                 }
                 else
                     $last = $pt;
 
-                if ($cn % $quant == 0)
+                if ($cn % $quant == 0 && !$test)
                 {
                     $sms = CMooseSMS::artificialSms(time(), "$file - " . $cn / $quant);
                     $sms->points = $points;
@@ -498,7 +497,7 @@ class CScheduler
             fclose($data);
         }
 
-        if (count($points) != 0)
+        if (count($points) != 0 && !$test)
         {
             $sms = CMooseSMS::artificialSms(time(), "$file - " . ceil($cn / $quant));
             $sms->points = $points;

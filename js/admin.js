@@ -194,16 +194,19 @@ CAdmin.prototype = {
 			var s = '';
             if (result.log && result.log.length > 0)
             {
-                s = result.log.join("\n");
-                console.log('log', s);
-                console.log(result.log);
+                if (result.log.length < 5)
+                    s = result.log.join("\n");
+                else
+                    s = String.format("{0} предупреждений", result.log.length);
+
+                console.log(result.log.join('\n'));
             }
 			
 			if (result.status && result.status.length > 0)
 			{
                 console.log('status', result.status);
                 if (s.length > 0 )
-                    s += "\n";
+                    s += "\n\n";
                 s += result.status;
             }
 
@@ -396,7 +399,7 @@ CLogs.prototype =
         var self = this;
         var tpl = '<tr><td>{0}</td><td>{1}</td><td style="white-space: nowrap;">{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>';
         var body = result.map(function(it, idx) {
-            return String.format(tpl, idx + 1, it.id, new Date(it.stamp).toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), self._ip2hrefs(String.toHTML(it.message)));
+            return String.format(tpl, idx + 1, it.id, new Date(it.stamp).toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), self._ip2hrefs(String.toHTML(it.message)).replace(/\r?\n/gi, '<br/>'));
         });
         this._body.html(body.join(''));
         this._table.removeClass('hidden');
