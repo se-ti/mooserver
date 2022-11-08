@@ -80,6 +80,7 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
     ];
 
     $proc = [];
+    $testMark = $test ? ' - test' : '';
     try
     {
         foreach ($set as $path => $v)
@@ -90,13 +91,13 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
             $warn = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose, $test);
             if ($warn != null && count($warn) > 0)
             {
-                Log::t($db, $auth, "import plt", "$v\n" . implode("\n", $warn));
+                Log::t($db, $auth, "import plt", "$v$testMark\n" . implode("\n", $warn));
                 $warn[0] = (count($res['log']) > 0 ? "\n" : '') . "файл: $v\n" . $warn[0];
                 $res['log'] = array_merge($res['log'], $warn);
             }
             $proc[] = $v;
         }
-        Log::t($db, $auth, "import plt",  "Импорт из " . implode(', ', $proc) . "\nПредупреждений: " . count($res['log']));
+        Log::t($db, $auth, "import plt",  ($test ? 'Тест импорта': 'Импорт'  ). ' из ' . implode(', ', $proc) . "\nПредупреждений: " . count($res['log']));
     }
     catch (Exception $e)
     {

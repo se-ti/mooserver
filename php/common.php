@@ -466,21 +466,20 @@ class CScheduler
         $points = [];
         try
         {
-            for ($line = 1; $tokens = fgetcsv($data, 300, ','); $line++, $cn++)
+            for ($line = 1; $tokens = fgetcsv($data, 300, ','); $line++)
             {
                 if (count($tokens) < 7 || $tokens[0] == 0)
                     continue;
 
-                $points[] = $pt = self::lineFromPlt($tokens);
+                $pt = self::lineFromPlt($tokens);
                 if ($last != null && $pt[2] < $last[2])
                 {
                     $warn[] = "Время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: строка $line";
                     continue;
                 }
-                else
-                    $last = $pt;
 
-                if ($cn % $quant == 0 && !$test)
+                $points[] = $last = $pt;
+                if ((++$cn) % $quant == 0 && !$test)
                 {
                     $sms = CMooseSMS::artificialSms(time(), "$file - " . $cn / $quant);
                     $sms->points = $points;
