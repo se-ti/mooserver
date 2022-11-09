@@ -10,6 +10,8 @@ require_once "php/auth.php";
 require_once "php/dbase.php";
 require_once "php/moosesms.php";
 require_once "php/common.php";
+require_once "php/excel/XLSXReader.php";
+require_once "php/excel/reader.php";
 
 global $auth;
 global $db;
@@ -122,10 +124,7 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
 function parseFile($name, $uploadName, $test)
 {
 	global $auth, $db;
-	$SuccessCounter = 0;
-
 	$Log = [];
-	
     $result = [
         'ok' => false,
         'log' => [],
@@ -136,19 +135,28 @@ function parseFile($name, $uploadName, $test)
 	if (!$auth->canAdmin() && !$auth->canFeed())
         dieError("You have no rights to import csv files.");
 
-    $putdata = fopen($name, "r");
-    if ($putdata === false)
+    $db->beginTran();
+
+	$ext = strtolower(pathinfo($uploadName, PATHINFO_EXTENSION));
+    if ('xls' == $ext)
+        $SuccessCounter = parseXls($db, $auth, $name, $Log);
+	else if ('xlsx' == $ext)
+        $SuccessCounter = parseXlsX($db, $auth, $name, $Log);
+	else
+        $SuccessCounter = parseCSV($db, $auth, $name, $Log);
+
+    if ($test)
+        $db->rollback();    // фигня откатывается всё, что уехало в лог :(
+    else
+        $db->commit();
+
+    if ($SuccessCounter === false)
     {
-        Log::e($db, $auth, "import", "Can't open file: '$name'");
         $result['status'] = $result['error'] = "Error opening file '$name'";
         return $result;
     }
 
-    for ($line = 1; $StringArray = fgetcsv($putdata, 300, ';'); $line++)
-		if (ProcessCSVRow($db, $auth, $StringArray, $line, $Log, $test))
-		    $SuccessCounter++;
 
-    fclose($putdata);
 
 	/*
 	$result['log'][] = 'Strings '. PackStringList ( array ( 1,3,5 ));
@@ -161,12 +169,80 @@ function parseFile($name, $uploadName, $test)
 	foreach ($Log as $ErrorText => $StringList)
 		$result['log'][] = 'Lines '. PackStringList($StringList). ': '. $ErrorText;
 
-    $msg = "Успешно импортировано $SuccessCounter строк из файла '$uploadName'";
+    $msg = ($test ? 'Тест: ' : '') . "Успешно импортировано $SuccessCounter строк из файла '$uploadName'";
     $result['status'] = $msg;
     $result['ok'] = true;
     Log::t($db, $auth, "import", "$msg. Ошибок: " . count($Log));
 
     return $result;
+}
+
+function parseCSV(CMooseDb $db, CMooseAuth $auth, $name, array $log)
+{
+    $putdata = fopen($name, "r");
+    if ($putdata === false)
+    {
+        Log::e($db, $auth, "import", "Can't open file: '$name'");
+        return false;
+    }
+
+    $SuccessCounter = 0;
+    for ($line = 1; $StringArray = fgetcsv($putdata, 300, ';'); $line++)
+        if (ProcessCSVRow($db, $auth, $StringArray, $line, $log))
+            $SuccessCounter++;
+
+    fclose($putdata);
+
+    return $SuccessCounter;
+}
+
+function parseXlsX(CMooseDb $db, CMooseAuth $auth, $name, array $log)
+{
+    $xlsx = new XLSXReader($name);
+    if ($xlsx->getSheetCount() < 1)
+        return false;
+
+    $res = [ 'cn' => $xlsx->getSheetCount(),
+        'names' => $xlsx->getSheetNames() ];
+
+    $parsed = 0;
+    $data = $xlsx->getSheetData($res['names'][1]);
+    $cn = count($data);
+    for ($i = 0; $i < $cn; $i++)
+        if (ProcessCSVRow($db, $auth, $data[$i], $i, $log))
+            $parsed++;
+
+    return $parsed;
+}
+
+function parseXls(CMooseDb $db, CMooseAuth $auth, $name, array $log)
+{
+    $xls = new Spreadsheet_Excel_Reader($name);
+
+    // Set output Encoding.
+    //$xls->setOutputEncoding('CP1251');
+    $rc = $xls->rowcount($sheet_index=0);
+    $cc = $xls->colcount($sheet_index=0);
+
+    $parsed = 0;
+    for ($i = 1; $i <= $rc; $i++)
+    {
+        $row = [];
+        $has = false;
+        for ($j = 1; $j <= $cc; $j++) {
+            $v = $xls->val($i, $j);
+            $has = $has || ($v != '');
+            $row[] = $v;
+        }
+
+        if ($i == 0)
+            Log::st($auth, 'import', print_r($row, 1));
+
+        if ($has && ProcessCSVRow($db, $auth, $row, $i, $log))
+            $parsed++;
+    }
+
+    return $parsed;
 }
 
 // expects format
@@ -176,7 +252,7 @@ function parseFile($name, $uploadName, $test)
  * 5 - time
  * 7 - sms text
  * */
-function ProcessCSVRow(CMooseDb $db, CMooseAuth $auth, array $data, $line, array $log, $test)
+function ProcessCSVRow(CMooseDb $db, CMooseAuth $auth, array $data, $line, array $log)
 {
     if (!array_key_exists( '2', $data) || !array_key_exists('5', $data) || !array_key_exists('7', $data))
     {
@@ -216,15 +292,14 @@ function ProcessCSVRow(CMooseDb $db, CMooseAuth $auth, array $data, $line, array
         if ($Moose == '')
             $Moose = null;
 
-        if (!$test)
-            $DBResult = $db->AddData($auth, $data[2]/*$from*/, $msg, $Moose);
+        $DBResult = $db->AddData($auth, $data[2]/*$from*/, $msg, $Moose);
 
         //$DBResult = $db->AddData($auth, $StringArray[2]/*$from*/, $msg, 'Moose5');
     }
     catch (Exception $e)
     {
         $log[$e->getMessage()][] = $line;
-        Log::e($db, $auth, "import", "line $line: " . $e->getMessage());
+        Log::se($auth, "import", "line $line: " . $e->getMessage());
         return false;
     }
     //$out .= $DBResult['error'];
