@@ -845,9 +845,19 @@ class CTinyDb
 
 class Log
 {
+    protected static $logDb = null;
+
+    private static function getDb()
+    {
+        if (self::$logDb == null)
+            self::$logDb = new CTinyDb();
+
+        return self::$logDb;
+    }
+
     public static function st(CTinyAuth $auth, $operation, $message)
     {
-        global  $db;
+        $db = self::getDb();
         if ($db != null)
             $db->AddLogRecord($auth, CTinyDb::LogTrace, $operation, $message);
     }
@@ -863,6 +873,14 @@ class Log
     {
         $db->AddLogRecord($auth, CTinyDb::LogDebug, $operation, $message);
     }
+
+    public static function se(CTinyAuth $auth, $operation, $message)
+    {
+        $db = self::getDb();
+        if ($db != null)
+            self::e($db, $auth, $operation, $message);
+    }
+
     public static function e(CTinyDb $db, CTinyAuth $auth, $operation, $message)
     {
         $db->AddLogRecord($auth, CTinyDb::LogError, $operation, $message);
