@@ -62,7 +62,6 @@ else
 echo json_encode($res);
 return;                     // that's all !
 
-
 function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
 {
     $defaultPath = './data/current/';
@@ -83,25 +82,32 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
     $testMark = $test ? ' - test' : '';
     try
     {
+        $db->beginTran();
         foreach ($set as $path => $v)
         {
             if (is_int($path))
                 $path = $defaultPath . $v;
 
-            $warn = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose, $test);
+            $warn = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose);
             if ($warn != null && count($warn) > 0)
             {
-                Log::t($db, $auth, "import plt", "$v$testMark\n" . implode("\n", $warn));
+                Log::st($auth, "import plt", "$v$testMark\n" . implode("\n", $warn));
                 $warn[0] = (count($res['log']) > 0 ? "\n" : '') . "файл: $v\n" . $warn[0];
                 $res['log'] = array_merge($res['log'], $warn);
             }
             $proc[] = $v;
         }
+
+        if ($test)
+            $db->rollback();    // фигня откатывается всё, что уехало в лог :(
+        else
+            $db->commit();
+
         Log::t($db, $auth, "import plt",  ($test ? 'Тест импорта': 'Импорт'  ). ' из ' . implode(', ', $proc) . "\nПредупреждений: " . count($res['log']));
     }
     catch (Exception $e)
     {
-        $db->rollback();        // todo фигня :( -- addSMS уже закоммитила всё, что могла
+        $db->rollback();
 
         Log::e($db, $auth, "import plt", $e->getMessage());
         $res['ok'] = false;

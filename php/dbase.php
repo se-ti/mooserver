@@ -1226,7 +1226,7 @@ class CMooseDb extends CTinyDb
 
         $qMooseId = $prop['mooseId'] != null ? $prop['mooseId'] : 'null';
 
-        $this->beginTran();
+        $ourTran = !$this->beginTran();
 		$rawSmsId = $this->AddRawSms($prop['phoneId'], $msg, $auth->id());
 
         $this->ValidateId($msg->id, 'Incorrect internal number', 0);
@@ -1237,7 +1237,8 @@ class CMooseDb extends CTinyDb
 		{
             if (!$msg->IsValid())
                 $res['error'] = $msg->GetErrorMessage();
-            $this->commit();
+            if ($ourTran)
+                $this->commit();
 			return $res;
 		}
 
@@ -1264,7 +1265,8 @@ class CMooseDb extends CTinyDb
         if ($prop['mooseId'] != null)
             $this->SetMooseTimestamp($auth, [$prop['mooseId']]);    // todo set global timestamp
 
-        $this->commit();
+        if ($ourTran)
+            $this->commit();
 		$res['sms'] = $smsId;
 		$res['temp'] = $msg->temp;
 

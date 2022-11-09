@@ -429,13 +429,13 @@ class CScheduler
         try
         {
             $res = $db->AddData($auth, $phone, $sms, $moose);
-            Log::t($db, $auth, "addSms", "via scheduler for '$phone' " . CMooseTools::addSmsMessage($res));
+            Log::st($auth, "addSms", "via scheduler for '$phone' " . CMooseTools::addSmsMessage($res));
         }
         catch (Exception $e)
         {
             $mess = $e->getMessage();
             if (!$tryHead || strpos($mess, CMooseDb::ErrDupSms) != 0)
-                Log::e($db, $auth, "scheduler", $mess);
+                Log::se($auth, "scheduler", $mess);
             return false;
         }
 
@@ -447,7 +447,7 @@ class CScheduler
         return strtotime(str_replace('.', '-', $tm)); // Change '.' to '-' to make strtotime think date is in american notation
     }
 
-    public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $path, $file, $phone, $moose, $test = true)
+    public static function uploadPlt(CMooseDb $db, CMooseAuth $auth, $path, $file, $phone, $moose)
     {
         if (!$auth->isSuper())
             throw new Exception(CTinyDb::ErrCRights);
@@ -455,9 +455,6 @@ class CScheduler
         $data = fopen($path, "r");
         if ($data === false)
             throw new Exception("error opening file '$path' for $file");
-
-        $tz = date_default_timezone_get();
-        date_default_timezone_set('UTC');
 
         $cn = 1;
         $last = null;
@@ -474,12 +471,12 @@ class CScheduler
                 $pt = self::lineFromPlt($tokens);
                 if ($last != null && $pt[2] < $last[2])
                 {
-                    $warn[] = "Время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: строка $line";
+                    $warn[] = "Время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: строка $line $pt[2] vs $last[2] " . date('D, d M Y H:i:s P', $last[2]);
                     continue;
                 }
 
                 $points[] = $last = $pt;
-                if ((++$cn) % $quant == 0 && !$test)
+                if ((++$cn) % $quant == 0)
                 {
                     $sms = CMooseSMS::artificialSms(time(), "$file - " . $cn / $quant);
                     $sms->points = $points;
@@ -492,11 +489,10 @@ class CScheduler
         }
         finally
         {
-            date_default_timezone_set($tz);
             fclose($data);
         }
 
-        if (count($points) != 0 && !$test)
+        if (count($points) != 0)
         {
             $sms = CMooseSMS::artificialSms(time(), "$file - " . ceil($cn / $quant));
             $sms->points = $points;
@@ -517,7 +513,12 @@ class CScheduler
 
         $str = str_ireplace($search, $rep, iconv('cp1251', 'utf8', $line[5] . $line[6]));
         if (trim($str) != '')
+        {
+            $tz = date_default_timezone_get();
+            date_default_timezone_set('UTC');
             $time = strtotime($str);
+            date_default_timezone_set($tz);
+        }
         else
             $time = self::oziToUnixTime(floatval($line[4]));
 
