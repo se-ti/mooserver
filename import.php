@@ -18,7 +18,7 @@ global $db;
 
 $db = new CMooseDb();
 $auth = new CMooseAuth($db);
-$test = true;
+$test = @$_POST['commit'] !== 'commit';
 
 $errcode = $_FILES['import']['error'][0];   // check all errors!
 if ($errcode != 0)

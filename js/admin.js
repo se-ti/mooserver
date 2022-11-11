@@ -141,7 +141,7 @@ CAdmin.prototype = {
                 })
             .on_dataChanged(this._cbReread);
 
-        $('<form method="post" enctype="multipart/form-data" action="import.php" target="fileTarget" class="row" style="margin-top: 1em;"><input type="file" name="import[]" multiple class="btn row"/><button class="btn btn-default">Import files!</button></form>')
+        $('<form method="post" enctype="multipart/form-data" action="import.php" target="fileTarget" class="row" style="margin-top: 1em;"><input type="file" name="import[]" multiple class="btn row"/><div class="checkbox"><label><input type="checkbox" name="commit" value="commit"/> Залить</label></div><button class="btn btn-default">Test files!</button></form>')
             .appendTo(this._rm)
             .find('button')
             .click($cd(this, this._sendFile));
@@ -172,6 +172,7 @@ CAdmin.prototype = {
 
         var form = this._rm.find('form');
         form.get(0).submit();
+        window.setTimeout(function () {form.find('input[type=checkbox]').get(0).checked = false;}, 0);
     },
 
     _load: function()

@@ -471,7 +471,9 @@ class CScheduler
                 $pt = self::lineFromPlt($tokens);
                 if ($last != null && $pt[2] < $last[2])
                 {
-                    $warn[] = "Время точки (" . date('D, d M Y H:i:s P', $pt[2]). ") меньше, чем у предыдущей: строка $line $pt[2] vs $last[2] " . date('D, d M Y H:i:s P', $last[2]);
+                    $prev = $line-1;
+                    $warn[] = "Время пошло назад: " . date('D, d M Y H:i:s P', $pt[2]). " строки $prev-$line";
+                    $last = $pt;
                     continue;
                 }
 
