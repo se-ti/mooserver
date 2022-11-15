@@ -1438,6 +1438,7 @@ CGate = function(after)
 
     this._result = null;
     this._smsData = {};
+    this._lastSelId = null;
 
     this._c_reRead = $cd(this, this.reRead);
     this._c_onReRead = $cd(this, this._onReRead);
@@ -1487,7 +1488,8 @@ CGate.prototype =
             .on('click', 'button.del', this._c_delClick)
             .on('click', 'button.chmoose', this._c_chmooseClick)
             .on('click', 'tr', this._c_rowClick)
-            .on('keydown', 'tr', this._c_keydown);
+            .on('keydown', 'tr', this._c_keydown)
+            .on('selectstart', function(e) { var s = window.getSelection();  if (s.anchorNode != null && s.isCollapsed) e.preventDefault(); s.removeAllRanges();});  // Отличаем выделение текста от shift-click-выделения диапазона смс. Не всегда успешно :( (диапазон при существующем выделении; клик в строку и попытка выделения)
 
         var map = $('<div class="moo-affix col-xs-12 col-sm-3"></div>')
                 .appendTo(this._rm);
@@ -1532,6 +1534,7 @@ CGate.prototype =
 
         this._result = result;
         this._smsData = {};
+        this._lastSelId = null;
 
         this._render(result);
     },
@@ -1653,12 +1656,39 @@ CGate.prototype =
         if (!e || !e.target || this._table.hasClass('hideControls'))
             return;
 
-        var multi = e.ctrlKey;
-        if (!multi)
+        var rangeSelect = e.shiftKey && !e.ctrlKey && this._lastSelId;
+        if (!e.ctrlKey && !e.shiftKey)
             this._body.find('tr.success').removeClass('success');
         var id = this._getSmsId(e);
         if ((id || '') != '')
-            this._body.find('tr[data-id="' + id + '"]').toggleClass('success', multi ? undefined : true);
+        {
+            if (rangeSelect)    // чтобы не выделялся ненужный диапазон, при сущствующем выделении
+                document.getSelection().removeAllRanges();
+
+            var cur = this._body.find('tr[data-id="' + id + '"]')
+                .toggleClass('success', e.ctrlKey && !e.shiftKey ? undefined : true)
+
+            var rowIdx = cur.get(0).sectionRowIndex;
+            if (rangeSelect)
+            {
+                this._selectRange(rowIdx, this._lastSelId.rowIdx);
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            if (cur.hasClass('success'))
+                this._lastSelId = {id : id, rowIdx: rowIdx };
+        }
+    },
+
+    _selectRange: function(idx1, idx2)
+    {
+        var rows = this._body.get(0).rows;
+        var st = Math.max(Math.min(idx1, idx2), 0);
+        var en = Math.min(Math.max(idx1, idx2), rows.length - 1);
+
+        for (var i = st; i <= en; i++)
+            $(rows[i]).addClass('success');
     },
 
     _deselectRows: function(predicate)
