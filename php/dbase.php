@@ -122,19 +122,22 @@ class CMooseDb extends CTinyDb
     // should be called only with verified $rawSmsIds
     protected function GetRawSmsMooses(CMooseAuth $auth, array $rawSmsIds)
     {
+        $result = ['ids' => [], 'names' => []];
         if ($rawSmsIds == null || count($rawSmsIds) == 0)
-            return [];
+            return $result;
 
         $ids = implode(", ", $rawSmsIds);
-        $query = "select distinct s.moose
-                    from raw_sms rs
-                    left join sms s on s.raw_sms_id = rs.id
-                    where rs.id in ($ids) and s.moose is not null";
+        $query = "select distinct m.id, m.name
+                    from sms s
+                    inner join moose m on m.id = s.moose
+                    where s.raw_sms_id in ($ids) ";
 
         $res = $this->Query($query);
-        $result = [];
         foreach ($res as $r)
-            $result[] = $r['moose'];
+        {
+            $result['ids'][] = $r['id'];
+            $result['names'][$r['id']] = $r['name'];
+        }
 
         return $result;
     }
@@ -1037,13 +1040,18 @@ class CMooseDb extends CTinyDb
         $result->closeCursor();
 
         $mooses = $this->GetRawSmsMooses($auth, $ids);
-        if ($moose != null)
-            $mooses[] = $moose;
-        $this->SetMooseTimestamp($auth, array_merge($old, $mooses));
+        $this->SetMooseTimestamp($auth, array_merge($old['ids'], $mooses['ids']));
 
         $this->commit();
 
-        Log::t($this, $auth, 'reassignSms', "перевешиваем c животных '". implode(', ', $old) ."' на животное '$moose', rawSmsIds: '".implode(", ", $ids) ."'");
+        $oldText = [];
+        foreach ($old['names'] as $k => $v)
+            $oldText[] = "$k ($v)";
+        $newText = [];
+        foreach ($mooses['names'] as $k => $v)
+            $newText[] = "$k ($v)";
+
+        Log::t($this, $auth, 'reassignSms', "перевешиваем c животных '". implode(', ', $oldText) ."' на животное '" . implode(', ', $newText). "', rawSmsIds: '".implode(", ", $ids) ."'");
         return ['res' => true, 'rc' => $result->rowCount()];
     }
 
@@ -1070,7 +1078,7 @@ class CMooseDb extends CTinyDb
 
         $this->beginTran();
         $res = $this->CoreTogglePoint($auth, $time, $valid, "raw_sms_id = $rawSmsId");
-        $this->SetMooseTimestamp($auth, $this->GetRawSmsMooses($auth, [$rawSmsId]));
+        $this->SetMooseTimestamp($auth, $this->GetRawSmsMooses($auth, [$rawSmsId])['ids']);
         $this->commit();
 
         return $res;
@@ -1126,7 +1134,7 @@ class CMooseDb extends CTinyDb
 
         $this->beginTran();
         $res = $this->CoreCommentPoint($auth, $time, $comment, "raw_sms_id = $rawSmsId");
-        $this->SetMooseTimestamp($auth, $this->GetRawSmsMooses($auth, [$rawSmsId]));
+        $this->SetMooseTimestamp($auth, $this->GetRawSmsMooses($auth, [$rawSmsId])['ids']);
         $this->commit();
 
         return $res;
@@ -1208,7 +1216,7 @@ class CMooseDb extends CTinyDb
         $query = "delete from raw_sms where id = $rawSmsId";
         $this->Query($query);
 
-        $this->SetMooseTimestamp($auth, $mooses);
+        $this->SetMooseTimestamp($auth, $mooses['ids']);
 
         $this->commit();
 
@@ -1623,7 +1631,7 @@ class CMooseDb extends CTinyDb
                     WHERE s.id = $smsId[0]";
         $this->Query($query);
 
-        $this->SetMooseTimestamp($auth, $mooses);
+        $this->SetMooseTimestamp($auth, $mooses['ids']);
 
         $this->commit();
 
@@ -1632,4 +1640,3 @@ class CMooseDb extends CTinyDb
 
     // endregion
 }
-?>
