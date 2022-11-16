@@ -1701,6 +1701,15 @@ CGate.prototype =
             .removeClass('success');
     },
 
+    _deselectRawSms: function(rawSmsfilter)
+    {
+        var hash = {};
+        (this._result || [])
+            .filter(rawSmsfilter)
+            .forEach(function(it) { hash[it.id] = true;});
+        this._deselectRows(function(idx, el) { return !hash[$(el).attr('data-id')]; });
+    },
+
     _rowClick: function(e)
     {
         this._selectRow(e);
@@ -1771,16 +1780,26 @@ CGate.prototype =
 
     _delClick: function(e)
     {
-        this._rowClick(e);
+        var isTest = (window.location.pathname || '').indexOf('/moose') == 0;
+        if (!isTest || !$(e.target).parents('tr:first').hasClass('success'))
+            this._rowClick(e);
 
         e.preventDefault();
         e.stopPropagation();
 
+        this._deselectRawSms(function(it) { return it.moose == null || it.sid == null || it.text.length < 50; });
+
+        var ids = this._getSelectedSmsIds(null, function(it) { return it.moose != null && it.sid && it.text.length >= 50; });
+        var len = ids.length;
+        if (len == 0)
+            return;
+
         var self = this;
-        var id = this._getSmsId(e);
+        var msg = (len > 1 ? String.format("Вы действительно хотите удалить {0} sms?", len)
+            : String.format("Вы действительно хотите удалить sms id='{0}'?", ids[0])) + '\nДействие невозможно отменить.';
         window.setTimeout(function() {  // чтобы rowClick хоть успел подсветить строку
-            if ((id || '') != '' && confirm(String.format("Вы действительно хотите удалить sms id='{0}'?\nДействие невозможно отменить.", id )))
-                $ajaxErr('deleteSms', {'rawSmsId': id}, self._c_onDeleteSms);
+            if (confirm(msg))
+                $ajaxErr('deleteSms', {'rawSmsId': ids}, self._c_onDeleteSms);
         }, 0);
     },
 
@@ -1812,9 +1831,7 @@ CGate.prototype =
         if (!m || smsId == null)
             return;
 
-        var hash = {};
-        (this._result || []).forEach(function(it) {if (it.sid) hash[it.id] = true;})
-        this._deselectRows(function(idx, el) { return !hash[$(el).attr('data-id')]; });
+        this._deselectRawSms(function(it) { return it.sid != null; });
 
         cell.get(0).innerHTML = '';
         this._mooseSel = $('<select class="form-control"/>')
@@ -1878,12 +1895,17 @@ CGate.prototype =
 //            this.reRead();
     },
 
-    _getSelectedSmsIds: function(curId)
+    _getSelectedSmsIds: function(curId, skipFilter)
     {
-        var res = [];
-        var hash = {};
-        (this._result || []).forEach(function(it) { if (!it.sid) hash[it.id] = true; });
+        if (!skipFilter || !skipFilter instanceof Function)
+            skipFilter = function(it) { return !it.sid; };
 
+        var hash = {};
+        (this._result || [])
+            .filter(skipFilter)
+            .forEach(function(it) { hash[it.id] = true; });
+
+        var res = [];
         this._body.find('tr.success').each(function (idx, el) {
             var id =  $(el).attr('data-id');
             if ((id || '') == '' || hash[id])
