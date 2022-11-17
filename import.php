@@ -81,6 +81,7 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
     ];
 
     $proc = [];
+    $archive = [];
     $testMark = $test ? ' - test' : '';
     try
     {
@@ -90,13 +91,24 @@ function uploadPlts(CMooseDb $db, CMooseAuth $auth, $test, array $set = null)
             if (is_int($path))
                 $path = $defaultPath . $v;
 
-            $warn = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose);
+            $cur = CScheduler::uploadPlt($db, $auth, $path, $v, $phone, $moose);
+            $warn = $cur['warn'];
             if ($warn != null && count($warn) > 0)
             {
                 Log::st($auth, "import plt", "$v$testMark\n" . implode("\n", $warn));
                 $warn[0] = (count($res['log']) > 0 ? "\n" : '') . "файл: $v\n" . $warn[0];
                 $res['log'] = array_merge($res['log'], $warn);
             }
+
+            if ($cur['min'] != null)
+                foreach ($archive as $a)
+                    if ($a['min'] != null && $a['min'] < $cur['max'] && $a['max'] > $cur['min'])
+                    {
+                        $res['log'][] = $msg = "треки '{$a['name']}' и '{$cur['name']}' пересекаются во времени";
+                        Log::st($auth, "import plt", $msg);
+                    }
+
+            $archive[] = $cur;
             $proc[] = $v;
         }
 

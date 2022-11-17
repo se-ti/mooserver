@@ -456,10 +456,16 @@ class CScheduler
         if ($data === false)
             throw new Exception("error opening file '$path' for $file");
 
+        $res = [
+            'name' => $file,
+            'min' => null,
+            'max' => null,
+            'warn' => []
+        ];
+
         $cn = 1;
         $last = null;
         $quant = 100;
-        $warn = [];
         $points = [];
         try
         {
@@ -469,10 +475,15 @@ class CScheduler
                     continue;
 
                 $pt = self::lineFromPlt($tokens);
+                if ($res['min'] == null || $res['min'] > $pt[2])
+                    $res['min'] = $pt[2];
+                if ($res['max'] == null || $res['max'] < $pt[2])
+                    $res['max'] = $pt[2];
+
                 if ($last != null && $pt[2] < $last[2])
                 {
                     $prev = $line-1;
-                    $warn[] = "Время пошло назад: " . date('D, d M Y H:i:s P', $pt[2]). " строки $prev-$line";
+                    $res['warn'][] = "Время пошло назад: " . date('D, d M Y H:i:s P', $pt[2]). " строки $prev-$line";
                     $last = $pt;
                     continue;
                 }
@@ -502,7 +513,7 @@ class CScheduler
                 throw new Exception("Error adding sms: '$file', line $line");
         }
 
-        return $warn;
+        return $res;
     }
 
     private static function lineFromPlt($line)
