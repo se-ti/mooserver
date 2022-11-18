@@ -453,13 +453,9 @@ function deleteSms()
     if (!$auth->isSuper())
         dieError(CTinyDb::ErrCRights);
 
-    if (is_array(@$_POST['rawSmsId']))
-        $smsIds = validateIdArray($_POST['rawSmsId'], true, -1, "Недопустимый список смс");
-    else
-        $smsIds = [checkId(@$_POST['rawSmsId'], 'Недопустимый id sms', false)];
+    $smsIds = validateIdArray($_POST['rawSmsId'], true, -1, "Недопустимый список смс");
 
-    foreach ($smsIds as $id)
-        $db->DeleteRawSms($auth, $id);
+    $db->DeleteRawSmses($auth, $smsIds);
 
     return ['res' => true];
 }

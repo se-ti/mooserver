@@ -1020,7 +1020,7 @@ class CMooseDb extends CTinyDb
     {
         $qmoose = $moose != null ? $this->ValidateId($moose, self::ErrWrongMooseId, 1): 'null';
 
-        if (!$auth->isSuper() || !$this->CanModify($auth, $qmoose, true))     // todo разрешить не только super, проверка на права
+        if (!$auth->isSuper() || !$this->CanModify($auth, $moose == null ? null : $qmoose, true))    // и чуть ниже для животных, с которых снимают
             $this->ErrRights();
 
         $ids = filter_var($smsIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
@@ -1034,7 +1034,12 @@ class CMooseDb extends CTinyDb
           where raw_sms_id in ($qids)";
 
         $this->beginTran();
+
         $old = $this->GetRawSmsMooses($auth, $ids);
+        if (!$auth->isSuper())
+            foreach ($old['ids'] as $oId)
+                if (!$this->CanModify($auth, $oId, true))
+                    $this->ErrRights();
 
         $result = $this->Query($query);
         $result->closeCursor();
@@ -1184,19 +1189,22 @@ class CMooseDb extends CTinyDb
 
     // endregion
 
-    function DeleteRawSms(CMooseAuth $auth, $rawSmsId)
+    function DeleteRawSmses(CMooseAuth $auth, array $rawSmsIds)
     {
-        if (!$auth->isSuper())
+        if (!$auth->isSuper())          // todo разрешить не только root, проверка на права
             $this->ErrRights();
 
-        $this->ValidateId($rawSmsId, "Incorrect raw sms id", 1);  // todo разрешить не только root, проверка на права
+        $rawIds = filter_var($rawSmsIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
+        if ($rawIds === false || count($rawIds) == 0)
+            $this->Err(self::ErrWrongSmsId);
 
         $this->beginTran();
 
-        $mooses = $this->GetRawSmsMooses($auth, [$rawSmsId]);
+        $mooses = $this->GetRawSmsMooses($auth, $rawIds);
+        $qRawIds = implode(', ', $rawIds);
 
         $smsId = [];
-        $r0 = $this->Query("select id from sms where raw_sms_id = $rawSmsId");
+        $r0 = $this->Query("select id from sms where raw_sms_id in ($qRawIds)");
         foreach ($r0 as $row)
             $smsId[] = $row['id'];
 
@@ -1210,17 +1218,17 @@ class CMooseDb extends CTinyDb
             $this->Query($query);
         }
 
-        $query = "delete from sms where raw_sms_id = $rawSmsId";
+        $query = "delete from sms where raw_sms_id in ($qRawIds)";
         $this->Query($query);
 
-        $query = "delete from raw_sms where id = $rawSmsId";
+        $query = "delete from raw_sms where id in ($qRawIds)";
         $this->Query($query);
 
         $this->SetMooseTimestamp($auth, $mooses['ids']);
 
         $this->commit();
 
-        Log::t($this, $auth, "deleteSms", "Raw sms id: $rawSmsId");
+        Log::t($this, $auth, "deleteSms", "Raw sms ids: $qRawIds");
     }
 
 	function AddData(CMooseAuth $auth, $phone, CMooseSMS $msg, $moose = null)
