@@ -1634,9 +1634,8 @@ class CMooseDb extends CTinyDb
 
 class CValidatedFilter
 {
-    var $hasEmpty;
-    var $vals;
-    var $ve;
+    private $hasEmpty;
+    private $vals;
 
     private $isEmpty;
 
@@ -1650,7 +1649,6 @@ class CValidatedFilter
         if (!is_array($val) || $valsSet && $val['values'] != null && !is_array($val['values']))
             throw new Exception($notAnArrErr);
 
-        $this->ve = @$val['empty'];
         $this->hasEmpty = (@$val['empty']) == 'true';
 
         if (isset($val['empty']) && !$valsSet)
