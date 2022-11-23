@@ -2688,7 +2688,6 @@ CColumnFilter.prototype =
         }
     },
 
-
     _onSearchKeydown: function(e)
     {
         if (e.keyCode != 40)
@@ -2919,7 +2918,7 @@ CColumnFilter.prototype =
 
         this._c.okBtn.html(String.format('ОК - {0}', str.join(', ')));
         this._c.resetBtn.get(0).disabled = st.empty == false && st.count == 0;
-        this._c.selAll[0].checked = st.visible == this._c.list.find('input').length;
+        this._c.selAll[0].checked = st.visible == (this._c.list.find('input').length - (st.empty ? 1 : 0));
     },
 
     _updateActivator: function()
@@ -2982,7 +2981,7 @@ CColumnFilter.prototype =
         if (add)
             filtered.forEach(it => this._curChecked[it.value] = !!hash[it.value]);  // убрать всех, кроме добавляемых
         else {
-            var noChecked = !filtered.some(it => this._curChecked[it.value] != undefined);  // в будущем -- на самом деле если add != include
+            var noChecked = !filtered.some(it => this._curChecked[it.value]);  // в будущем -- на самом деле если add != include
             filtered.forEach(it => this._curChecked[it.value] = (noChecked || this._curChecked[it.value]) && !hash[it.value]);
         }
 

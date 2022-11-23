@@ -519,10 +519,10 @@ function getGateData()
 
     $limit = checkId(@$_POST['limit'], 'Недопустимое значение предела', true);
     $justErr =  @$_POST['errors'] === 'true';
-    $phoneIds = validateIdArray(@$_POST['phoneIds'], false, -1, "Недопустимый список приборов");
-    $mooseIds = validateIdArray(@$_POST['mooseIds'], false, -1, "Недопустимый список животных");
+    $phones = new CValidatedFilter(@$_POST['phoneIds'], function ($e) { return checkId($e, "Недопустимый id прибора: $e", false, false); }, 'Список приборов не массив', 'Недопустимый список приборов');
+    $mooses = new CValidatedFilter(@$_POST['mooseIds'], function ($e) { return checkId($e, "Недопустимый id животного: $e", false, false); }, 'Список животных не массив', 'Недопустимый список животных');
 
-    return $db->GetGateData($auth, $limit, $justErr, $phoneIds, $mooseIds);
+    return $db->GetGateData($auth, $limit, $justErr, $phones, $mooses);
 }
 
 function getLogs()
@@ -610,14 +610,18 @@ function varNotEmpty($name, $strict, $errmsg)   // todo add filtering
     return $var;
 }
 
-function checkId($id, $err, $canBeNull = false)
+function checkId($id, $err, $canBeNull = false, $die = true)
 {
     if ($id == null && $canBeNull == true)
         return $id;
 
     $id = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if ($id === false)
-        dieError($err);
+    {
+        if ($die)
+            dieError($err);
+        throw new Exception($err);
+    }
     return $id;
 }
 

@@ -1433,7 +1433,7 @@ class CMooseDb extends CTinyDb
         $this->Query($query);
     }
 
-    function GetGateData(CTinyAuth $auth, $limit = null, $justErr, $phoneIds, $mooseIds)
+    function GetGateData(CTinyAuth $auth, $limit = null, $justErr, CValidatedFilter $phonesF, CValidatedFilter $moosesF)
     {
         if (!$auth->canAdmin())
             $this->ErrRights();
@@ -1441,25 +1441,8 @@ class CMooseDb extends CTinyDb
         $limit = ($limit === null) ? 100 : $this->ValidateId($limit, "Недопустимое значение limit", 1);
         $justErr = $justErr === true ? ' (s.id is null or m.id is null or char_length(rs.text) < 50 or rs.stamp < s.maxt) ' : 'true';
 
-        if ($phoneIds === null)
-            $phones = 'true';
-        else
-        {
-            $phones = filter_var($phoneIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
-            if (!$phones)
-                $this->Err(self::ErrWrongPhoneId);
-            $phones = 'rs.phone_id in (' . implode(', ', $phones). ')';
-        }
-
-        if ($mooseIds === null)
-            $mooses = 'true';
-        else
-        {
-            $mooses = filter_var($mooseIds, FILTER_VALIDATE_INT, ['flags' => FILTER_REQUIRE_ARRAY | FILTER_FORCE_ARRAY, 'options' => ['min_range' => 1]]);
-            if (!$mooses)
-                $this->Err(self::ErrWrongMooseId);
-            $mooses = 's.moose in (' . implode(', ', $mooses). ')';
-        }
+        $phones = $phonesF->GetCondition('rs.phone_id');
+        $mooses = $moosesF->GetCondition('s.moose');
 
         $access = $this->CanSeeCond($auth, 'p');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose');
@@ -1647,4 +1630,58 @@ class CMooseDb extends CTinyDb
     }
 
     // endregion
+}
+
+class CValidatedFilter
+{
+    var $hasEmpty;
+    var $vals;
+    var $ve;
+
+    private $isEmpty;
+
+    function __construct($val, $validator, $notAnArrErr, $err)
+    {
+        $this->isEmpty = true;
+        if ($val == null)
+            return;
+
+        $valsSet = isset($val['values']);
+        if (!is_array($val) || $valsSet && $val['values'] != null && !is_array($val['values']))
+            throw new Exception($notAnArrErr);
+
+        $this->ve = @$val['empty'];
+        $this->hasEmpty = (@$val['empty']) == 'true';
+
+        if (isset($val['empty']) && !$valsSet)
+            $this->vals = [];
+        else
+            $this->vals = self::FillVals($valsSet ? $val['values']: $val, $validator, $err);
+
+        $this->isEmpty = (!$this->hasEmpty) && count($this->vals) == 0;
+    }
+
+    private function FillVals(array $vals, $validator, $errMess)
+    {
+        $res = [];
+        foreach ($vals as $v)
+            $res[] = call_user_func($validator, $v, $errMess);
+
+        return $res;
+    }
+
+    public function GetCondition($field)
+    {
+        if ($this->isEmpty)
+            return 'true';
+
+        $cond = [];
+        if ($this->hasEmpty)
+            $cond[] = "$field is null";
+
+        if (count($this->vals) > 0)
+            $cond[] = "$field in (". implode(', ', $this->vals) . ')';
+
+        return '(' . implode(' or ', $cond) . ')';
+    }
 }
