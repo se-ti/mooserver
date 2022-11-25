@@ -715,7 +715,7 @@ class CTinyDb
         $this->Query($query);
     }
 
-    function GetLogs(CTinyAuth $auth, $levels, $ops, $users, $search, $limit)
+    function GetLogs(CTinyAuth $auth, $levels, CValidatedFilter $ops, CValidatedFilter $users, $search, $limit)
     {
         if (!$auth->canAdmin())
             $this->ErrRights();
@@ -738,16 +738,13 @@ class CTinyDb
             }
         }
 
-
-        $ands[] = $this->getStringFilterCondition($ops, 'operation', 'недопустимый список операций', 'недопустимая операция');
-        $ands[] = $this->getStringFilterCondition($users, 'login', 'недопустимый список пользователей', 'недопустимый пользователь');
+        $ands[] = $ops->GetCondition('operation', $this->db, false);
+        $ands[] = $users->GetCondition('login', $this->db, false);
         if ($search !== null && trim($search) != '')
         {
             $search = $this->escapeForLike($search);
             $ands[] = "(message like '%$search%' or u.login like '%$search%')" ;
         }
-
-
 
         $limit = $limit === null ? '' : " limit " . $this->ValidateId($limit, "Недопустимое значение limit", 1);
 
@@ -786,47 +783,6 @@ class CTinyDb
             'users' => $this->GetFilterOptions('login', 'users', 'is_group = false')];
     }
 
-    private function strValidator($str, $err)
-    {
-        if (!is_string($str))
-            $this->Err($err);
-        return $this->db->quote($str);
-    }
-
-    private function getStringFilterCondition($vals, $field, $notAnArrErr, $errMess)
-    {
-        return $this->getFilterCondition($vals, $field, 'strValidator', $notAnArrErr, $errMess);
-    }
-
-    private function getFilterCondition($vals, $field, $validator, $notAnArrErr, $errMess)
-    {
-        if ($vals == null)
-            return 'true';
-
-        if (!is_array($vals))
-            $this->Err($notAnArrErr);
-        $qVals = [];
-        $hasNull = false;
-        foreach ($vals as $val)
-            if ($val == null)
-                $hasNull = true;
-            else
-                $qVals[] = call_user_func([$this, $validator], $val, $errMess);
-
-        $conds = [];
-        if ($hasNull)
-            $conds[] = "$field is null";
-        if (count($qVals) > 0)
-            $conds[] = $field . ' in ('. implode(', ', $qVals) .')';
-
-        if (count($conds) > 1)
-            return '( ' . implode(' or ', $conds) . ')';
-        if (count($conds) == 1)
-            return $conds[0];
-
-        return 'true';
-    }
-
     private function GetFilterOptions($column, $table = 'logs', $where = "true")
     {
         $query = "select distinct $column
@@ -840,6 +796,93 @@ class CTinyDb
             $ops[] = $r[$column];
 
         return $ops;
+    }
+}
+
+class CValidatedFilter
+{
+    var $hasEmpty;
+    var $vals;
+
+    private $isEmpty;
+
+    const emptyKey = 'empty';
+    const valsKey = 'values';
+
+    public static function IntFilter($val, $notAnArrErr, $err, $minValue = 1)
+    {
+        $opt = ['options' => ['min_range' => $minValue]];
+        $func = function($v) use ($err, $opt)
+        {
+            $res = filter_var($v, FILTER_VALIDATE_INT, $opt);
+            if ($res === false)
+                throw new InvalidArgumentException("$err: '$v'");
+
+            return $res;
+        };
+
+        return new CValidatedFilter($val, $func, $notAnArrErr);
+    }
+
+    public static function StringFilter($val, $notAnArrErr, $err)
+    {
+        $func = function($str) use ($err)
+        {
+            if (!is_string($str))
+                throw new InvalidArgumentException("$err: '$str'");
+
+            return $str;
+        };
+
+        return new CValidatedFilter($val, $func, $notAnArrErr);
+    }
+
+    function __construct($val, $validator, $notAnArrErr)
+    {
+        $this->isEmpty = true;
+        if ($val == null)
+            return;
+
+        $valsSet = isset($val[self::valsKey]);
+        if (!is_array($val) || $valsSet && $val[self::valsKey] != null && !is_array($val[self::valsKey]))
+            throw new Exception($notAnArrErr);
+
+        $this->hasEmpty = (@$val[self::emptyKey]) == 'true';
+
+        if (isset($val[self::emptyKey]) && !$valsSet)
+            $this->vals = [];
+        else
+            $this->vals = self::FillVals($valsSet ? $val[self::valsKey]: $val, $validator);
+
+        $this->isEmpty = (!$this->hasEmpty) && count($this->vals) == 0;
+    }
+
+    // that could be an array_map, but it predates exceptions :(
+    private function FillVals(array $vals, $validator)
+    {
+        $res = [];
+        foreach ($vals as $v)
+            $res[] = call_user_func($validator, $v);
+
+        return $res;
+    }
+
+    public function GetCondition($field, PDO $quoter = null, $withAnd = true)
+    {
+        if ($this->isEmpty)
+            return $withAnd ? '' : 'true';
+
+        $cond = [];
+        if ($this->hasEmpty)
+            $cond[] = "$field is null";
+
+        if (count($this->vals) > 0)
+        {
+            $mapped = $quoter == null ? $this->vals : array_map(function ($e) use ($quoter) { return $quoter->quote($e); }, $this->vals);
+            $cond[] = "$field in (" . implode(', ', $mapped) . ')';
+        }
+
+        return ($withAnd ? 'and ' : '').'(' . implode(' or ', $cond) . ')';
     }
 }
 
@@ -890,5 +933,3 @@ class Log
         $db->AddLogRecord($auth, CTinyDb::LogCritical, $operation, $message);
     }
 }
-
-?>

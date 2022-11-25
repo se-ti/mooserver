@@ -518,9 +518,9 @@ function getGateData()
         dieError(CTinyDb::ErrCRights);
 
     $limit = checkId(@$_POST['limit'], 'Недопустимое значение предела', true);
-    $justErr =  @$_POST['errors'] === 'true';
-    $phones = new CValidatedFilter(@$_POST['phoneIds'], function ($e) { return checkId($e, "Недопустимый id прибора: $e", false, false); }, 'Список приборов не массив', 'Недопустимый список приборов');
-    $mooses = new CValidatedFilter(@$_POST['mooseIds'], function ($e) { return checkId($e, "Недопустимый id животного: $e", false, false); }, 'Список животных не массив', 'Недопустимый список животных');
+    $justErr = @$_POST['errors'] === 'true';
+    $phones = CValidatedFilter::IntFilter(@$_POST['phoneIds'], 'Список приборов не массив', 'Недопустимый id прибора');
+    $mooses = CValidatedFilter::IntFilter(@$_POST['mooseIds'], 'Список животных не массив', 'Недопустимый id животного');
 
     return $db->GetGateData($auth, $limit, $justErr, $phones, $mooses);
 }
@@ -543,14 +543,8 @@ function getLogs()
             dieError('недопустимые уровни логов');
     }
 
-    $ops = @$_POST['ops'];
-    if ($ops != null && (!is_array($ops) || count($ops) != count(array_filter($ops))))
-        dieError('недопустимая операция');
-
-    $users = @$_POST['users'];
-    if ($users != null && (!is_array($users) || count($users) != count(array_filter($users))))
-        dieError('недопустимые пользователи');
-    
+    $ops = CValidatedFilter::StringFilter(@$_POST['ops'], 'недопустимый список операций', 'недопустимая операция');
+    $users = CValidatedFilter::StringFilter(@$_POST['users'], 'недопустимый список пользователей', 'недопустимый пользователь');
     $search = @$_POST['search'];
 
     return $db->GetLogs($auth, $levels, $ops, $users, $search, $limit);

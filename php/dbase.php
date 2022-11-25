@@ -1458,7 +1458,7 @@ class CMooseDb extends CTinyDb
             left join sms s on s.raw_sms_id = rs.id
             left join moose m on m.id = s.moose
 
-            where true and {$access['cond']} and $justErr and $phones and $mooses and (s.moose is null or {$mAccess['cond']})
+            where true and {$access['cond']} and $justErr $phones $mooses and (s.moose is null or {$mAccess['cond']})
             order by id desc limit $limit";
 
         $result = $this->Query($query);
@@ -1630,56 +1630,4 @@ class CMooseDb extends CTinyDb
     }
 
     // endregion
-}
-
-class CValidatedFilter
-{
-    private $hasEmpty;
-    private $vals;
-
-    private $isEmpty;
-
-    function __construct($val, $validator, $notAnArrErr, $err)
-    {
-        $this->isEmpty = true;
-        if ($val == null)
-            return;
-
-        $valsSet = isset($val['values']);
-        if (!is_array($val) || $valsSet && $val['values'] != null && !is_array($val['values']))
-            throw new Exception($notAnArrErr);
-
-        $this->hasEmpty = (@$val['empty']) == 'true';
-
-        if (isset($val['empty']) && !$valsSet)
-            $this->vals = [];
-        else
-            $this->vals = self::FillVals($valsSet ? $val['values']: $val, $validator, $err);
-
-        $this->isEmpty = (!$this->hasEmpty) && count($this->vals) == 0;
-    }
-
-    private function FillVals(array $vals, $validator, $errMess)
-    {
-        $res = [];
-        foreach ($vals as $v)
-            $res[] = call_user_func($validator, $v, $errMess);
-
-        return $res;
-    }
-
-    public function GetCondition($field)
-    {
-        if ($this->isEmpty)
-            return 'true';
-
-        $cond = [];
-        if ($this->hasEmpty)
-            $cond[] = "$field is null";
-
-        if (count($this->vals) > 0)
-            $cond[] = "$field in (". implode(', ', $this->vals) . ')';
-
-        return '(' . implode(' or ', $cond) . ')';
-    }
 }
