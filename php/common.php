@@ -428,7 +428,7 @@ class CScheduler
     {
         try
         {
-            $res = $db->AddData($auth, $phone, $sms, $moose);
+            $res = $db->AddData($auth, $phone, $sms, $moose, true);
             Log::st($auth, "addSms", "via scheduler for '$phone' " . CMooseTools::addSmsMessage($res));
         }
         catch (Exception $e)

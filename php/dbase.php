@@ -615,7 +615,7 @@ class CMooseDb extends CTinyDb
         $min = CMooseAuth::Demo;
         $demo = CMooseAuth::Demo;
 
-        if ($auth-> isSuper())
+        if ($auth->isSuper())
         {
             $join = '';
             $cond = 'true';
@@ -641,6 +641,32 @@ class CMooseDb extends CTinyDb
             $res[] = ['id' => $row['id'],
                 'name' => $row['name'] != null || trim($row['name']) != ''? trim($row['name']) : $row['login']];
         return $res;
+    }
+
+    protected function TestSmsIntersections(CMooseAuth $auth, $mooseId, $smsId, $rawSmsId, $throwException)
+    {
+        $query = "select raw_sms_id, DATE_FORMAT(lim.rMin,'%Y-%m-%dT%TZ') as mMin, DATE_FORMAT(lim.rMax,'%Y-%m-%dT%TZ') as mMax 
+                        from sms s
+                        inner join (select mint as rMin, maxt as rMax from sms where id = $smsId) lim
+                    where id <> $smsId and moose = $mooseId and lim.rMin < maxt and lim.rMax > mint ";
+
+        $conf = [];
+        $conflict = $this->Query($query);
+        foreach ($conflict as $c)
+        {
+            $mMin = $c['mMin'];
+            $mMax = $c['mMax'];
+            $conf[] = $c['raw_sms_id'];
+        }
+        if (count($conf) > 0)
+        {
+            $msg = "Смс rawSmsId=$rawSmsId пересекается по времени $mMin - $mMax с смс " .implode(", ", $conf);
+
+            if ($throwException)
+                $this->Err($msg);
+            else
+                Log::st($auth, "addSms", $msg);
+        }
     }
 
     // call on update: +new sms, + reassign sms, + toggle is point valid, comment point , import === new sms, + DeleteRawSms
@@ -1231,7 +1257,7 @@ class CMooseDb extends CTinyDb
         Log::t($this, $auth, "deleteSms", "Raw sms ids: $qRawIds");
     }
 
-	function AddData(CMooseAuth $auth, $phone, CMooseSMS $msg, $moose = null)
+	function AddData(CMooseAuth $auth, $phone, CMooseSMS $msg, $moose = null, $testTime = false)
 	{
 		if (!$auth->canFeed() || !$auth->isSuper() && $moose != null) // добавлять не текущему лосю может лишь супер
 			$this->ErrRights();
@@ -1279,7 +1305,10 @@ class CMooseDb extends CTinyDb
         $this->Query($query);
 
         if ($prop['mooseId'] != null)
+        {
+            $this->TestSmsIntersections($auth, $prop['mooseId'], $smsId, $rawSmsId, $testTime);
             $this->SetMooseTimestamp($auth, [$prop['mooseId']]);    // todo set global timestamp
+        }
 
         if ($ourTran)
             $this->commit();
@@ -1396,7 +1425,7 @@ class CMooseDb extends CTinyDb
 		{
 			$stamp = $this->ToSqlTime(isset($pt[2]) ? $pt[2] : $tm);
 			$valid = isset($pt[3]) && (!$pt[3]) ? 0 : 1;
-			$values[] = "({$pt[0]}, {$pt[1]}, $valid, $stamp, $smsId)";
+			$values[] = "($pt[0], $pt[1], $valid, $stamp, $smsId)";
 			$tm++;
 		}
 		$query = "insert into position (lat, lon, valid, stamp, sms_id) values ". implode($values, ', ');

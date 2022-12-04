@@ -304,7 +304,7 @@ function ProcessCSVRow(CMooseDb $db, CMooseAuth $auth, array $data, $line, array
         if ($Moose == '')
             $Moose = null;
 
-        $DBResult = $db->AddData($auth, $data[2]/*$from*/, $msg, $Moose);
+        $DBResult = $db->AddData($auth, $data[2]/*$from*/, $msg, $Moose, true);
 
         //$DBResult = $db->AddData($auth, $StringArray[2]/*$from*/, $msg, 'Moose5');
     }
