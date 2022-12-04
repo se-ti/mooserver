@@ -1261,8 +1261,8 @@ class CMooseDb extends CTinyDb
 		$qDiag = ($msg->diag == null || trim($msg->diag) == '') ? 'null' : $this->ValidateTrimQuote($msg->diag);
 
 		$query = "insert into sms (moose, raw_sms_id, int_id, volt, temp, gsm_tries, gps_on, diagnose) 
-				values ( $qMooseId, $rawSmsId, {$msg->id}, 
-						{$msg->volt}, {$msg->temp}, {$msg->gsmTries}, {$msg->gpsOn}, $qDiag)";
+				values ($qMooseId, $rawSmsId, $msg->id, 
+						$msg->volt, $msg->temp, $msg->gsmTries, $msg->gpsOn, $qDiag)";
 		$this->Query($query);
 
 		$smsId = $this->db->lastInsertId();
