@@ -1688,9 +1688,10 @@ CMooseMap = function(root, id, root2)
 
     this.data = [];	  // слои на карте
     this.source = null; // исходные точки
+    this._tailLayer = null; // 7 предыдущих сегментов трека
     this._topLayer = null; // невалидные точки, точки с комментариями и т.п.
 
-    this._idx = null;
+    this._idx = null;   // индекс текущей выделенной точки
     this._blockMarker = false;
 
     this._showInvalid = false;
@@ -1875,6 +1876,9 @@ CMooseMap.prototype = {
         for (var i = 0; i < this.data.length; i++)
             this.map.removeLayer(this.data[i]);
 
+        if (this._tailLayer)
+            this._tailLayer.clearLayers();
+
         if (this._topLayer)
             this._topLayer.clearLayers();
 
@@ -1903,6 +1907,11 @@ CMooseMap.prototype = {
             this.heatMap.clear();
             this.heatMap.setHeatOptions(heatSett);
         }
+
+        if (!this._tailLayer)
+            this._tailLayer = L.layerGroup();
+        else
+            this.map.removeLayer(this._tailLayer);
 
         if (!this._topLayer)
             this._topLayer = L.layerGroup();
@@ -1965,6 +1974,7 @@ CMooseMap.prototype = {
         if (showHeat)
             this.map.addLayer(this.heatMap);
 
+        this.map.addLayer(this._tailLayer);
         //if (this._showInvalid)
             this.map.addLayer(this._topLayer);
 
@@ -1974,9 +1984,14 @@ CMooseMap.prototype = {
         this._mooseAttr.setHtml(caps);
     },
 
+    _trackStyle: function(color)
+    {
+        return { color: color, noClip: true, opacity: 0.5, weight: this._forPrint ? 3 : 2 };
+    },
+
     _newPoly: function(idx, id, key)
     {
-        var l = L.polyline([], {color: this.colors[idx % this.colors.length], noClip: true, opacity: 0.5, weight: this._forPrint ? 3 : 2})
+        var l = L.polyline([], this._trackStyle(this.colors[idx % this.colors.length]))
             .addTo(this.map);
         l.__id = id;
         l.__key = key;
@@ -2183,6 +2198,8 @@ CMooseMap.prototype = {
             if (!p._isOpen)                         // HACK 2 !!!
                 this._marker.openPopup();
         }
+
+        this._updateTail(ll);
     },
 
     _initMarker: function(pt)
@@ -2197,7 +2214,31 @@ CMooseMap.prototype = {
 
     _createMarker: function(pt, color)
     {
-        return  L.circleMarker(pt, {color: color, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1, weight: 2});
+        return L.circleMarker(pt, {color: color, radius: 6, fillColor:"#fff", fillOpacity: 0.6, opacity: 1, weight: 2});
+    },
+
+    _updateTail: function(pt)
+    {
+        var i;
+        var tailLen = 7;
+        var l = this._tailLayer.getLayers() || [];
+        if (pt == null)
+        {
+            for (i = 0; i < tailLen && i < l.length; i++)
+                l[i].setLatLngs([]);
+            return;
+        }
+
+        var opt = this._trackStyle('black');
+        var step = (opt.opacity - (opt.opacity > 0.3 ? 0.15 : 0)) / tailLen;
+        if (l.length == 0)
+            for (i = 0; i < tailLen; i++, opt.opacity -= step)
+                l.push(L.polyline([], opt).addTo(this._tailLayer));
+
+        var idx = pt._idx;
+        var data = this.data[0].getLatLngs();       // attn !!! works with first track only!
+        for (i = 0; i < tailLen; i++, idx--)
+            l[i].setLatLngs(idx < 1 ? [] : [data[idx], data[idx - 1]]);
     },
 
     _onMove: function(e)
@@ -2224,7 +2265,10 @@ CMooseMap.prototype = {
             this._onShowMarker();
         }
         else if (has && e.latlng.distanceTo(this._marker.getLatLng()) > lim * 2.5)
+        {
             this.map.removeLayer(this._marker);
+            this._updateTail(null);
+        }
     },
 
     _nearestPt: function(pt, limit)
