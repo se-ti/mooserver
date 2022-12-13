@@ -2220,12 +2220,13 @@ CMooseMap.prototype = {
     _updateTail: function(pt)
     {
         var i;
+        var _e = [];
         var tailLen = 7;
-        var l = this._tailLayer.getLayers() || [];
+        var l = this._tailLayer.getLayers() || _e;
         if (pt == null)
         {
             for (i = 0; i < tailLen && i < l.length; i++)
-                l[i].setLatLngs([]);
+                l[i].setLatLngs(_e);
             return;
         }
 
@@ -2233,12 +2234,23 @@ CMooseMap.prototype = {
         var step = (opt.opacity - (opt.opacity > 0.3 ? 0.15 : 0)) / tailLen;
         if (l.length == 0)
             for (i = 0; i < tailLen; i++, opt.opacity -= step)
-                l.push(L.polyline([], opt).addTo(this._tailLayer));
+                l.push(L.polyline(_e, opt).addTo(this._tailLayer));
 
         var idx = pt._idx;
-        var data = this.data[0].getLatLngs();       // attn !!! works with first track only!
+        var data = [];
+        if (pt.mId == undefined)
+            data = this.data[0].getLatLngs();       // attn !!! works with first track only!
+        else                                    // found by nearest pt
+        {
+            var filtered = (this.data || []).filter(function (d) { return d.__id == pt.mId; });
+            if (filtered.length > 0)
+                data = filtered[0].getLatLngs();
+            else
+                idx = -1;
+        }
+
         for (i = 0; i < tailLen; i++, idx--)
-            l[i].setLatLngs(idx < 1 ? [] : [data[idx], data[idx - 1]]);
+            l[i].setLatLngs(idx < 1 ? _e : [data[idx], data[idx - 1]]);
     },
 
     _onMove: function(e)
@@ -2254,7 +2266,6 @@ CMooseMap.prototype = {
             this._initMarker(nearest);
 
         var has = this.map.hasLayer(this._marker);
-
 
         if (dist <= lim)
         {
