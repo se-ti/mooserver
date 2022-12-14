@@ -1363,10 +1363,11 @@ class CMooseDb extends CTinyDb
 				where m.name = $qMoose and {$access['cond']}";
         $result = $this->Query($query);
 
-        $res = $result->fetch(PDO::FETCH_ASSOC);
-        if ($res == null)
+        $row = $result->fetch(PDO::FETCH_ASSOC);
+        if ($row == null)
             $this->Err("Нет доступных животных с именем '$qMoose'");
 
+        $res = $row['id'];
         $result->closeCursor();
         return $res;
     }
