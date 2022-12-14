@@ -88,13 +88,10 @@ class CMooseDb extends CTinyDb
                where o.id = $id and g.removeDate is null and ug.user_id = $uid";
 
         $res = $this->Query($query);
-        foreach ($res as $r)
-        {
-            $res->closeCursor();
-            return $r['cn'] > 0;
-        }
+        $r = $res->fetch(PDO::FETCH_ASSOC);
+        $res->closeCursor();
 
-        return false;
+        return $r['cn'] > 0;
     }
 
     protected function CanModifySms($auth, $rawSmsId)
@@ -831,7 +828,7 @@ class CMooseDb extends CTinyDb
         $rec = null;
         foreach ($result as $row)
         {
-            $rec =  [$row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0];
+            $rec = [$row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0];
             if ($row['comment'] != null)
             {
                 $rec[] = $row['comment'];
@@ -875,19 +872,13 @@ class CMooseDb extends CTinyDb
         $pAccess = $this->CanSeeCond($auth, 'p', 'phone', 'rs.phone_id');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
-        $query = "select text, UNIX_TIMESTAMP(rs.stamp) as ustamp 
+        $query = "select text, UNIX_TIMESTAMP(rs.stamp) as stamp 
                 from raw_sms rs 
 				inner join sms on rs.id = sms.raw_sms_id				
 				where rs.id = $rawSmsId and (sms.moose is null and {$pAccess['cond']} or {$mAccess['cond']}) ";
 
         $result = $this->Query($query);
-
-        $res = null;
-        foreach ($result as $row)
-        {
-            $res = ['text' => $row['text'], 'stamp' => $row['ustamp']];
-            break;
-        }
+        $res = $result->fetch(PDO::FETCH_ASSOC);
         $result->closeCursor();
         return $res;
     }
@@ -1327,18 +1318,17 @@ class CMooseDb extends CTinyDb
 
         $access = $this->CanSeeCond($auth, 'p');
 
-        $query = "select moose.id as id, p.id as pId
+        $query = "select moose.id as mooseId, p.id as phoneId
 				from phone p
 				 {$access['join']}
 				left join moose on phone_id = p.id
-				where p.canonical = $qPhone and {$access['cond']}";
+				where $qPhone <> '' and p.canonical = $qPhone and {$access['cond']}";
         $result = $this->Query($query);
 
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if ($row == null)
+        $res = $result->fetch(PDO::FETCH_ASSOC);
+        if ($res == null)
             $this->Err("Нет доступных телефонов с номером '$phone'");
 
-        $res = ['mooseId' => $row['id'], 'phoneId' => $row['pId']];
         $result->closeCursor();
         return $res;
     }
@@ -1350,11 +1340,11 @@ class CMooseDb extends CTinyDb
                     inner join moose m on m.phone_id = p.id
                   where m.id = $mooseId";
         $result = $this->Query($query);
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if ($row == null)
+        $res = $result->fetch(PDO::FETCH_ASSOC);
+        if ($res == null)
             return null;
 
-        $res = ['id' => $row['id'], 'phone' => $row['phone'], 'canonical' => $row['canonical'], 'msg' => "'{$row['phone']}' id={$row['id']}"];
+        $res['msg'] = "'{$res['phone']}' id={$res['id']}";
         $result->closeCursor();
         return $res;
     }
@@ -1373,11 +1363,10 @@ class CMooseDb extends CTinyDb
 				where m.name = $qMoose and {$access['cond']}";
         $result = $this->Query($query);
 
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if ($row == null)
+        $res = $result->fetch(PDO::FETCH_ASSOC);
+        if ($res == null)
             $this->Err("Нет доступных животных с именем '$qMoose'");
 
-        $res = $row['id'];
         $result->closeCursor();
         return $res;
     }
@@ -1387,11 +1376,11 @@ class CMooseDb extends CTinyDb
         $query = "select id, name from moose
                   where phone_id = $phoneId";
         $result = $this->Query($query);
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if ($row == null)
+        $res = $result->fetch(PDO::FETCH_ASSOC);
+        if ($res == null)
             return null;
 
-        $res = ['id' => $row['id'], 'name' => $row['name'], "msg" => "'{$row['name']}' id={$row['id']}"];
+        $res['msg'] = "'{$res['name']}' id={$res['id']}";
         $result->closeCursor();
         return $res;
     }
