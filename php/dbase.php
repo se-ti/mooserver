@@ -756,7 +756,7 @@ class CMooseDb extends CTinyDb
 
 
         $t3 = microtime(true);
-        //Log::d($this, $auth, "times", "track total: '" . ($t4-$t0) ."' que: '" . ($t2-$t1) . "' retr: '" . ($t3-$t2));
+//        Log::d($this, $auth, "times", sprintf("track total: %.4f, que: %.4f, retr: %.4f", $t3 - $t0, $t2 - $t1, $t3 - $t2));
 		return $retVal;
 	}
 
@@ -809,7 +809,7 @@ class CMooseDb extends CTinyDb
 
         $t3 = microtime(true);
 
-        //Log::d($this, $auth, "times", sprintf("activity total: %.4f query: %.4f, retrieve %4f", ($t3-$t0), ($t2-$t1), ($t3-$t2)));
+        //Log::d($this, $auth, "times", sprintf("activity total: %.4f query: %.4f, retrieve %.4f", ($t3-$t0), ($t2-$t1), ($t3-$t2)));
         return $retVal;
 	}
 
