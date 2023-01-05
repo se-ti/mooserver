@@ -50,9 +50,10 @@ function getData($forceLoadAll = false)
 
     $retrieveIds = [];
     $useCache = [];
+    $allowCache = false;
     foreach ($ids as $id)
     {
-        if (isset($clientStamps[$id]) && $stamps != null && isset($stamps[$id]) && $clientStamps[$id] >= $stamps[$id])
+        if ($allowCache && isset($clientStamps[$id]) && $stamps != null && isset($stamps[$id]) && $clientStamps[$id] >= $stamps[$id])
             $useCache[] = ['id' => $id, 'useCache' => true];
         else
             $retrieveIds[] = $id;
