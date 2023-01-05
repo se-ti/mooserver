@@ -152,14 +152,9 @@ class CTinyDb
 
     protected function SetSessionTimezone($tz)
     {
-        $old = '';
-        $res = $this->Query("select @@session.time_zone as tz");
-        foreach ($res as $rec)
-        {
-            $old = $rec['tz'];
-            $res->closeCursor();
-            break;
-        }
+        $res = $this->Query("select @@session.time_zone");
+        $old = $res->fetchColumn();
+        $res->closeCursor();
 
         if ($tz != 'SYSTEM')
             $tz = $this->TrimQuote($tz);
