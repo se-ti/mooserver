@@ -717,7 +717,7 @@ class CMooseDb extends CTinyDb
 		$timeCond = $this->TimeCondition('position.stamp', $start, $end);
         $access = $this->CanSeeCond($auth, 'm', 'moose');
 		
-		$query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid, position.comment, author_id, DATE_FORMAT(comment_stamp,'%Y-%m-%dT%TZ') as cstamp, sms.moose as moose 
+		$query = "select lat, lon, UNIX_TIMESTAMP(position.stamp) as stamp, valid, position.comment, author_id, DATE_FORMAT(comment_stamp,'%Y-%m-%dT%TZ') as cstamp, sms.moose as moose 
                 from position
                 inner join sms on position.sms_id = sms.id
                 inner join moose m on m.id = sms.moose
@@ -725,6 +725,7 @@ class CMooseDb extends CTinyDb
 				where sms.moose in ($cond) $timeCond and {$access['cond']}
 				order by sms.moose asc, position.stamp asc ";
 
+        $oldTz = $this->SetSessionTimezone('+00:00');
         $t1 = microtime(true);
 		$result = $this->Query($query);
         $t2 = microtime(true);
@@ -747,6 +748,7 @@ class CMooseDb extends CTinyDb
             $res[$moose][] = $rec;
         }
         $result->closeCursor();
+        $this->SetSessionTimezone($oldTz);
 
         $retVal = [];
         foreach($res as $id => $data)
@@ -770,7 +772,7 @@ class CMooseDb extends CTinyDb
 		$timeCond = $this->TimeCondition('activity.stamp', $start, $end);
         $access = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
-		$query = "select DATE_FORMAT(activity.stamp,'%Y-%m-%dT%TZ') as stamp, max(active) as active, valid, sms.moose as moose
+		$query = "select UNIX_TIMESTAMP(activity.stamp) as stamp, max(active) as active, valid, sms.moose as moose
 				from activity				
 				inner join sms on activity.sms_id = sms.id
 				{$access['join']}
@@ -778,6 +780,7 @@ class CMooseDb extends CTinyDb
 				 group by activity.stamp, valid, sms.moose
 				order by sms.moose asc, activity.stamp asc ";
 
+        $oldTz = $this->SetSessionTimezone('+00:00');
         $old = $this->db->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY);
         $this->db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
         $t1 = microtime(true);
@@ -797,6 +800,7 @@ class CMooseDb extends CTinyDb
         $result->closeCursor();
 
         $this->db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $old);
+        $this->SetSessionTimezone($oldTz);
 //        Log::d($this, $auth, "times", sprintf("activity rows: %d", $rowCount));
 
         $retVal = [];
@@ -816,13 +820,14 @@ class CMooseDb extends CTinyDb
         $pAccess = $this->CanSeeCond($auth, 'p', 'phone', 'rs.phone_id');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
-        $query = "select lat, lon, DATE_FORMAT(position.stamp,'%Y-%m-%dT%TZ') as stamp, valid, comment, author_id, DATE_FORMAT(comment_stamp,'%Y-%m-%dT%TZ') as cstamp
+        $query = "select lat, lon, UNIX_TIMESTAMP(position.stamp) as stamp, valid, comment, author_id, DATE_FORMAT(comment_stamp,'%Y-%m-%dT%TZ') as cstamp
                 from position
                 inner join sms on position.sms_id = sms.id
                 inner join raw_sms rs on rs.id = sms.raw_sms_id
 				where sms.raw_sms_id = $rawSmsId and (sms.moose is null and {$pAccess['cond']} or {$mAccess['cond']})
 				order by position.stamp asc ";
 
+        $oldTz = $this->SetSessionTimezone('+00:00');
         $result = $this->Query($query);
         $res = [];
         $rec = null;
@@ -839,6 +844,7 @@ class CMooseDb extends CTinyDb
         }
 
         $result->closeCursor();
+        $this->SetSessionTimezone($oldTz);
 
         return $res;
     }
@@ -849,19 +855,21 @@ class CMooseDb extends CTinyDb
         $pAccess = $this->CanSeeCond($auth, 'p', 'phone', 'rs.phone_id');
         $mAccess = $this->CanSeeCond($auth, 'm', 'moose', 'sms.moose');
 
-        $query = "select DATE_FORMAT(activity.stamp,'%Y-%m-%dT%TZ') as stamp, activity.active, valid
+        $query = "select UNIX_TIMESTAMP(activity.stamp) as stamp, activity.active, valid
 				from activity
 				inner join sms on activity.sms_id = sms.id
 				inner join raw_sms rs on rs.id = sms.raw_sms_id
 				where sms.raw_sms_id = $rawSmsId and (sms.moose is null and {$pAccess['cond']} or {$mAccess['cond']})
 				order by activity.stamp asc";
 
+        $oldTz = $this->SetSessionTimezone('+00:00');
         $result = $this->Query($query);
 
         $res = [];
         foreach ($result as $row)
             $res[] = [$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
         $result->closeCursor();
+        $this->SetSessionTimezone($oldTz);
 
         return $res;
     }

@@ -1939,7 +1939,7 @@ CMooseMap.prototype = {
 
                 pt = L.latLng(src[j][0], src[j][1]);
                 pt._midx = j;
-                pt._time = src[j][2];
+                pt._time = src[j][2] * 1000;
                 pt._valid = valid;
                 pt._cnt = src[j].cnt;
                 pt._sum = src[j].sum;
@@ -1964,10 +1964,10 @@ CMooseMap.prototype = {
 
             if (src.length > 0)
             {
-                if (!minTime || minTime > src[0][2])
-                    minTime = src[0][2];
-                if (!maxTime || maxTime < src[src.length - 1][2])
-                    maxTime = src[src.length - 1][2];
+                if (!minTime || minTime > src[0][2] * 1000)
+                    minTime = src[0][2] * 1000;
+                if (!maxTime || maxTime < src[src.length - 1][2] * 1000)
+                    maxTime = src[src.length - 1][2] * 1000;
             }
         }
 
@@ -2062,7 +2062,7 @@ CMooseMap.prototype = {
         var ll = this.latlng;
         this.ctx.map.closePopup();
 
-        var param = {time: ll._time, valid: !ll._valid};
+        var param = {time: new Date(ll._time).toISOString(), valid: !ll._valid};
         param[(ll.key || 'mooseId')] = ll.mId;
         var jq = $ajaxErr('togglePoint', param, this.ctx._d_onToggleValid);
         jq._latlng = ll;
@@ -2103,7 +2103,7 @@ CMooseMap.prototype = {
         if (cmt == '')
             cmt = null;
 
-        var param = { time: ll._time, comment: cmt };
+        var param = { time: new Date(ll._time).toISOString(), comment: cmt };
         param[(ll.key || 'mooseId')] = ll.mId;
         var jq = $ajaxErr('commentPoint', param, this._d_onCommentPoint);
         jq._latlng = ll;
@@ -2445,7 +2445,7 @@ CMooseMapHelper._strToTime = function(arr, idx)
 {
     if (arr && arr.length > 0 && idx >= 0)
         for (var i = 0, len = arr.length; i < len; i++)
-            arr[i].tm = Date.parse(arr[i][idx]);
+            arr[i].tm = arr[i][idx] * 1000;
 }
 
 CMooseMapHelper.prototype =

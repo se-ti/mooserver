@@ -79,6 +79,11 @@ function mooseName($mooses, $id)
 	return $id;
 }
 
+function zuluTime($stamp)
+{
+    return gmdate('Y-m-d\TH:i:s\Z', $stamp);
+}
+
 function exportBeacons()
 {
 	prepareIds();
@@ -129,7 +134,10 @@ function exportActivity()
             $qNames[] = $name;
 
 			foreach($moose['activity'] as $mark)
-				$rows[] = $name . ";" . implode(";", array_map("CMooseTools::csvEscape", $mark));
+			{
+			    $mark[0] = zuluTime($mark[0]);  // тайное знание, что 0-эелемент -- unix-timestamp
+                $rows[] = $name . ";" . implode(";", array_map("CMooseTools::csvEscape", $mark));
+            }
 		}
 
 	$header = "Экспорт активности для:;" . implode(";", $qNames) . "\n";
@@ -160,7 +168,7 @@ function exportTracks()
 	{
 		$pts = '';
 		foreach($track['track'] as $point)
-			$pts.= "<trkpt lat=\"{$point[0]}\" lon=\"{$point[1]}\"><time>{$point[2]}</time></trkpt>\n";
+			$pts.= "<trkpt lat=\"$point[0]\" lon=\"$point[1]\"><time>" . zuluTime($point[2]) . "</time></trkpt>\n";
 
 
 		$moose = mooseName($moo, $track['id']);
@@ -182,7 +190,7 @@ function exportTracks()
 		$times .= ' с ' . gmdate("m M Y", strtotime($start));
 
 	if ($end != null)
-		$times .= ' по ' . gmdate("M Y", strtotime($end));
+		$times .= ' по ' . gmdate("m M Y", strtotime($end));
 
 	header("Content-Type: application/gpx+xml gpx; charset=UTF-8");
 	header('Content-Disposition: attachment; filename="'.$fname.'.gpx"');
