@@ -150,13 +150,31 @@ class CTinyDb
         throw new Exception($msg);
 	}
 
+    protected function SetSessionTimezone($tz)
+    {
+        $old = '';
+        $res = $this->Query("select @@session.time_zone as tz");
+        foreach ($res as $rec)
+        {
+            $old = $rec['tz'];
+            $res->closeCursor();
+            break;
+        }
+
+        if ($tz != 'SYSTEM')
+            $tz = $this->TrimQuote($tz);
+        $this->Query("set time_zone = $tz");
+
+        return $old;
+    }
+
     protected function Query($query, $dupMessage = null)
     {
         $res = $this->db->query($query, PDO::FETCH_ASSOC);
         if (!$res && ($dupMessage === null || !$this->ErrDuplicate($dupMessage)))
         {
             $err = $this->db->errorInfo();
-            $this->Err("Query failed: sqe: {$err[0]} code '{$err[1]}' error: {$err[2]} at request: \n$query");
+            $this->Err("Query failed: sqe: $err[0] code '$err[1]' error: $err[2] at request: \n$query");
         }
 
         return $res;
