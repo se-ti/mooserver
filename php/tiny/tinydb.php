@@ -55,14 +55,9 @@ class CTinyDb
         }
 
 		$query = "select max(version) as ver from version";
-		$res = $this->Query($query);
-		foreach($res as $r)
-		{
-			if ($r['ver'] != self::$Version)
-				$this->Err("Wrong db version: '{$r['ver']}', expected '" .self::$Version. "'");
-			break;
-		}
-		$res->closeCursor();
+		$ver = $this->QueryColumn($query);
+        if ($ver != self::$Version)
+            $this->Err("Wrong db version: '$ver', expected '" .self::$Version. "'");
 
         if (isset($tinySett['timezone']))
             date_default_timezone_set($tinySett['timezone']);
@@ -259,17 +254,8 @@ class CTinyDb
 			$query = "select *, UNIX_TIMESTAMP(CONVERT_TZ(removeDate, '+0:00', @@session.time_zone)) as removed, UNIX_TIMESTAMP(CONVERT_TZ(block_till, '+0:00', @@session.time_zone)) as block
 					from users where $where";
 
-		$result = $this->Query($query);
-
-		$res = [];
-		foreach($result as $r)
-		{
-			$res = $r;
-			break;
-		}
-		$result->closeCursor();
-
-		if (!isset($res['id']))
+		$res = $this->QueryRow($query);
+		if ($res == null || !isset($res['id']))
 			return [];
 
 		$r = $this->GetUsersGroups($res['id']);
@@ -291,12 +277,9 @@ class CTinyDb
 
 		$query = "select group_id from usergroups inner join users on group_id = users.id 
 				where user_id = $userId and users.removeDate is null";
+
 		$result = $this->Query($query);
-
-		$res = [];
-		foreach($result as $r)
-			$res[] = $r['group_id'];
-
+		$res = $result->fetchAll(PDO::FETCH_COLUMN);
 		$result->closeCursor();
 		return $res;
 	}
@@ -704,15 +687,9 @@ class CTinyDb
         if ($update)
             return $result->rowCount() == 1;
 
-        foreach($result as $r)
-        {
-            $res = $r['login'];
-            $result->closeCursor();
-
-            return $res;
-        }
-
-        return false;
+        $res = $result->fetch(PDO::FETCH_ASSOC);
+        $result->closeCursor();
+        return $res == null ? false : $res['login'];
     }
 
     function AddLogRecord(CTinyAuth $auth, $level, $operation, $message)
@@ -818,11 +795,9 @@ class CTinyDb
                     order by $column";
 
         $result = $this->Query($query);
-        $ops = [];
-        foreach($result as $r)
-            $ops[] = $r[$column];
-
-        return $ops;
+        $res = $result->fetchAll(PDO::FETCH_COLUMN);
+        $result->closeCursor();
+        return $res;
     }
 }
 
