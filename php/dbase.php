@@ -87,11 +87,7 @@ class CMooseDb extends CTinyDb
                inner join users g on g.id = ug.group_id
                where o.id = $id and g.removeDate is null and ug.user_id = $uid";
 
-        $res = $this->Query($query);
-        $r = $res->fetch(PDO::FETCH_ASSOC);
-        $res->closeCursor();
-
-        return $r['cn'] > 0;
+        return $this->QueryColumn($query) > 0;
     }
 
     protected function CanModifySms($auth, $rawSmsId)
@@ -552,7 +548,7 @@ class CMooseDb extends CTinyDb
 
         $rights = $this->GetRights($auth);
 
-        $cond =  ($inactive === true) ? "true" : "removeDate is null";
+        $cond = ($inactive === true) ? "true" : "removeDate is null";
 
         $accessCond = 'true';
         $accessJoin = '';
@@ -655,6 +651,7 @@ class CMooseDb extends CTinyDb
             $mMax = $c['mMax'];
             $conf[] = $c['raw_sms_id'];
         }
+        $conflict->closeCursor();
         if (count($conf) > 0)
         {
             $msg = "Смс rawSmsId=$rawSmsId пересекается по времени $mMin - $mMax с смс " .implode(", ", $conf);
@@ -738,7 +735,7 @@ class CMooseDb extends CTinyDb
             if (!isset($res[$moose]))
                 $res[$moose] = [];
 
-            $rec = [$row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0];
+            $rec = [+$row['lat'], +$row['lon'], +$row['stamp'], $row['valid'] ? 1 : 0];
             if ($row['comment'] != null)
             {
                 $rec[] = $row['comment'];
@@ -794,8 +791,7 @@ class CMooseDb extends CTinyDb
             if (!isset($res[$moose]))
                 $res[$moose] = [];
 
-            //$res[$moose][] = new CActivity($row);
-            $res[$moose][] = [$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
+            $res[$moose][] = [+$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
         }
         $result->closeCursor();
 
@@ -833,7 +829,7 @@ class CMooseDb extends CTinyDb
         $rec = null;
         foreach ($result as $row)
         {
-            $rec = [$row['lat'], $row['lon'], $row['stamp'], $row['valid'] ? 1 : 0];
+            $rec = [+$row['lat'], +$row['lon'], +$row['stamp'], $row['valid'] ? 1 : 0];
             if ($row['comment'] != null)
             {
                 $rec[] = $row['comment'];
@@ -867,7 +863,7 @@ class CMooseDb extends CTinyDb
 
         $res = [];
         foreach ($result as $row)
-            $res[] = [$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
+            $res[] = [+$row['stamp'], $row['active'] ? 1 : 0, $row['valid'] ? 1 : 0];
         $result->closeCursor();
         $this->SetSessionTimezone($oldTz);
 
@@ -885,10 +881,7 @@ class CMooseDb extends CTinyDb
 				inner join sms on rs.id = sms.raw_sms_id				
 				where rs.id = $rawSmsId and (sms.moose is null and {$pAccess['cond']} or {$mAccess['cond']}) ";
 
-        $result = $this->Query($query);
-        $res = $result->fetch(PDO::FETCH_ASSOC);
-        $result->closeCursor();
-        return $res;
+        return $this->QueryRow($query);
     }
     // endregion
 
@@ -1331,13 +1324,11 @@ class CMooseDb extends CTinyDb
 				 {$access['join']}
 				left join moose on phone_id = p.id
 				where $qPhone <> '' and p.canonical = $qPhone and {$access['cond']}";
-        $result = $this->Query($query);
 
-        $res = $result->fetch(PDO::FETCH_ASSOC);
+        $res = $this->QueryRow($query);
         if ($res == null)
             $this->Err("Нет доступных телефонов с номером '$phone'");
 
-        $result->closeCursor();
         return $res;
     }
 
@@ -1347,13 +1338,12 @@ class CMooseDb extends CTinyDb
                     from phone p
                     inner join moose m on m.phone_id = p.id
                   where m.id = $mooseId";
-        $result = $this->Query($query);
-        $res = $result->fetch(PDO::FETCH_ASSOC);
+
+        $res = $this->QueryRow($query);
         if ($res == null)
             return null;
 
         $res['msg'] = "'{$res['phone']}' id={$res['id']}";
-        $result->closeCursor();
         return $res;
     }
 
@@ -1369,14 +1359,10 @@ class CMooseDb extends CTinyDb
 				from moose m
 				 {$access['join']}
 				where m.name = $qMoose and {$access['cond']}";
-        $result = $this->Query($query);
-
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if ($row == null)
+        $res = $this->QueryColumn($query);
+        if ($res == null)
             $this->Err("Нет доступных животных с именем '$qMoose'");
 
-        $res = $row['id'];
-        $result->closeCursor();
         return $res;
     }
 
@@ -1384,13 +1370,11 @@ class CMooseDb extends CTinyDb
     {
         $query = "select id, name from moose
                   where phone_id = $phoneId";
-        $result = $this->Query($query);
-        $res = $result->fetch(PDO::FETCH_ASSOC);
+        $res = $this->QueryRow($query);
         if ($res == null)
             return null;
 
         $res['msg'] = "'{$res['name']}' id={$res['id']}";
-        $result->closeCursor();
         return $res;
     }
 
