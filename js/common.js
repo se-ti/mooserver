@@ -241,7 +241,7 @@ function $ajax(method, param, success, fail)
             }
 
             var rt = jqXHR.responseText || '';
-            var respStat = jqXHR.status == 200 ? String.format("response len: {0}, head: {1}...", rt.length, rt.substr(0, 50)): '';
+            var respStat = jqXHR.status == 200 ? String.format("response len: {0}, head: {1}...", rt.length, rt.substr(0, 150)): '';
 
             var reqData = this.data && method != 'login' ? String.format(', req params: {0}', this.data) : '';
 
