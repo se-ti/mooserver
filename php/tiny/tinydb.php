@@ -184,6 +184,14 @@ class CTinyDb
         return $res;
     }
 
+    protected function QueryColumnAll($query)
+    {
+        $result = $this->Query($query);
+        $res = $result->fetchAll(PDO::FETCH_COLUMN);
+        $result->closeCursor();
+        return $res;
+    }
+
 	function Version()
 	{
 		return $this->db->getAttribute(PDO::ATTR_CLIENT_VERSION);
@@ -278,10 +286,7 @@ class CTinyDb
 		$query = "select group_id from usergroups inner join users on group_id = users.id 
 				where user_id = $userId and users.removeDate is null";
 
-		$result = $this->Query($query);
-		$res = $result->fetchAll(PDO::FETCH_COLUMN);
-		$result->closeCursor();
-		return $res;
+		return $this->QueryColumnAll($query);
 	}
 
 	function UserBySession($sessionId)
@@ -794,10 +799,7 @@ class CTinyDb
                     where $where
                     order by $column";
 
-        $result = $this->Query($query);
-        $res = $result->fetchAll(PDO::FETCH_COLUMN);
-        $result->closeCursor();
-        return $res;
+        return $this->QueryColumnAll($query);
     }
 }
 

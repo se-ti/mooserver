@@ -100,16 +100,12 @@ class CMooseDb extends CTinyDb
                     left join sms s on s.raw_sms_id = rs.id
                     where rs.id = $rawSmsId";
 
-        $res = $this->Query($query);
-        foreach($res as $r)
-        {
-            $hasMoose = isset($r['moose']);
-            $can = $this->CanModify($auth, $hasMoose ? $r['moose'] : $r['phone'], $hasMoose);
-            $res->closeCursor();
+        $r = $this->QueryRow($query);
+        if ($r == null)
+            return false;
 
-            return $can;
-        }
-        return false;
+        $hasMoose = isset($r['moose']);
+        return $this->CanModify($auth, $hasMoose ? $r['moose'] : $r['phone'], $hasMoose);
     }
 
     // should be called only with verified $rawSmsIds
@@ -160,11 +156,7 @@ class CMooseDb extends CTinyDb
         $query = "select $alias.id from $table $alias
             {$res['join']}
             where {$res['cond']}";
-
-        $ids = [];
-        $result = $this->Query($query);
-        foreach ($result as $r)
-            $ids[] = $r['id'];
+        $ids = $this->QueryColumnAll($query);
 
         $res['join'] = '';
         if ($extAlias == null)
@@ -1221,11 +1213,7 @@ class CMooseDb extends CTinyDb
         $mooses = $this->GetRawSmsMooses($auth, $rawIds);
         $qRawIds = implode(', ', $rawIds);
 
-        $smsId = [];
-        $r0 = $this->Query("select id from sms where raw_sms_id in ($qRawIds)");
-        foreach ($r0 as $row)
-            $smsId[] = $row['id'];
-
+        $smsId = $this->QueryColumnAll("select id from sms where raw_sms_id in ($qRawIds)");
         if (count($smsId) > 0)
         {
             $smsIds = implode(', ', $smsId);
@@ -1584,22 +1572,19 @@ class CMooseDb extends CTinyDb
 
         $sms = null;
         $query = "select text, UNIX_TIMESTAMP(CONVERT_TZ(stamp, '+0:00', @@session.time_zone)) as ustamp, stamp, DATE_FORMAT(stamp,'%Y-%m-%dT%TZ') as sstamp from raw_sms where id = $rawSmsId";
-        $r0 = $this->Query($query);
-        foreach ($r0 as $row) {
+        $row = $this->QueryRow($query);
+        if ($row != null)
+        {
             $sms = $row['text'];
             $time = $row['ustamp'];
             $st = $row['stamp'];
             $sst = $row['sstamp'];
-            break;
         }
-        $r0->closeCursor();
+
         if ($sms == '')
             $this->Err("empty message for raswSms '$rawSmsId'");
 
-        $smsId = [];
-        $r0 = $this->Query("select id from sms where raw_sms_id = $rawSmsId");
-        foreach ($r0 as $row)
-            $smsId[] = $row['id'];
+        $smsId = $this->QueryColumnAll("select id from sms where raw_sms_id = $rawSmsId");
         if (count($smsId) > 1)
             $this->Err('too many sms ids (' . implode(', ', $smsId) . ") for raw sms $rawSmsId");
 
