@@ -152,9 +152,7 @@ class CTinyDb
 
     protected function SetSessionTimezone($tz)
     {
-        $res = $this->Query("select @@session.time_zone");
-        $old = $res->fetchColumn();
-        $res->closeCursor();
+        $old = $this->QueryColumn("select @@session.time_zone");
 
         if ($tz != 'SYSTEM')
             $tz = $this->TrimQuote($tz);
@@ -172,6 +170,22 @@ class CTinyDb
             $this->Err("Query failed: sqe: $err[0] code '$err[1]' error: $err[2] at request: \n$query");
         }
 
+        return $res;
+    }
+
+    protected function QueryRow($query)
+    {
+        $result = $this->Query($query);
+        $res = $result->fetch(PDO::FETCH_ASSOC);
+        $result->closeCursor();
+        return $res;
+    }
+
+    protected function QueryColumn($query)
+    {
+        $result = $this->Query($query);
+        $res = $result->fetchColumn();
+        $result->closeCursor();
         return $res;
     }
 
