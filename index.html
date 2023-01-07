@@ -1719,9 +1719,9 @@ CGate.prototype =
         if (rawId == null)
             return;
 
-        if (this._smsData[rawId] && this._smsData[rawId].data)
+        if (this._smsData[rawId] && this._smsData[rawId].data && e.altKey == (this._smsData[rawId].diag != undefined))
         {
-            this._drawSelectedSmses();
+            this._drawSelectedSmses(e.altKey);
             return;
         }
 
@@ -1756,7 +1756,7 @@ CGate.prototype =
         CSingleBeacon.ensureVisible(this._body.find('tr.success'));
     },
 
-    _onGetSms: function(data, req)
+    _onGetSms: function(data, req, rawResult)
     {
         var rawId = req.__rawId;
         if (this._smsData[rawId] == null) // всё сильно поменялось с момента вызова
@@ -1765,18 +1765,21 @@ CGate.prototype =
         data.id = rawId;
         data.key = 'rawSmsId';
 
-        this._smsData[rawId] = {data: data };
+        this._smsData[rawId] = {data: data, diag: rawResult.diagnostics };
 
-        this._drawSelectedSmses();
+        this._drawSelectedSmses(rawResult.diagnostics);
     },
 
-    _drawSelectedSmses: function()
+    _drawSelectedSmses: function(showDiagnostics)
     {
+        var diag = null;
         var tracks = this._getSelectedSmsIds(null)
-            .map(function(v) { return this._smsData[v] ? this._smsData[v].data : null; }, this)
+            .map(function(v) { if (!this._smsData[v]) return null; diag = this._smsData[v].diag; return this._smsData[v].data; }, this)
             .filter(function (v) { return v != null; });
 
         this._map.render(tracks);
+        if (showDiagnostics && tracks.length == 1 && diag)
+            ;                           // this._map.setStatus(diag);
     },
 
     _delClick: function(e)
