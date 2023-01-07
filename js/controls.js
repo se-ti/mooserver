@@ -1681,10 +1681,12 @@ CMooseMap = function(root, id, root2)
     this.map = null;
     this.heatMap = null;
     this._marker = null;
+    this._markerPopup = null;
     this._heatSett = null;
     this._contextMenu = null;
     this._modalEdit = null;
     this._mooseAttr = null;
+    this._statusPanel = null;
 
     this.data = [];	  // слои на карте
     this.source = null; // исходные точки
@@ -1762,13 +1764,15 @@ CMooseMap.prototype = {
 
         this._modalEdit = new CModalEdit().on_onClose(this._d_onCommentEdited);
 
-        this.map.addControl(L.control.fullscreen())
+        this._statusPanel = new (L.Control.extend(LeafTextControl))({position: 'topleft'});
+        this.map.addControl(this._statusPanel)
+            .addControl(L.control.fullscreen())
             .addControl(L.control.scale({imperial:false}));
         var ctrl = L.control.layers(layers, param).addTo(this.map);
         this._extendControls(ctrl);
         this._onToggleOverlay();
 
-        this._mooseAttr = new (L.Control.extend(LeafTextControl))({position : 'topleft'});
+        this._mooseAttr = new (L.Control.extend(LeafTextControl))({position: 'topright'});
 
         document.addEventListener('fullscreenchange', this._d_onFullScreenChanged, false);
     },
@@ -1801,8 +1805,10 @@ CMooseMap.prototype = {
 
     _onToggleOverlay: function()
     {
+        var hasHeat = this.map && this.heatMap && this.map.hasLayer(this.heatMap)
         if (this._heatSett)
-            this._heatSett.toggle(this.map && this.heatMap && this.map.hasLayer(this.heatMap));
+            this._heatSett.toggle(hasHeat);
+        this._statusPanel.toggle(!hasHeat);
     },
 
     invalidateSize: function()
@@ -1832,6 +1838,8 @@ CMooseMap.prototype = {
             this.map.closePopup();
             if (this._marker)
                 this.map.removeLayer(this._marker);
+
+            this.setStatus(null);
         }
 
         this._render();
@@ -1887,6 +1895,8 @@ CMooseMap.prototype = {
 
         if (this._mooseAttr)
             this._mooseAttr.setHtml(null);
+
+        this.setStatus(null);
 
         this.data = [];
     },
@@ -1982,6 +1992,12 @@ CMooseMap.prototype = {
         if (minTime)
             caps.unshift(String.format('c {0} по {1}', new Date(minTime).toLocaleDateString(), new Date(maxTime).toLocaleDateString()));
         this._mooseAttr.setHtml(caps);
+    },
+
+    setStatus: function(html)
+    {
+        if (this._statusPanel)
+            this._statusPanel.setHtml(html);
     },
 
     _trackStyle: function(color)
@@ -2148,8 +2164,7 @@ CMooseMap.prototype = {
         if (ll.mId == null || ll.key == null)
             return;
 
-        if (this._marker._popup) // HACK 3 !!!
-            this._marker.closePopup();
+        this._marker.closePopup();
 
         if (!this._contextMenu)
             this._initContextMenu(ll);
@@ -2183,19 +2198,25 @@ CMooseMap.prototype = {
     _onShowMarker: function()
     {
         var ll = this._marker.getLatLng();
+        this.map.panInside(ll, {padding: [26, 26]});
         this._marker.setStyle({color: this._markerColor});
-        var p = this._marker._popup;            // HACK !!!
-        if (p)
+
+        var c = String.format("{0}<br/>{1} N, {2} E", new Date(ll._time).toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
+        if (ll._cnt != null)
+            c += String.format('<br/>Активность: {2} ({0} / {1})', ll._sum || 0, ll._cnt || 0, ll._str || '');
+        this.setStatus(c);
+
+        if (ll._comment == null)
         {
-            var c = String.format("{0}<br/>{1} N, {2} E", new Date(ll._time).toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
-            if (ll._cnt != null)
-                c += String.format('<br/>Активность: {2} ({0} / {1})', ll._sum || 0, ll._cnt || 0, ll._str || '');
-
-            if (ll._comment != null)
-                c += String.format('<br/><br/>{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), new Date(ll._commentTime).toLocaleString());
-            p.setContent(c);
-
-            if (!p._isOpen)                         // HACK 2 !!!
+            this._marker.closePopup();
+            this._marker.unbindPopup();
+        }
+        else
+        {
+            if (!this._marker.getPopup())
+                this._marker.bindPopup(this._markerPopup);
+            this._markerPopup.setContent(String.format('{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), new Date(ll._commentTime).toLocaleString()));
+            if (!this._markerPopup.isOpen())
                 this._marker.openPopup();
         }
 
@@ -2204,9 +2225,9 @@ CMooseMap.prototype = {
 
     _initMarker: function(pt)
     {
+        this._markerPopup = L.popup({closeButton: false, offset: L.point(0, -3)});
         this._marker = this._createMarker(pt, this._markerColor);
 
-        this._marker.bindPopup('', {closeButton: false, offset: L.point(0, -3)});
         this._marker.on('mouseover', this._d_onShowMarker)
             .on('contextmenu', this._d_onContextMenu)
             .on('click', this._d_onContextMenu);
@@ -2278,6 +2299,7 @@ CMooseMap.prototype = {
         else if (has && e.latlng.distanceTo(this._marker.getLatLng()) > lim * 2.5)
         {
             this.map.removeLayer(this._marker);
+            this.setStatus(null);
             this._updateTail(null);
         }
     },
@@ -2487,7 +2509,7 @@ CMooseMapHelper.prototype =
 
         jqXHR.__mapControl.render([data]);
         if (result.diagnostics)
-            ;   // show diagnostics
+            ;   // jqXHR.__mapControl.setStatus(result.diagnostics);
     }
 }
 
@@ -3297,7 +3319,6 @@ CModalEdit = function(opt)
 
 CModalEdit.prototype =
 {
-
     _tpl: '<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="CModalEdit-ModalCenterTitle" aria-hidden="true"> ' +
     '  <div class="modal-dialog modal-dialog-centered" role="document">' +
     '    <div class="modal-content">' +
@@ -3399,6 +3420,7 @@ var LeafTextControl = {
             root: null,
             ele: null
         };
+        this._visible = true;
 
         this._html = options.html || '';
 
@@ -3407,7 +3429,17 @@ var LeafTextControl = {
 
     onAdd: function (map)
     {
-        this._c.root = $('<div class="leaflet-control " style="display:none; position: relative; left: 3em; top: -15.3ex; padding: 0.2ex 0.5em; font-size: larger; text-shadow: white 1px 1px 1px, white -1px 1px, white 1px -1px, white -1px -1px; background-color: rgba(255,255,255,0.5)"></div>');
+        var opt = this.options;
+        var left = opt.position == 'topleft' || opt.position == 'bottomleft';
+        var ext = left ? {position: 'absolute', left: '3.15em', 'white-space': 'nowrap'} : {float: 'right'};
+
+        var style = 'display:none; clear:none; position: relative; padding: 0.2ex 0.5em; font-size: -larger; ' +
+            'text-shadow: white 1px 1px 1px, white -1px 1px, white 1px -1px, white -1px -1px; ' +
+            'box-shadow: 0 1px 5px rgb(0 0 0 / 40%);' +
+            'background-color: rgba(255,255,255,0.6);';
+
+        this._c.root = $('<div class="leaflet-control leaflet-bar" style="' + style + '"></div>')
+            .css(ext);
         this._update();
 
         return this._c.root[0];
@@ -3417,6 +3449,12 @@ var LeafTextControl = {
     {
         this._c.root.empty();
         this._c.ele = null;
+    },
+
+    toggle: function(visible)
+    {
+        this._visible = visible !== undefined ? visible : !this._visible;
+        return this._update();
     },
 
     setHtml: function(html)
@@ -3429,7 +3467,7 @@ var LeafTextControl = {
 
     _update: function()
     {
-        this._c.root && this._c.root.toggle((this._html || '') != '')
+        this._c.root && this._c.root.toggle(this._visible && (this._html || '') != '')
             .html(this._html);
         return this;
     }
