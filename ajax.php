@@ -565,8 +565,8 @@ function addLog()
 
 function requestIpStat($long = false)
 {
-    $headers = $long ? ['HTTP_USER_AGENT' => 'UA', 'HTTP_ACCEPT_LANGUAGE' => 'lang', 'HTTP_X_REAL_IP' => 'real IP', 'HTTP_X_FORWARDED_FOR' => 'xForwardFor', 'HTTP_REFERER' => 'referer'] :
-        ['HTTP_ACCEPT_LANGUAGE' => 'lang', 'HTTP_X_REAL_IP' => 'ip', 'HTTP_X_FORWARDED_FOR' => 'xfw'];
+    $headers = $long ? ['HTTP_USER_AGENT' => 'UA', 'HTTP_ACCEPT_LANGUAGE' => 'lang', 'HTTP_X_REAL_IP' => 'real IP', 'REMOTE_ADDR' => 'real IP', 'HTTP_X_FORWARDED_FOR' => 'xForwardFor', 'HTTP_REFERER' => 'referer'] :
+        ['HTTP_ACCEPT_LANGUAGE' => 'lang', 'HTTP_X_REAL_IP' => 'ip', 'REMOTE_ADDR' => 'ip', 'HTTP_X_FORWARDED_FOR' => 'xfw'];
 
     $sep = $long ? "\n": ', ';
     $ext = [];
