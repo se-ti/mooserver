@@ -24,6 +24,7 @@ class CMooseSMS
 	
 	var $TestValue;
 	var $TestValue2;
+	var $HasTechData;
 	
 	var $IsOk;
 	var $ErrorMessage;
@@ -43,6 +44,7 @@ class CMooseSMS
 		
 		$this->IsOk = TRUE;
 		$this->ErrorMessage = '';
+		$this->HasTechData = false;
 		
 		$this->text = $text;
 		
@@ -247,7 +249,7 @@ class CMooseSMS
 	{
 		return $this->activity != null && count($this->activity) > 0 || $this->points != null && count($this->points) > 0;
 	}
-	
+
 	public function GetErrorMessage ()
 	{
 		return $this->ErrorMessage;
@@ -454,9 +456,11 @@ class CMooseSMSv3 extends CMooseSMS
 		$this->gpsOn = CMooseSMS::a64bitstoi ( $this->TechHeaderText, 12, 12 );
 		$this->volt = CMooseSMS::a64bitstoi ( $this->TechHeaderText, 6, 6 );
 		$this->temp = CMooseSMS::a64bitstoi ( $this->TechHeaderText, 0, 6 );
-		
-		if ( $this->id === FALSE || $this->gsmTries === FALSE || $this->gpsOn === FALSE ||
-			 $this->volt === FALSE || $this->temp === FALSE )
+
+		$this->HasTechData = $this->id !== FALSE && $this->gsmTries !== FALSE && $this->gpsOn !== FALSE &&
+			$this->volt !== FALSE && $this->temp !== FALSE;
+
+		if (!$this->HasTechData)
 		{
 			$this->SetError ( "Message processing failed (internal error in tech header routine)! header: '$this->TechHeaderText'" );
 			return;
@@ -486,20 +490,20 @@ class CMooseSMSv3 extends CMooseSMS
 		if ($diagLevel > 0)
 			$this->AddDiag("<br/>pts hdr: '$this->PointsHeaderText', doy: $DayOfYear, minutesOfDay: " . $TimeOfDayIn10MinIntervals * 60 . " ct: $this->CompressionType, cf: $this->CompressionFactor");
 		
-		if ( $LatDegree === NULL || $LatPartsOfDegree === NULL || $LongDegree === NULL ||
-			 $LongPartsOfDegree === NULL || $DayOfYear === NULL || $TimeOfDayIn10MinIntervals === NULL ||
-			 $this->CompressionType === NULL || $this->CompressionFactor === NULL )
+		if ( $LatDegree === false || $LatPartsOfDegree === false || $LongDegree === false ||
+			 $LongPartsOfDegree === false || $DayOfYear === false || $TimeOfDayIn10MinIntervals === false ||
+			 $this->CompressionType === false || $this->CompressionFactor === false )
 		{
 			$this->SetError ( 'Message processing failed (internal error in points header routine)!' );
 			return;
 		}
 		
-		if ( $LatDegree == 0 && $LatPartsOfDegree==0 && $LongDegree==0 && $LongPartsOfDegree==0 &&
-		      $DayOfYear==0 && $TimeOfDayIn10MinIntervals==0 ) // This is a 'null point'
-			  {
-			  $this->SetError ( "There are no any meaning points in the message." );
-			  return;
-			  }
+		if ($LatDegree == 0 && $LatPartsOfDegree == 0 && $LongDegree == 0 && $LongPartsOfDegree == 0 &&
+		      $DayOfYear == 0 && $TimeOfDayIn10MinIntervals == 0) // This is a 'null point'
+		{
+			$this->SetError ( "There are no any meaning points in the message." );
+			return;
+		}
 		
 		$NewPoint[0] = $LatDegree + $LatPartsOfDegree/65536;
 		$NewPoint[1] = $LongDegree + $LongPartsOfDegree/32768;
@@ -562,7 +566,7 @@ class CMooseSMSv3 extends CMooseSMS
 			$Y = CMooseSMS::a64bitstoi ( $PointText, $dTimeLength, $YFieldLength );
 			$dTime = CMooseSMS::a64bitstoi ( $PointText, 0, $dTimeLength );
 			
-			if ($X === NULL || $Y === NULL || $dTime === NULL)
+			if ($X === false || $Y === false || $dTime === false)
 				{
 					$this->SetError ( "Message processing failed (internal error in points routine)!" );
 					return;
@@ -604,20 +608,20 @@ class CMooseSMSv3 extends CMooseSMS
 		$this->TestValue2 .= $this->ActivityText;
 		$this->TestValue2 .= '.';
 		
-		$ActivityDay = CMooseSMS::a64bitstoi ( $this->ActivityText, 24*6 , 6 );
+		$ActivityDay = CMooseSMS::a64bitstoi ($this->ActivityText, 24*6, 6);
 		
-		if ( $ActivityDay === NULL )
+		if ($ActivityDay === false)
 		{
-			$this->SetError ( "Message processing failed (internal error in activity routine)! Activity text: '$this->ActivityText'" );
+			$this->SetError ( "Message processing failed (internal error in activity routine)! Activity text: '$this->ActivityText'");
 			return;
 		}
 
 		if ($diagLevel > 0)
 			$this->AddDiag("<br/> act: $this->ActivityText, ActDay: $ActivityDay");
 		
-		if ( $ActivityDay >= 32 ) //These values are reserved for special usage (tests etc.)
+		if ($ActivityDay >= 32) //These values are reserved for special usage (tests etc.)
 		{
-			if ( $ActivityDay == 32 )
+			if ($ActivityDay == 32)
 				$this->ProcessReloadDiagnostic ();
 			else
 				$this->AddDiag("incorrect ActivityDay: $ActivityDay");
@@ -644,9 +648,9 @@ class CMooseSMSv3 extends CMooseSMS
 		for ( $i=0 ; $i<24 ; $i++ )
 			for ( $j=0 ; $j<6 ; $j++ )
 			{
-				$CurrentActivity[1] = CMooseSMS::a64bitstoi ( $this->ActivityText, (23-$i)*6 + $j, 1 );
-				$CurrentActivity[0] = (($i < $this->RotateHour ) ? $ActivityDate2 : $ActivityDate1 ) + $i*60*60 + $j*10*60;
-				if ( $CurrentActivity[1] === NULL )
+				$CurrentActivity[1] = CMooseSMS::a64bitstoi ($this->ActivityText, (23-$i)*6 + $j, 1);
+				$CurrentActivity[0] = (($i < $this->RotateHour) ? $ActivityDate2 : $ActivityDate1) + $i*60*60 + $j*10*60;
+				if ($CurrentActivity[1] === false)
 				{
 					$this->SetError ( "Message processing failed (internal error in activity routine)!" );
 					return;
@@ -657,7 +661,7 @@ class CMooseSMSv3 extends CMooseSMS
 			}
 
 		if ($diagLevel > 0) {
-			$dtStr = gmdate('Y-m-d',$ActivityDate1) .'T'. gmdate('H:i:s', $ActivityDate1). 'Z';
+			$dtStr = gmdate('Y-m-d', $ActivityDate1) .'T'. gmdate('H:i:s', $ActivityDate1). 'Z';
 			$this->AddDiag("refTime: $refTime,  hasPoints: " . ($hasPoints ? 1 : 0) . ", actDate: $ActivityDate1 ($dtStr)");
 		}
 	}
@@ -672,11 +676,24 @@ class CMooseSMSv3 extends CMooseSMS
 		$second = CMooseSMS::a64bitstoi($text, 42, 6);
 
 		$reloadsCounter = CMooseSMS::a64bitstoi($text, 10, 8);
+
+		if ($day === false || $hour === false || $minute === false || $second === false || $reloadsCounter == false)
+		{
+			$this->SetError ( "Reload day/time processing failed! header: '$text'" );
+			return;
+		}
+
 		$this->AddDiag("Reload on day $day at $hour:$minute:$second GMT, reloads: $reloadsCounter");
 
 		$rCon = CMooseSMS::a64bitstoi($text, 26, 16);
 		$runPoint = CMooseSMS::a64bitstoi($text, 2, 8);
 		$sysState = CMooseSMS::a64bitstoi($text, 18, 8);
+
+		if ($rCon === false || $runPoint === false || $sysState === false)
+		{
+			$this->SetError ("Reload reason processing failed! header: '$text'" );
+			return;
+		}
 
 		$occured = [];
 		foreach (self::$ReloadReasons as $k => $v)
@@ -849,6 +866,8 @@ class CMooseSMSv1 extends CMooseSMS
             $this->temp = self::a64toi($matches[8]);
             if ($this->temp > 30)
                 $this->temp -= 65;
+
+			$this->HasTechData = true;
         }
         else if (preg_match($ericRe, $this->TechHeaderText, $matches))
         {
@@ -861,6 +880,8 @@ class CMooseSMSv1 extends CMooseSMS
             $this->gpsOn = self::a64toi($matches[5]);
             $this->gsmOn = self::a64toi($matches[6]);
             $this->volt = self::a64toi($matches[7]) * 0.1 + 6;
+
+			$this->HasTechData = true;
         }
         else
             $this->SetError("error parsing header");
