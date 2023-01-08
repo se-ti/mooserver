@@ -52,7 +52,7 @@
     })();
 </script>
 <script src="js/common.js"></script>
-    <script src="js/lineedit.js"></script>
+<script src="js/lineedit.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/admin.js"></script>
 <script src="lib/jquery-3.4.1.min.js"></script>
@@ -1207,7 +1207,7 @@ CSingleBeacon.prototype =
 
     _init: function(after)
     {
-        this._elem = $(this._tpl).insertAfter(after).hide();
+        this._elem = $(this._tpl_fl).insertAfter(after).hide();
         var row = this._elem.find('.row');
         this._rm = $(this._tpl_right).appendTo(row);
         var je = $(this._tpl_main)
@@ -1230,7 +1230,7 @@ CSingleBeacon.prototype =
             .click($cd(this, this._export))
             .css('margin-top', '1.5ex');
 
-        var holder = $('<div class="map-panel moo-affix" data-spy="-affix"></div>')
+        var holder = $('<div class="moo-affix col-xs-12 col-sm-3" data-spy="-affix"></div>')
                 .appendTo(this._rm);
 
         this._map = new CMooseMap(holder, 'map3', null);
