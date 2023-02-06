@@ -333,7 +333,7 @@ class CTinyAuth
     {
         $part = pathinfo($_SERVER['SCRIPT_NAME'], PATHINFO_DIRNAME);
         $port = isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] != 80 ? ":{$_SERVER['PORT']}" : '';
-        $res = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . "://{$_SERVER['SERVER_NAME']}$port$part/index.html#confirm/";
+        $res = "https://{$_SERVER['SERVER_NAME']}$port$part/index.html#confirm/";
         return $res;
     }
 
