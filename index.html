@@ -763,6 +763,12 @@ CMoose.prototype =
                     delayLoad.push(res.id);
             }
 
+            if (!mooseHash[res.id])
+            {
+                trace(String.format('empty mooseHash for moose id {0}\ninaccessible moose after login / logout?', res.id), true);
+                return;
+            }
+
             var cap = [];
             ['name', 'phone'].forEach(function(prop) {if (mooseHash[res.id][prop]) cap.push(mooseHash[res.id][prop])});
             this.source.push({id: res.id, key: 'mooseId', data: gtd, caption: cap.join(', ')});
