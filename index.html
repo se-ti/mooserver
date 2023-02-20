@@ -77,7 +77,27 @@ table.hideControls tr:hover > td > .note {visibility: hidden;}
 
 div.bold {font-weight: bold;}
 
-.mainmap {min-height:700px; max-height:1024px;}
+.fullheightMap,
+.fullheightMap body,
+.fullheightMap body .container-fluid,
+.fullheightMap body .container-fluid .row,
+.fullheightMap body .container-fluid .row > div {
+    height: 100%
+}
+
+.fullheightMap .mapSideMenu {
+    overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+    .fullheightMap .mapSideMenu {
+        height: auto !important;
+        margin-bottom: 1em;
+    }
+}
+
+.mainmap {height: 95%; height: calc(100% - 2.1em);}
+
 .map2 {min-height:450px; max-height:500px;}
 .map3 {min-height:400px; max-height:400px; width:100%; margin: 1.5em 0;}
 
@@ -174,7 +194,7 @@ table.wide-content {
     overflow-x: auto;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     table.wide-content {
         display: block;
     }
@@ -211,8 +231,7 @@ table.wide-content {
     <div class="container" id='description' style="display: none"></div>
     <div class="container" id='contacts' style="display: none"></div>
     <div class="container" id='beaconspec' style="display: none"></div>
-
-    <div class="container-fluid" >
+    <!-- <div class="container-fluid" >
         <div class="row" id="main">
         </div>
     </div>
@@ -223,10 +242,7 @@ table.wide-content {
             </div>
         </div>
     </div>
-
-
-	
-
+-->
 <script>
 
 
@@ -555,7 +571,7 @@ CMoose.prototype =
 		this._elem = $(this._tpl_fl).insertAfter(after).hide();
 		var row = this._elem.find('.row');
 
-        var rm = $(this._tpl_right).appendTo(row); /*правое меню*/
+        var rm = $(this._tpl_right).addClass('mapSideMenu').appendTo(row); /*правое меню*/
 		var je = $(this._tpl_main).appendTo(row);
 
         this.periodChooser = new CPeriodChooser(rm)
@@ -576,10 +592,17 @@ CMoose.prototype =
 		this.send = new CSmsControl(rm)
 			.on_sendSuccess($cd(this, this.reRead))
 			.on_change($cd(this, this._phoneSelect));
-        $('<div class="pull-right text-muted small"><small>программирование: <a href="https://github.com/se-ti/">se-ti</a>, <a href="https://github.com/av-p/">AVP</a>, маяки: <a href="https://github.com/av-p/">AVP</a></small></div>')
+        $('<div class="pull-right text-muted small" style="margin-left: 1em;"><small>программирование: <a href="https://github.com/se-ti/">se-ti</a>, <a href="https://github.com/av-p/">AVP</a>, маяки: <a href="https://github.com/av-p/">AVP</a></small></div>')
                 .appendTo(je);
 
-        this.tipControl = new CTipControl($('<div></div>').appendTo(je),
+        var styles = {
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+            maxHeight: '2.6ex'
+        };
+
+        this.tipControl = new CTipControl($('<div></div>').css(styles).appendTo(je),
                 ['Используйте клавиши <small><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></small> для перемещения вдоль трека',
                     'Зажав <small><kbd>Ctrl</kbd></small> можно выбрать треки нескольких животных',
                     'Чтобы прокомментировать трек нужно залогиниться, навести мышь на точку трека и нажать правую кнопку']);
@@ -590,6 +613,8 @@ CMoose.prototype =
 		CPage.callBaseMethod(this, 'activate', [s]);
         this._reloadMoose();
 
+        $(document.firstElementChild).addClass('fullheightMap');
+
         if (this.map)
 			this.map.invalidateSize();
         if (this.periodChooser)
@@ -598,6 +623,12 @@ CMoose.prototype =
             this.send.collapse(true);
         this.tipControl.random();
 	},
+
+    deactivate: function()
+    {
+        $(document.firstElementChild).removeClass('fullheightMap');
+        CPage.callBaseMethod(this, 'deactivate');
+    },
 
 	setRights: function(rights)
 	{
