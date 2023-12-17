@@ -227,21 +227,23 @@ function $ajax(method, param, success, fail)
 
     fail = fail || function(jqXHR, textStatus, errorThrown)
         {
-            if (jqXHR && jqXHR.status == 401 && jqXHR.responseJSON && jqXHR.responseJSON.error)
+            var jsonError = jqXHR.responseJSON && jqXHR.responseJSON.error ? jqXHR.responseJSON.error : null
+            if (jqXHR && jqXHR.status == 401 && jsonError)
             {
                 window.location.hash = '';
 
                 if (window.CApp)
                 {
-                    CApp.single().error(String.toHTML(jqXHR.responseJSON.error));
+                    CApp.single().error(String.toHTML(jsonError));
                     CApp.single().reset();
                 }
 
                 return;
             }
 
+            var limit = 200;
             var rt = jqXHR.responseText || '';
-            var respStat = jqXHR.status == 200 ? String.format("response len: {0}, head: {1}...", rt.length, rt.substr(0, 150)): '';
+            var respStat = jsonError != null ? '"' + jsonError + '"' : String.format("response len: {0}, head: {1}{2} ", rt.length, rt.substr(0, limit), limit < rt ? '...' : '');
 
             var reqData = this.data && method != 'login' ? String.format(', req params: {0}', this.data) : '';
 

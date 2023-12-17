@@ -101,6 +101,9 @@ catch (Exception $e)
 
 function test()
 {
+    http_response_code(555); // 403 -- forbidden
+    die(makeError("turned off"));
+
     //get_timezone();
     /*return date_default_timezone_get();
     return '';*/
