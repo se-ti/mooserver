@@ -2201,7 +2201,7 @@ CMooseMap.prototype = {
         this.map.panInside(ll, {padding: [26, 26]});
         this._marker.setStyle({color: this._markerColor});
 
-        var c = String.format("{0}<br/>{1} N, {2} E", new Date(ll._time).toLocaleString(), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
+        var c = String.format("{0}<br/>{1} N, {2} E", new Date(ll._time).toLocaleString(navigator.language), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
         if (ll._cnt != null)
             c += String.format('<br/>Активность: {2} ({0} / {1})', ll._sum || 0, ll._cnt || 0, ll._str || '');
         this.setStatus(c);
@@ -2215,7 +2215,7 @@ CMooseMap.prototype = {
         {
             if (!this._marker.getPopup())
                 this._marker.bindPopup(this._markerPopup);
-            this._markerPopup.setContent(String.format('{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), new Date(ll._commentTime).toLocaleString()));
+            this._markerPopup.setContent(String.format('{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), new Date(ll._commentTime).toLocaleString(navigator.language)));
             if (!this._markerPopup.isOpen())
                 this._marker.openPopup();
         }

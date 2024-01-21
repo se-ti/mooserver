@@ -1070,6 +1070,7 @@ CBeacon.prototype = {
         var note ='<td><div class="note">вн. id<br/>V<br/>T&deg; C</div></td>';
 
         var text = (this._search.val() || '').toLocaleLowerCase().trim();
+        var dtf = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium'});
         for (i = 0; i < result.length; i ++)
         {
             var item = result[i];
@@ -1086,7 +1087,7 @@ CBeacon.prototype = {
             var line = String.format('<td{0}><h4>{1}</h4>{2}</td>{3}', cls, String.toHTML(phoneText), sfx, note);
 
             for (var j = 0; j < dates.length; j++)
-                line += this._renderItem(this._findItem(dates[j], phd), j > 0);
+                line += this._renderItem(this._findItem(dates[j], phd), j > 0, dtf);
 
             body += '<tr data-id="' + item.id + '" class="clickable">' + line + '</tr>';
         }
@@ -1114,7 +1115,7 @@ CBeacon.prototype = {
         return null;
     },
 
-    _renderItem: function(item, highlightEmpty)
+    _renderItem: function(item, highlightEmpty, dateTimeFormat)
     {
         if (!item)
             return '<td' + (highlightEmpty ? ' class="warning"' : '') + '>&nbsp;</td>';
@@ -1127,7 +1128,7 @@ CBeacon.prototype = {
             res += String.format('<div{0}>{1}</div>', cls, String.format(item[k]));
         }
 
-        return String.format('<td title="получено: {0}" data-id="{1}">{2}</td>', new Date(item[0]).toLocaleString(), item[7], res);
+        return String.format('<td title="получено: {0}" data-id="{1}">{2}</td>', dateTimeFormat.format(new Date(item[0])), item[7], res);
     },
 
     _clickRow: function(e)
@@ -1351,6 +1352,8 @@ CSingleBeacon.prototype =
         var moose = CApp.single().getMoose();
         (moose || []).forEach(function(v) { mooseNames[v.id] = v.name;   });
 
+        var df = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short'});
+        var dtf = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium'});
         for (var i = 0; i < result.length; i ++)
         {
             var phd = result[i].data;
@@ -1360,8 +1363,8 @@ CSingleBeacon.prototype =
 
             for(var j = 0; j < phdLen; j++)
             {
-                line = this._localeDateCell(phd[j][0], true)
-                     + this._localeDateCell(phd[j][1], false);
+                line = this._localeDateCell(phd[j][0], dtf)
+                     + this._localeDateCell(phd[j][1], df);
 
                 for (var k = 2; k < 7; k++)
                 {
@@ -1399,13 +1402,12 @@ CSingleBeacon.prototype =
         return item[idx] != null && (idx == 4 && item[idx] < CSingleBeacon.prototype.cold || idx == 3 && item[idx] < CSingleBeacon.prototype.low);
     },
 
-    _localeDateCell: function(val, full)
+    _localeDateCell: function(val, dateTimeFormat)
     {
         if (!val)
             return '<td>&lt;нет&gt;</td>';
 
-        var date = new Date(val);
-        return String.format('<td>{0}</td>', full ? date.toLocaleString() : date.toLocaleDateString());
+        return String.format('<td>{0}</td>', dateTimeFormat.format(new Date(val)));
     },
 
     _rowClick: function(e)
@@ -1588,7 +1590,9 @@ CGate.prototype =
         var it;
         var len = result.length;
         var body = '';
-        var tpl = '<tr data-id="{1}" tabindex="-1"><td>{0}</td><td>{1}</td><td>{3}<br/>{2}</td><td>{4}</td><td>{5}</a></td><td>{6}</td><td>{7}</td>{8}</tr>';
+        var df = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short' });
+        var tf = new Intl.DateTimeFormat(navigator.language, { timeStyle: 'medium' });
+        var tpl = '<tr data-id="{1}" tabindex="-1"><td>{0}</td><td>{1}</td><td>{2}<br/>{3}</td><td>{4}</td><td>{5}</a></td><td>{6}</td><td>{7}</td>{8}</tr>';
         for (var i = 0; i < len; i++)
         {
             it = result[i];
@@ -1596,7 +1600,7 @@ CGate.prototype =
             var d = new Date(it.stamp);
             var stat = this._itemStatus(it);
             var diagnose = it.diagnose ? ('<br/>' + String.makeBreakable(it.diagnose)): '';
-            body += String.format(tpl, i+1, it.id, d.toLocaleTimeString(), d.toLocaleDateString(), this._renderUser(it), CSingleBeacon.beaconHref(it.phoneId, it.phone), this._renderMoose(it), stat.html, this._renderButtons(it, stat))
+            body += String.format(tpl, i+1, it.id, df.format(d), tf.format(d), this._renderUser(it), CSingleBeacon.beaconHref(it.phoneId, it.phone), this._renderMoose(it), stat.html, this._renderButtons(it, stat))
                     + String.format('<tr data-id="{0}" tabindex="-1"><td colspan="8" class="smsText {2}"><small><small class="text-danger">{1}{3}</small></small></td></tr>', it.id, String.makeBreakable(it.text), stat.needText ? '' : 'smsSmallText', diagnose); //<br/>{3} , String.toHTML(CSingleBeacon.activityText(it.text))
         }
 

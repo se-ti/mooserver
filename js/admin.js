@@ -398,9 +398,10 @@ CLogs.prototype =
         }
 
         var self = this;
+        var dtf = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium'});
         var tpl = '<tr><td>{0}</td><td>{1}</td><td style="white-space: nowrap;">{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>';
         var body = result.map(function(it, idx) {
-            return String.format(tpl, idx + 1, it.id, new Date(it.stamp).toLocaleString()/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), self._ip2hrefs(String.toHTML(it.message)).replace(/\r?\n/gi, '<br/>'));
+            return String.format(tpl, idx + 1, it.id, dtf.format(new Date(it.stamp))/*, d.toLocaleDateString()*/, String.toHTML(it.level), String.toHTML(it.uid), String.toHTML(it.login), String.toHTML(it.duration), String.toHTML(it.op), self._ip2hrefs(String.toHTML(it.message)).replace(/\r?\n/gi, '<br/>'));
         });
         this._body.html(body.join(''));
         this._table.removeClass('hidden');
