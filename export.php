@@ -158,7 +158,7 @@ function exportTracks()
 	$moo = $db->GetMooses($auth, false);
 	
 	prepareIds();
-	$data = getData(true);
+	$data = getData(false, true);
 	if ($data == null)
 		die('no data');
 
@@ -168,7 +168,8 @@ function exportTracks()
 	{
 		$pts = '';
 		foreach($track['track'] as $point)
-			$pts.= "<trkpt lat=\"$point[0]\" lon=\"$point[1]\"><time>" . zuluTime($point[2]) . "</time></trkpt>\n";
+		    if ($point[3] == 1)     // is valid
+			    $pts.= "<trkpt lat=\"$point[0]\" lon=\"$point[1]\"><time>" . zuluTime($point[2]) . "</time></trkpt>\n";
 
 
 		$moose = mooseName($moo, $track['id']);

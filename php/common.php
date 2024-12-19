@@ -30,7 +30,7 @@ function getRights()
 }
 
 // думать про версии кеша
-function getData($forceLoadAll = false)
+function getData($forceLoadAll = false, $skipActivity = false)
 {
     global $db, $auth;
 
@@ -81,7 +81,7 @@ function getData($forceLoadAll = false)
         }
 
     $t4 = microtime(true);
-    $aData = $db->GetMooseActivity($auth, $activityIds, $start, $end);
+    $aData = $skipActivity ? null : $db->GetMooseActivity($auth, $activityIds, $start, $end);
     $t5 = microtime(true);
 
     // add activity to data
