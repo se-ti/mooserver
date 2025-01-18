@@ -530,7 +530,7 @@ class CMooseSMSv3 extends CMooseSMS
 			return;
 		}
 
-		$dSkip = 0;
+		$dInvalid = 0;
 		$PointLength = 5;
 		$XFieldLength = 11;
 		$YFieldLength = 11;
@@ -580,27 +580,26 @@ class CMooseSMSv3 extends CMooseSMS
 			$dLat=1/$Kfactor*(tan ( $X*pi()/$XFieldCapacity) + tan ( ($X+1)*pi()/$XFieldCapacity))/2;
 			$dLong=1/($LongCorrectionFactor*$Kfactor) * 
 					(tan ( $Y*pi()/$YFieldCapacity) + tan ( ($Y+1)*pi()/$YFieldCapacity))/2;
-					
-			if ( $X > -$XLimit && $X < $XLimit &&
-				 $Y > -$YLimit && $Y < $YLimit )
-			{
-				// If the value is close to the range edge, it's most probably invalid.
-				$Point[0] = $this->points[0][0] + $dLat;
-				$Point[1] = $this->points[0][1] + $dLong;
-				$Point[2] = $this->points[0][2] + $dTime*$dTimeTick;
-				$this->CheckDate($refTime, $Point[2], "point");
-				$Point[3] = 1;
 
-				$this->points[] = $Point;
-			}
-			else
+			// If the value is close to the range edge, it's most probably invalid.
+			$Point[0] = $this->points[0][0] + $dLat;
+			$Point[1] = $this->points[0][1] + $dLong;
+			$Point[2] = $this->points[0][2] + $dTime*$dTimeTick;
+			$this->CheckDate($refTime, $Point[2], "point");
+
+			$Point[3] = 1;
+			if ( $X <= -$XLimit || $X >= $XLimit ||
+				 $Y <= -$YLimit || $Y >= $YLimit )
 			{
-				$dSkip++;
+				$dInvalid++;
+				$Point[3] = 0;
 			}
+
+			$this->points[] = $Point;
 		}
 
-		if ( $dSkip > 0 )
-			$this->ProcessSkippedDiagnostic ( $dSkip );
+		if ( $dInvalid > 0 )
+			$this->ProcessAutoInvalidDiagnostic ( $dInvalid );
 	}
 	
 	protected function ProcessActivity ($diagLevel)
@@ -704,9 +703,9 @@ class CMooseSMSv3 extends CMooseSMS
 		$this->AddDiag("SysState: $sysState: ". @self::$BeaconStates[$sysState]. ", Runpoint: $runPoint: " . @self::$RunPoints[$runPoint]);
 	}
 
-	protected function ProcessSkippedDiagnostic ($numSkipped)
+	protected function ProcessAutoInvalidDiagnostic ($numInvalid)
 	{
-		$this->AddDiag("$numSkipped points skipped");
+		$this->AddDiag("$numInvalid points marked invalid");
 	}
 }
 
