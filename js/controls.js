@@ -1692,6 +1692,7 @@ CMooseMap = function(root, id, root2)
     this.source = null; // исходные точки
     this._tailLayer = null; // 7 предыдущих сегментов трека
     this._topLayer = null; // невалидные точки, точки с комментариями и т.п.
+    this._markersLayer = null; // временные маркеры
 
     this._idx = null;   // индекс текущей выделенной точки
     this._blockMarker = false;
@@ -1713,6 +1714,7 @@ CMooseMap = function(root, id, root2)
     this._d_onToggleValid = $cd(this, this._onToggleValid);
     this._d_onCommentPoint = $cd(this, this._onCommentPoint);
     this._d_onContextMenu = $cd(this, this._onContextMenu);
+    this._d_onMapClick = $cd(this, this._onMapClick);
     this._d_onToggleOverlay = $cd(this, this._onToggleOverlay);
     this._d_onCommentEdited = $cd(this, this._onCommentEdited);
     this._d_onFullScreenChanged = $cd(this, this._onFullScreenChanged);
@@ -1767,7 +1769,9 @@ CMooseMap.prototype = {
         this._statusPanel = new (L.Control.extend(LeafTextControl))({position: 'topleft'});
         this.map.addControl(this._statusPanel)
             .addControl(L.control.fullscreen())
-            .addControl(L.control.scale({imperial:false}));
+            .addControl(L.control.scale({imperial:false}))
+            .on('click', this._d_onMapClick);
+
         var ctrl = L.control.layers(layers, param).addTo(this.map);
         this._extendControls(ctrl);
         this._onToggleOverlay();
@@ -1890,6 +1894,9 @@ CMooseMap.prototype = {
         if (this._topLayer)
             this._topLayer.clearLayers();
 
+        if (this._markersLayer)
+            this._markersLayer.clearLayers();
+
         if (this._marker)
             this.map.removeLayer(this._marker);
 
@@ -1927,6 +1934,11 @@ CMooseMap.prototype = {
             this._topLayer = L.layerGroup();
         else
             this.map.removeLayer(this._topLayer);
+
+        if (!this._markersLayer)
+            this._markersLayer = L.layerGroup();
+        else
+            this.map.removeLayer(this._markersLayer);
 
         var minTime = null;
         var maxTime = null;
@@ -1984,9 +1996,9 @@ CMooseMap.prototype = {
         if (showHeat)
             this.map.addLayer(this.heatMap);
 
-        this.map.addLayer(this._tailLayer);
-        //if (this._showInvalid)
-            this.map.addLayer(this._topLayer);
+        this.map.addLayer(this._tailLayer)
+            .addLayer(this._topLayer)
+            .addLayer(this._markersLayer);
 
         var caps = (data || []).map(function(d) {return String.toHTML((d.caption || '').trim());});
         if (minTime)
@@ -2049,7 +2061,7 @@ CMooseMap.prototype = {
         if (len == 0)
             return;
 
-        this._idx = this._idx == null ?  0 : (this._idx + shift);
+        this._idx = this._idx == null ? 0 : (this._idx + shift);
         if (this._idx >= len)
             this._idx = 0;
         else if (this._idx < 0)
@@ -2063,7 +2075,7 @@ CMooseMap.prototype = {
         if (!this.map.hasLayer(this._marker))
             this.map.addLayer(this._marker);
 
-        this._onShowMarker();
+        this._showMarker(this._marker);
     },
 
     _initContextMenu: function(latlng)
@@ -2142,29 +2154,57 @@ CMooseMap.prototype = {
         this.update();
     },
 
+    _onMapClick: function(e)
+    {
+        if (this._markersLayer)
+            this._markersLayer.clearLayers();
+    },
+
     _onContextMenu: function(e)
     {
         var ll;
+        var marker = e.sourceTarget; // this._marker
+
         if (e.originalEvent.button != 2)
         {
             if (this._marker)
             {
-                this._marker.setStyle({color: this._activeMarker});
                 ll = this._marker.getLatLng();
                 if (ll._idx != null)
                     this._idx = ll._idx;
+
+                var lim = this.map.getZoom() > 13 ? 20 : 50;
+                var nearest = this._nearestPts(ll, lim);
+                //var dist = nearest ? nearest.__dist : 10000;
+
+                if (nearest && this._markersLayer)
+                {
+                    this._markersLayer.clearLayers();
+                    this._showStar(nearest);    // обновлять всегда
+
+                    var min = lim + 1;
+                    var t = this;
+                    var nearestM = this._marker;
+                    ll = marker.getLatLng();
+                    this._markersLayer.eachLayer(function(l) { var ll2 = l.getLatLng(); var d = ll2.distanceTo(ll); if (d < min) { min = d; nearestM = l; if (ll2._idx !== null) t._idx = ll2._idx; } });
+
+                    window.setTimeout(function() {nearestM.setStyle({color: t._activeMarker});}, 0); // ??? почему потребовался timeout?
+                }
+                else
+                    this._marker.setStyle({color: this._activeMarker});
             }
+            L.DomEvent.stop(e);
             return;
         }
 
         if (!this._canToggle && !this._canComment)
             return;
 
-        ll = this._marker.getLatLng();
+        ll = marker.getLatLng();
         if (ll.mId == null || ll.key == null)
             return;
 
-        this._marker.closePopup();
+        marker.closePopup();
 
         if (!this._contextMenu)
             this._initContextMenu(ll);
@@ -2181,7 +2221,7 @@ CMooseMap.prototype = {
                 content.append('<br/>');
             $(String.format('<span class="spanLink">{0}</span>', (ll._comment || '') == '' ? 'Комментировать' : 'Изменить комментарий'))
                 .appendTo(content)
-                .click($cd({ctx: this, latlng:ll}, this._editComment));
+                .click($cd({ctx: this, latlng: ll}, this._editComment));
         }
 
         this._contextMenu.options.offset = L.point(ll._valid ? 93 : 67, 30);
@@ -2195,11 +2235,16 @@ CMooseMap.prototype = {
         e.originalEvent.preventDefault();
     },
 
-    _onShowMarker: function()
+    _onShowMarker: function(e)
     {
-        var ll = this._marker.getLatLng();
+        this._showMarker(e.sourceTarget/* this._marker*/);
+    },
+
+    _showMarker: function(marker)
+    {
+        var ll = marker.getLatLng();
         this.map.panInside(ll, {padding: [26, 26]});
-        this._marker.setStyle({color: this._markerColor});
+        marker.setStyle({color: this._markerColor});
 
         var c = String.format("{0}<br/>{1} N, {2} E", new Date(ll._time).toLocaleString(navigator.language), L.Util.formatNum(ll.lat, 7), L.Util.formatNum(ll.lng, 7));
         if (ll._cnt != null)
@@ -2208,16 +2253,16 @@ CMooseMap.prototype = {
 
         if (ll._comment == null)
         {
-            this._marker.closePopup();
-            this._marker.unbindPopup();
+            marker.closePopup();
+            marker.unbindPopup();
         }
         else
         {
-            if (!this._marker.getPopup())
-                this._marker.bindPopup(this._markerPopup);
+            if (!marker.getPopup())
+                marker.bindPopup(this._markerPopup);
             this._markerPopup.setContent(String.format('{0}<br/><small>{1} {2}</small>', String.toHTML(ll._comment).replace(/\n/gm, "<br/>"), String.toHTML(ll._author), new Date(ll._commentTime).toLocaleString(navigator.language)));
             if (!this._markerPopup.isOpen())
-                this._marker.openPopup();
+                marker.openPopup();
         }
 
         this._updateTail(ll);
@@ -2226,12 +2271,49 @@ CMooseMap.prototype = {
     _initMarker: function(pt)
     {
         this._markerPopup = L.popup({closeButton: false, offset: L.point(0, -3)});
-        this._marker = this._createMarker(pt, this._markerColor);
+        this._marker = this._menuMarker(pt, this._markerColor);
+    },
 
-        this._marker.on('mouseover', this._d_onShowMarker)
+    _showStar: function (pts)
+    {
+        if (!this._markersLayer)
+            return;
+
+        this._markersLayer.__rad = 0;
+
+        pts = pts || [];
+        if (pts.length < 2)
+            return;
+
+        var r;
+        var r0 = 20;
+        var ll2;
+        var al = 0;
+        //console.log('show star');
+        for (var i = 1; i < pts.length; i++)
+        {
+            r = r0 * (1 + al / 2 / Math.PI);
+            ll2 = this.map.layerPointToLatLng(this.map.latLngToLayerPoint(pts[i]).add([r * Math.cos(al), r * Math.sin(al)]));
+
+            var color = (pts[i]._comment || '') != '' ? this._commentMarker
+                : (pts[i]._valid ? this._markerColor : this._invalidMarker);
+            var m = this._menuMarker(L.extend(L.latLng(0, 0), pts[i], {lat: ll2.lat, lng: ll2.lng, nativeColor: color}), color)
+                .on('mouseout', function(e) { e.sourceTarget.setStyle({ color: e.latlng.nativeColor }); });
+            this._markersLayer.addLayer(m);
+
+            al += 2 * Math.asin(r0 / 2 / r);
+        }
+
+        this._markersLayer.__rad = ll2.distanceTo(pts[0]) * (1 + 12 / r);
+    },
+
+    _menuMarker: function(pt, color)
+    {
+        return this._createMarker(pt, color)
+            .on('mouseover', this._d_onShowMarker)
             .on('contextmenu', this._d_onContextMenu)
             .on('click', this._d_onContextMenu);
-    },
+    } ,
 
     _createMarker: function(pt, color)
     {
@@ -2280,37 +2362,40 @@ CMooseMap.prototype = {
             return;
 
         var lim = this.map.getZoom() > 13 ? 20 : 50;
-        var nearest = this._nearestPt(e.latlng, lim);
-        var dist = nearest ? e.latlng.distanceTo(nearest) : 10000;
+        var nearest = this._nearestPts(e.latlng, lim);
+        var dist = nearest ? nearest.__dist : 10000;
 
-        if (!this._marker)
-            this._initMarker(nearest);
+        if (!this._marker && nearest)
+            this._initMarker(nearest[0]);
 
         var has = this.map.hasLayer(this._marker);
+        var hasStar = this._markersLayer && (this._markersLayer.getLayers() || []).length > 0;
 
-        if (dist <= lim)
+        if (dist <= lim && !hasStar)
         {
-            this._marker.setLatLng(nearest);
+            this._marker.setLatLng(nearest[0]);
             if (!has)
                 this.map.addLayer(this._marker);
+
             this._marker.bringToFront();
-            this._onShowMarker();
+            this._showMarker(this._marker);
         }
-        else if (has && e.latlng.distanceTo(this._marker.getLatLng()) > lim * 2.5)
+        else if (has && e.latlng.distanceTo(this._marker.getLatLng()) > Math.max(lim * 2.5, this._markersLayer.__rad || 0))
         {
             this.map.removeLayer(this._marker);
+            this._markersLayer.clearLayers();
             this.setStatus(null);
             this._updateTail(null);
         }
     },
 
-    _nearestPt: function(pt, limit)
+    _nearestPts: function(pt, limit)
     {
         if (!pt || !this.data || this.data.length == 0)
             return null;
 
         var dist;
-        var point;
+        var points;
 
         var min = null;
         var minDist;
@@ -2318,27 +2403,29 @@ CMooseMap.prototype = {
         var len = this.data.length;
         for (var i = 0; i < len; i++)
         {
-            //point = this._nearest(pt, this.data[i].getLatLngs());
-            point = this.data[i].__kTree.nearest(pt, limit);
-            if (!point)
+            points = this.data[i].__kTree.nearest(pt, limit);
+            if (!points)
                 continue;
-            dist = point.__dist;
+            dist = points.__dist;    // meters
             if (min != null && dist >= minDist)
                 continue;
 
             minDist = dist;
-            min = this._extendMarkerPoint(point, this.data[i]);
+            min = this._extendMarkerPoint(points, this.data[i]);
         }
 
         return min;
     },
 
-    _extendMarkerPoint: function(point, track)
+    _extendMarkerPoint: function(points, track)
     {
-        // а idx в нее добавили внутри _nearest
-        point.mId = track.__id;
-        point.key = track.__key;  // признак, откуда точка -- из лося, или rawSms
-        return point;
+        // а idx в них добавили внутри _nearest
+        points.forEach(function (pt) {
+                pt.mId = track.__id;
+                pt.key = track.__key;  // признак, откуда точка -- из лося, или rawSms})
+            });
+
+        return points;
     }
 }
 CMooseMap.inheritFrom(CControl);
@@ -2531,32 +2618,48 @@ CKTreeItem = function(latLngs, sectByLat)
 CKTreeItem.prototype = {
     nearest: function(pt, limMeters)
     {
-        return this._nearest(pt, this._pad(pt, limMeters), limMeters);
+        return this._nearest(pt, this._pad(pt, limMeters), limMeters, null);
     },
 
-    _nearest: function(pt, extBnds, limMeters)
+    _nearest: function(pt, extBnds, limMeters, current)
     {
         if (!extBnds || !this._rect.isValid() || !extBnds.intersects(this._rect))
-            return null;
+            return current;
 
         if (this._data != null)
-            return this._def(pt, limMeters);
+            return this._def(pt, limMeters, current);
 
-        var l = this._left._nearest(pt, extBnds, limMeters);
-        return this._right._nearest(pt, extBnds, l ? l.__dist : limMeters) || l; // _nearest returns null if it's worse than l
+        var l = this._left._nearest(pt, extBnds, limMeters, current);
+        return this._right._nearest(pt, extBnds, l ? l.__dist : limMeters, l); // _nearest returns null if it's worse than l and no current
     },
 
-    _def: function(pt, limMeters)
+    _def: function(pt, limMeters, cur)
     {
         var d;
-        var res = null;
+        var res = cur;
         var min = limMeters;
+        var step = 2;
+        var thresh = min + step;
+
+        var cpt;
         var len = this._data.length;
         for (var i = 0; i < len; i++)
-            if ((d = pt.distanceTo(this._data[i])) < min)
+            if ((d = pt.distanceTo(this._data[i])) < thresh)
             {
-                res = this._data[i];
-                min = d;
+                cpt = this._data[i];
+                if (d >= min && res && cpt.distanceTo(res.__ref) >= step)
+                    continue;
+
+                res = (!res || d < min - step) ? []
+                    : (d < min ? res.filter(function (r) {return r.__dist < d + step && cpt.distanceTo(r) < step;}) : res);
+
+                if (d < min || res.length == 0)
+                    res.__ref = cpt;
+
+                cpt.__dist = d;
+                res.push(cpt);
+                min = Math.min(min, d);
+                thresh = min + step;
             }
 
         if (res)
