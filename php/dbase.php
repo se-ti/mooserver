@@ -380,7 +380,7 @@ class CMooseDb extends CTinyDb
 
     private function LogPhoneMooseUpdate(CTinyAuth $auth, $mooseId, $name, $prev, $new)
     {
-        if ($prev == null && $new == null || $prev['id'] == $new['id']) // nothing changed
+        if ($prev == null && $new == null || $prev != null && $new != null && $prev['id'] == $new['id']) // nothing changed
             return;
 
         $from = $prev != null ? "снимаем маяк {$prev['msg']} " : '';
@@ -391,7 +391,7 @@ class CMooseDb extends CTinyDb
 
     private function LogMoosePhoneUpdate(CTinyAuth $auth, $phoneId, $phone, $prev, $new)
     {
-        if ($prev == null && $new == null || $prev['id'] == $new['id']) // nothing changed
+        if ($prev == null && $new == null || $prev != null && $new != null && $prev['id'] == $new['id']) // nothing changed
             return;
 
         $verb = 'перевешиваем';
