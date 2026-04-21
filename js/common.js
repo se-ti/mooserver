@@ -151,6 +151,9 @@ String._htmlSubstitutes = [{r:/&/gi, t:'&amp;'},
 
 String.toHTML = function(str)
 {
+    if (typeof(str) == 'number')
+        return str;
+
     if (!str)
         return '';
 
