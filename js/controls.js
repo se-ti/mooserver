@@ -1229,15 +1229,15 @@ CEditableTableControl.prototype = {
         c.title = $('<h2>' + this._sett.title + '</h2>')
             .appendTo(c.root);
 
-        c.add = $('<button class="btn btn-default" title="Ctrl+Alt+ +">Добавить</button>')
+        c.add = $('<button class="btn btn-default hidden-print" title="Ctrl+Alt+ +">Добавить</button>')
             .appendTo(c.root)
+            .toggleClass('hidden', !this._sett.canEdit || !this._sett.onAdd)
             .click(this._d_add);
 
-        var t = this;
-        c.search = $('<div class="checkbox"><input type="text"/> </div>')
+        c.search = $('<div class="checkbox hidden-print"><input type="text" placeholder="Поиск"/> </div>')
             .appendTo(c.root)
             .find('input')
-            .change(function() {if (t._lastSearch != $(this).val()) t._render();}) //this._d_render
+            .change(() => { if (this._lastSearch != c.search.val()) this._render();} )
             .keyup(this._d_delaySearch);
 
         if (this._sett.onToggle)
@@ -1320,14 +1320,11 @@ CEditableTableControl.prototype = {
 
         var p = {id: item.id,
             del: item.active};
-        $ajax(this._sett.onToggle, p, this._d_onToggle);
+        $ajaxErr(this._sett.onToggle, p, this._d_onToggle);
     },
 
     _onToggle: function(result, text, jqXHR)
     {
-        if ((result.error || '') != '')
-            return CApp.single().error(result.error);
-
         this._raise_dataChanged();
     },
 
@@ -1364,7 +1361,7 @@ CEditableTableControl.prototype = {
         // а что принес результат?
         this._c.lineEditor.deactivate(jqXHR.__item);
         this._toggleControls(true);
-        this._raise_dataChanged();
+        this._raise_dataChanged(jqXHR.__item);
     },
 
     _onShortcutKeyDown: function(e)
@@ -1373,7 +1370,7 @@ CEditableTableControl.prototype = {
             this._add(e);
     },
 
-    setOptions: function(options)
+    setOptions: function(options, keepSort)
     {
         this._sett = options || {};
 
@@ -1381,7 +1378,7 @@ CEditableTableControl.prototype = {
             this._sett.canEdit = true;
 
         if (this._c.add)
-            this._c.add.toggleClass('hidden', !this._sett.canEdit);
+            this._c.add.toggleClass('hidden', !this._sett.canEdit || !this._sett.onAdd);
 
         if (this._sett.showLineNumbers)
             this._sett.cols.splice(0, 0, new Cr.CNumEdit('', '__lineNumber', {readOnly: true}));
@@ -1389,9 +1386,10 @@ CEditableTableControl.prototype = {
         if (this._c.lineEditor)
             this._c.lineEditor.setColumns(this._sett.cols);
 
-        this._sortColumn = null;
-        this._renderHead();
+        var key = this._sortColumn && this._sortColumn.getKey? this._sortColumn.getKey() : null;
+        this._sortColumn = keepSort && key ? this._sett.cols.find(c => c.getKey && c.getKey() == key && c.comparator()) : null;
 
+        this._renderHead();
         return this;
     },
 
@@ -1399,7 +1397,7 @@ CEditableTableControl.prototype = {
     {
         var i;
         var proxy = this._sett.proxy;
-        if (data && orgs)
+        if (data)
         {
             var hash = {};
             if (orgs)
@@ -1424,7 +1422,6 @@ CEditableTableControl.prototype = {
                 this._sett.cols[i].setData(leData);
 
         this._render();
-
         return this;
     },
 
@@ -1443,12 +1440,16 @@ CEditableTableControl.prototype = {
         if (!this._c.head)
             return;
 
-        var head = '';
-        this._sett.cols.forEach(col =>
-            {
-                var activator = col.comparator() instanceof Function ? '<span class="filter-activator glyphicon glyphicon-sort"/>' : '';
-                head += String.format('<th{0}>{1}{2}</th>', activator != '' ? ' class="activator-root"' : '', String.toHTML(col.headText()), activator);
-            });
+        var head = this._sett.cols.map(col =>
+        {
+            var activator = '';
+            if (col.comparator() instanceof Function) {
+                var cls = col == this._sortColumn ? (this._inverseSort ? 'glyphicon-sort-by-attributes-alt' : 'glyphicon-sort-by-attributes') : 'glyphicon-sort';
+                activator = String.format('<span class="filter-activator glyphicon {0}"/>', cls);
+            }
+            return String.format('<th{0}>{1}{2}</th>', activator != '' ? ' class="activator-root"' : '', String.toHTML(col.headText()), activator);
+        })
+            .join('');
 
         if (this._sett.canEdit)
             head += '<th class="col-md-4">&nbsp;</th>';
@@ -1466,18 +1467,18 @@ CEditableTableControl.prototype = {
         this._lastSearch = c.search.val();
         var search = this._prepareSearch(this._lastSearch);
 
-        var i;
         var empty = '';
+
         var cols = this._sett.cols;
         var colLen = cols.length;
-        for (i = 0; i < colLen; i++)
+        for (var i = 0; i < colLen; i++)
             empty += '<td></td>';
         empty = '<tr><td>Нет данных</td>' + empty + '</tr>';
 
         var cTpl = '<td>{0}</td>';
 
         var proxy = this._sett.proxy;
-        var body = '';
+        var body = [];
         if (data)
         {
             data.forEach((it, idx) => it.__srcIdx = idx);
@@ -1490,29 +1491,23 @@ CEditableTableControl.prototype = {
                 sorted.sort(this._inverseSort ? (a, b) => comp(b, a) : comp);
             }
 
-            var cls;
-            var line;
-            var lNum = 0;
-            var len = data.length;
-            for (i = 0; i < len; i++)
-                if (this._show(sorted[i], showInactive, search))
+            body = sorted.filter(it => this._show(it, showInactive, search))
+                .map((item, lNum) =>
                 {
-                    line = '';
                     if (this._sett.showLineNumbers)
-                        sorted[i].__lineNumber = '' + (++lNum);
+                        item.__lineNumber = '' + (lNum + 1);
 
-                    cls = (noInactive || sorted[i].active) ? (sorted[i].id >= 0 ? '' : ' class="warning"') : ' class="info"';
-                    for (var j = 0; j < colLen; j++)
-                        line += String.format(cTpl, cols[j].cellHtml(sorted[i]));
+                    var cls = (noInactive || item.active) ? (item.id >= 0 ? '' : ' class="warning"') : ' class="info"';
+                    var line = cols.reduce((ln, col) => ln + String.format(cTpl, col.cellHtml(item)), '');
 
                     if (this._sett.canEdit)
-                        line += '<td class="col-md-4">' + (proxy.canEdit && !proxy.canEdit(sorted[i]) ? '' : c.lineEditor.activators(sorted[i])) + '</td>';
+                        line += '<td class="col-md-4">' + (proxy.canEdit && !proxy.canEdit(item) ? '' : c.lineEditor.activators(item)) + '</td>';
 
-                    body += String.format('<tr{0} data-id="{1}">{2}</tr>', cls, sorted[i].__srcIdx, line);
-                }
+                    return String.format('<tr{0} data-id="{1}">{2}</tr>', cls, item.__srcIdx, line);
+                });
         }
 
-        c.body.html(body == '' ? empty : body);
+        c.body.html(body.length == 0 ? empty : body.join(''));
     },
 
     _delaySearch: function()
@@ -1521,7 +1516,7 @@ CEditableTableControl.prototype = {
             window.clearTimeout(this._tmId);
         var srch = this._c.search;
         var v = srch.val();
-        this._tmId = window.setTimeout(() => { this._tmId = null; if (v == srch.val()) this._render();}, 150);
+        this._tmId = window.setTimeout(() => { this._tmId = null; if (v == srch.val()) this._render();}, 200);
     },
 
     _prepareSearch: function(str)
@@ -1546,7 +1541,7 @@ CEditableTableControl.prototype = {
         var j;
         var ctx = this._sett.proxy.getContext(item);
         for (j = 0, show = true; show && j < search.length; j++)
-            for (i = ctx.length - 1, show = false; show == false && i >=0; i--)
+            for (i = ctx.length - 1, show = false; show == false && i >= 0; i--)
                 show = show || ctx[i].indexOf(search[j]) >= 0;
 
         return show;
@@ -1572,9 +1567,9 @@ CEditableTableControl.prototype = {
         this._render();
     },
 
-    _raise_dataChanged: function()
+    _raise_dataChanged: function(item)
     {
-        this.raise('dataChanged');
+        this.raise('dataChanged', item);
     }
 }
 CEditableTableControl.inheritFrom(CControl).addEvent('dataChanged');

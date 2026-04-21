@@ -97,6 +97,10 @@ Cr.CTextEdit.prototype = {
     _tpl: '<div class="form-group"><label>{0}<input type="text" class="form-control"/></label></div>',
     _cbTpl: '<div class="form-group checkbox"><label><input type="checkbox" class="-form-control"/> {0}</label></div>',
 
+    getKey: function ()
+    {
+        return this._key;
+    },
 
     cellHtml: function(item)
     {
