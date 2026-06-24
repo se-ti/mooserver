@@ -421,12 +421,14 @@ class CTinyAuth
 		if($data_charset != $send_charset)
 			$body = iconv($data_charset, $send_charset, $body);
 
-		$headers = "From: $from\r\n";
+        $headers = "Date: " . date(DATE_RFC2822) . "\r\n";
+		$headers .= "From: $from\r\n";
 		$type = ($html) ? 'html' : 'plain';
 		$headers .= "Content-type: text/$type; charset=$send_charset\r\n";
+        $headers .= "Content-Transfer-Encoding: 8bit\r\n";
 		$headers .= "Mime-Version: 1.0\r\n";
 
-        	return mail($to, $subject, $body, $headers, "-f".$email_from);
+        return mail($to, $subject, $body, $headers, "-f".$email_from);
 	}
 
 	static function mime_header_encode($str, $data_charset, $send_charset)
