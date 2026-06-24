@@ -418,7 +418,7 @@ class CTinyAuth
 		$from = self::mime_header_encode($name_from, $data_charset, $send_charset) . " <$email_from>";
 		$subject = self::mime_header_encode($subject, $data_charset, $send_charset);
 
-		if($data_charset != $send_charset)
+		if ($data_charset != $send_charset)
 			$body = iconv($data_charset, $send_charset, $body);
 
         $headers = "Date: " . date(DATE_RFC2822) . "\r\n";
@@ -431,11 +431,13 @@ class CTinyAuth
         return mail($to, $subject, $body, $headers, "-f".$email_from);
 	}
 
-	static function mime_header_encode($str, $data_charset, $send_charset)
-	{
-		if($data_charset != $send_charset)
-			$str = iconv($data_charset, $send_charset, $str);
-		return '=?' . $send_charset . '?B?' . base64_encode($str) . '?=';
-	}
+    static function mime_header_encode($str, $data_charset, $send_charset)
+    {
+        if ($data_charset != $send_charset)
+            $str = iconv($data_charset, $send_charset, $str);
+        if (preg_match("/^[a-z0-9@\.,\-_<>!?#$%^&\*\s]*$/umi", $str))
+            return $str;
+        return '=?' . $send_charset . '?B?' . base64_encode($str) . '?=';
+    }
 }
 ?>
