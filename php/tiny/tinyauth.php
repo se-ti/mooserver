@@ -53,13 +53,13 @@ class CTinyAuth
 		if (!isset($res['id']))
 			return;
 
-		$tm = time();
 		$sess = $res['session'];
 		if (isset($res['removed']) && $res['removed'] != null || self::isSessionExpired($sess['sqlNow'], $sess['start'], $sess['last']))
 		{
 			$this->clearSession($db);
 
-			/*$diff = $tm - $sess['start'];
+			/* $tm = time();
+			$diff = $tm - $sess['start'];
 			die ("$tm vs {$sess['start']} vs {$sess['last']} diff: $diff, {$this->SID}");*/
 			return;
 		}
