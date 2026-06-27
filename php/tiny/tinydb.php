@@ -294,7 +294,8 @@ class CTinyDb
 		$session = $this->db->quote($sessionId);
 
 		$query = "select users.*, UNIX_TIMESTAMP(CONVERT_TZ(removeDate, '+0:00', @@session.time_zone)) as removed, UNIX_TIMESTAMP(CONVERT_TZ(block_till, '+0:00', @@session.time_zone)) as block, 
-				UNIX_TIMESTAMP(CONVERT_TZ(start, '+0:00', @@session.time_zone)) as st, UNIX_TIMESTAMP(CONVERT_TZ(last, '+0:00', @@session.time_zone)) as cur
+				UNIX_TIMESTAMP(CONVERT_TZ(start, '+0:00', @@session.time_zone)) as st, UNIX_TIMESTAMP(CONVERT_TZ(last, '+0:00', @@session.time_zone)) as cur,
+                UNIX_TIMESTAMP() as sqlNow
 				from session inner join users on users.id = session.user_id
 				where session.id = $session";
 
@@ -304,9 +305,11 @@ class CTinyDb
 
 		$user['session'] = [
 			'start' => intval(@$user['st']),
-			'last' =>  intval(@$user['cur'])];
+			'last' =>  intval(@$user['cur']),
+            'sqlNow' => intval(@$user['sqlNow'])];
 		unset($user['st']);
 		unset($user['cur']);
+        unset($user['sqlNow']);
 
 		return $user;
 	}

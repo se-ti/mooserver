@@ -55,11 +55,8 @@ class CTinyAuth
 
 		$tm = time();
 		$sess = $res['session'];
-		if (isset($res['removed']) && $res['removed'] != null || 
-			$tm < $sess['start'] || $tm < $sess['last'] ||
-			($tm - $sess['last']) > self::Short || 
-			($tm - $sess['start']) > self::Long)
-		{			
+		if (isset($res['removed']) && $res['removed'] != null || self::isSessionExpired($sess['sqlNow'], $sess['start'], $sess['last']))
+		{
 			$this->clearSession($db);
 
 			/*$diff = $tm - $sess['start'];
@@ -130,6 +127,13 @@ class CTinyAuth
 		$this->login = '';
 		$this->SID = '';
 	}
+
+	protected static function isSessionExpired($sqlNow, $start, $last)
+    {
+        $tm = $sqlNow !== null ? $sqlNow : time();
+        return $tm < $start || $tm < $last ||
+            ($tm - $last) > self::Short || ($tm - $start) > self::Long;
+    }
 
 	protected function getSession()
 	{				
